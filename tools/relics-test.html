@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>信物预览</title>
+<style>
+  body{margin:0;background:#f8fafc;color:#0f172a;font-family:"PingFang SC","Microsoft YaHei",sans-serif;padding:22px}
+  h1{font-size:15px;color:#64748b;font-weight:600;margin:0 0 14px}
+  .grid{display:grid;grid-template-columns:92px repeat(5,1fr);gap:8px;align-items:center}
+  .h{font-size:11px;color:#94a3b8;text-align:center}
+  .r{font-size:13px;font-weight:700;color:#334155}
+  .cell{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:6px;display:grid;place-items:center}
+  canvas{display:block}
+  .big{margin-top:20px;display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap}
+  .big figure{margin:0;text-align:center}
+  .big figcaption{font-size:11px;color:#94a3b8;margin-top:4px}
+</style>
+</head>
+<body>
+<h1>30 个档位信物（左列 = 维度，列 = T1–T5）</h1>
+<div class="grid" id="grid"></div>
+
+<h1 style="margin-top:22px">实际尺寸（46px，地图上的大小）</h1>
+<div class="big" id="big"></div>
+
+<script src="../render/relics.js"></script>
+<script>
+var MOTIFS = [['steam','食'],['window','住'],['book','学'],['track','体'],['stage','文'],['bus','行']];
+var g = document.getElementById('grid');
+g.appendChild(Object.assign(document.createElement('div'), {className:'h', textContent:'维度'}));
+for (var t = 1; t <= 5; t++) g.appendChild(Object.assign(document.createElement('div'), {className:'h', textContent:'T' + t}));
+
+function cell(motif, tier, size) {
+  var cv = document.createElement('canvas');
+  var dpr = window.devicePixelRatio || 2;
+  cv.width = size * dpr; cv.height = size * dpr;
+  cv.style.width = size + 'px'; cv.style.height = size + 'px';
+  var ctx = cv.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ZJU.drawRelic(ctx, motif, tier, size / 2, size / 2, size * 0.86);
+  return cv;
+}
+
+MOTIFS.forEach(function (m) {
+  var r = document.createElement('div'); r.className = 'r'; r.textContent = m[1] + ' · ' + m[0];
+  g.appendChild(r);
+  for (var t = 1; t <= 5; t++) {
+    var d = document.createElement('div'); d.className = 'cell';
+    d.appendChild(cell(m[0], t, 78));
+    g.appendChild(d);
+  }
+});
+
+var big = document.getElementById('big');
+MOTIFS.forEach(function (m) {
+  for (var t = 1; t <= 5; t++) {
+    var f = document.createElement('figure');
+    f.appendChild(cell(m[0], t, 46));
+    var c = document.createElement('figcaption'); c.textContent = m[1] + t;
+    f.appendChild(c); big.appendChild(f);
+  }
+});
+</script>
+</body>
+</html>

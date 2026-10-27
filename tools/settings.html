@@ -77,6 +77,10 @@ td.num{text-align:right}
         <label>回合数 <small>每回合可以重新「开工」，广度税清零</small></label>
         <input type="number" id="rounds" min="1" max="8" step="1">
       </div>
+      <div class="row">
+        <label>显示档位信物 <small>关掉 = 回到「只有建筑」的旧版视觉</small></label>
+        <input type="checkbox" id="relicsOn" style="width:auto">
+      </div>
       <div class="row"><label>升到 T2 的价钱</label><input type="number" id="c2" min="0" max="60" step="1"></div>
       <div class="row"><label>升到 T3 的价钱</label><input type="number" id="c3" min="0" max="60" step="1"></div>
       <div class="row"><label>升到 T4 的价钱</label><input type="number" id="c4" min="0" max="60" step="1"></div>
@@ -209,6 +213,7 @@ function render(){
 function fill(cur){
   inits = {};
   (DATA.dims || []).forEach(function(d){ inits[d.id] = (cur.inits && cur.inits[d.id]) || d.init; });
+  $('relicsOn').checked = cur.relics !== false;
   items = (cur.items || []).slice();
   itemsOn = cur.itemsEnabled !== false;
   $('itemsOn').checked = itemsOn;
@@ -232,6 +237,7 @@ function load(){
   if (el) el.addEventListener("input", render);
 });
 $("itemsOn").addEventListener("change", render);
+$("relicsOn").addEventListener("change", render);
 $("rounds").addEventListener("input", function(){
   var n = Math.max(1, Math.min(8, Math.round(+$("rounds").value || 4)));
   while (roundPts.length < n) roundPts.push(roundPts.length ? roundPts[roundPts.length-1] : 14);
@@ -245,6 +251,7 @@ $('btnSave').onclick = function(){
     rounds: roundPts.length,
     roundPoints: roundPts.slice(),
     itemsEnabled: $('itemsOn').checked,
+    relics: $('relicsOn').checked,
     items: items,
     carryRatio: +$('carry').value || 0,
     breadthBase: +$('breadthBase').value,

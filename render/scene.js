@@ -2,13 +2,13 @@
  * Canvas 2D，逻辑坐标 1000x1000，浏览器与小程序共用。 */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) {
-    module.exports = factory(require('./palette.js'), require('../game/config.js'));
+    module.exports = factory(require('./palette.js'), require('../game/config.js'), null);
   } else {
     var z = root.ZJU || {};
-    var mod = factory(z, z);
+    var mod = factory(z, z, z);
     for (var k in mod) root.ZJU[k] = mod[k];
   }
-})(typeof globalThis !== 'undefined' ? globalThis : this, function (P, C) {
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (P, C, Z) {
 
   var FONT = '"PingFang SC","Microsoft YaHei","Hiragino Sans GB",sans-serif';
   var CX = 500, CY = 500, R = 300;
@@ -430,6 +430,9 @@
     // 母题装饰
     this.decor(d, p, t, tier, col);
 
+    // 档位信物（config.RELICS = false 可关掉，回到纯建筑版）
+    if (C.RELICS !== false && Z && Z.drawRelic) this.relic(d, p, t, tier);
+
     // 档位徽章
     var bx = p.x + PAD_W / 2 - 6, by = p.y - PAD_H / 2 + 4;
     ctx.fillStyle = '#0f172a';
@@ -562,6 +565,44 @@
     ctx.strokeStyle = P.css([255, 255, 255], 0.5);
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.ellipse(p.x, p.y + 30, 94, 42, 0, 0, 6.283); ctx.stroke();
+    ctx.restore();
+  };
+
+  // 楼前的「档位信物」：一个小台座 + 代表这个档位的物件
+  // 楼前的「档位信物」：圆底徽章 + 代表这个档位的物件
+  Scene.prototype.relic = function (d, p, t, tier) {
+    var ctx = this.ctx;
+    var ry = p.y + PAD_H / 2 - 30;
+    var pulse = this.pulse[d.id] || 0;
+    var pop = pulse > 0.02 ? 1 + pulse * 0.3 : 1;
+    var R = 25;
+
+    ctx.save();
+
+    // 投影
+    ctx.beginPath();
+    ctx.ellipse(p.x + 1, ry + R - 2, R - 3, 7, 0, 0, 6.283);
+    ctx.fillStyle = "rgba(15,23,42,.09)";
+    ctx.fill();
+
+    // 圆底
+    ctx.beginPath(); ctx.arc(p.x, ry, R, 0, 6.283);
+    ctx.fillStyle = tier >= 5 ? "#fffbeb" : "#ffffff";
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = tier >= 5 ? "#f59e0b" : (tier >= 4 ? "#fcd34d" : "rgba(203,213,225,.95)");
+    ctx.stroke();
+
+    // T5 光晕
+    if (tier >= 5) {
+      var g = ctx.createRadialGradient(p.x, ry, R, p.x, ry, R + 22);
+      g.addColorStop(0, "rgba(245,158,11,.30)");
+      g.addColorStop(1, "rgba(245,158,11,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(p.x, ry, R + 22, 0, 6.283); ctx.fill();
+    }
+
+    Z.drawRelic(ctx, d.motif, tier, p.x, ry, 40 * pop, {});
     ctx.restore();
   };
 

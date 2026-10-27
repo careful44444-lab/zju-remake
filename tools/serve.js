@@ -320,6 +320,7 @@ http.createServer(function (req, res) {
         rounds: cur.rounds != null ? cur.rounds : Cf.MAX_ROUNDS,
         stepCost: cur.stepCost || Cf.STEP_COST,
         roundPoints: cur.roundPoints || Cf.ROUND_POINTS,
+        relics: cur.relics != null ? cur.relics : Cf.RELICS,
         itemsEnabled: cur.itemsEnabled != null ? cur.itemsEnabled : Cf.ITEMS_ENABLED,
         items: cur.items || Cf.ITEMS,
         carryRatio: cur.carryRatio != null ? cur.carryRatio : Cf.CARRY_RATIO,
@@ -379,6 +380,7 @@ http.createServer(function (req, res) {
             return arr;
           })(),
           itemsEnabled: o.itemsEnabled !== false,
+          relics: o.relics !== false,
           items: (function () {
             var src = (Object.prototype.toString.call(o.items) === '[object Array]') ? o.items : null;
             var base = require('../game/config.js').ITEMS;

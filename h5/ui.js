@@ -97,6 +97,7 @@
     }
     if (typeof o.carryRatio === "number") Z.CARRY_RATIO = Math.max(0, Math.min(1, o.carryRatio));
     if (typeof o.itemsEnabled === "boolean") Z.ITEMS_ENABLED = o.itemsEnabled;
+    if (typeof o.relics === "boolean") Z.RELICS = o.relics;
     if (Object.prototype.toString.call(o.items) === "[object Array]" && o.items.length) Z.ITEMS = o.items;
     if (Object.prototype.toString.call(o.stepCost) === "[object Array]" && o.stepCost.length === 4) {
       Z.STEP_COST = o.stepCost.map(function (v) { return Math.max(0, Math.round(v)); });

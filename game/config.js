@@ -76,6 +76,9 @@
 NaN
 NaN
   //   { t:'top',   of:['food'] }                      这个维度是唯一最高的
+  // 档位信物：每个维度每一档在楼前摆一个小物件（馒头 / 八宝鸭 / 自行车…）
+  // 设成 false 就回到「只有建筑」的旧版
+  var RELICS = true;
   var ACHIEVEMENTS = [
     { id: 'life',   name: '生活区天堂', desc: '食和住都到 T4',   cond: [{ t: 'every', of: ['food', 'dorm'], min: 4 }] },
     { id: 'edu',    name: '五育并举',   desc: '学和体都到 T4',   cond: [{ t: 'every', of: ['study', 'sport'], min: 4 }] },
@@ -130,6 +133,7 @@ NaN
     BREADTH_BASE: BREADTH_BASE,
     MAX_ROUNDS: MAX_ROUNDS,
     ACHIEVEMENTS: ACHIEVEMENTS,
+    RELICS: RELICS,
     TITLES: TITLES,
     ITEMS_ENABLED: ITEMS_ENABLED,
     ITEMS: ITEMS,
