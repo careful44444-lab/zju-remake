@@ -514,8 +514,8 @@ function renderEvents(main){
     html += '</div>';
   });
   main.innerHTML = html;
-  bindWhen(main);
   main.querySelectorAll('input,textarea,select').forEach(function(el){
+    if (el.dataset.w) return;            // 触发条件的控件由 bindWhen 负责
     var h = el.tagName === 'SELECT' ? 'onchange' : 'oninput';
     el[h] = function(){
       var i = +el.dataset.ev, o = EVENTS[i];
@@ -580,6 +580,7 @@ function renderEvents(main){
       }
     };
   });
+  bindWhen(main);   // 放在通用监听之后，避免被覆盖
 }
 
 function buildPayload(){
