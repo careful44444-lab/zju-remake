@@ -219,16 +219,21 @@
 
     $('roundInfo').innerHTML = locked
       ? '四个回合都用完了 · 不能再改，点右边结算'
-      : '第 <b>' + r + '/' + max + '</b> 回合' +
-        (dims.length ? ' · 本回合已开工 <b>' + dims.join('、') + '</b>' : ' · 本回合还没动工');
+      : (r >= max
+        ? '第 <b>' + r + '/' + max + '</b> 回合 · <b>最后一回合</b>，改完直接提交'
+        : '第 <b>' + r + '/' + max + '</b> 回合' +
+          (dims.length ? ' · 本回合已开工 <b>' + dims.join('、') + '</b>' : ' · 本回合还没动工'));
 
     var btn = $('btnRound');
-    btn.textContent = locked ? '提交方案' : '结束本回合';
-    btn.classList.toggle('final', locked);
+    var isLast = r >= max;                       // 最后一回合没有「结束回合」这一步
+    btn.textContent = (locked || isLast) ? '提交方案' : '结束本回合';
+    btn.classList.toggle('final', locked || isLast);
   }
 
   function nextRound() {
     if (Z.isLocked(state)) { endRun(); return; }
+    // 最后一回合没有「结束回合」，直接提交
+    if ((state.round || 1) >= (Z.MAX_ROUNDS || 4)) { endRun(); return; }
     var r = Z.endRound(state);
     if (!r.ok) { toast(r.msg); return; }
     beep(620, 0.06, 'sine', 0.03);
@@ -531,7 +536,8 @@
   function endRun() {
     // 回合用完后必须能提交，否则「一步没改 + 空过四个回合」会卡死
     var locked = Z.isLocked && Z.isLocked(state);
-    if (state.ops === 0 && !locked) { toast("先改点什么吧（或者把四个回合空过完，也会进入结算）"); return; }
+    var onLast = (state.round || 1) >= (Z.MAX_ROUNDS || 4);
+    if (state.ops === 0 && !locked && !onLast) { toast("先改点什么吧（或者把四个回合空过完，也会进入结算）"); return; }
     var sm = Z.summary(state);
     if (Track) Track.endRun({
       title: sm.title.name,
@@ -834,6 +840,13 @@
           state.events = 99;
           for (var q = 0; q < (Z.MAX_ROUNDS || 4); q++) Z.endRound(state);
           setTimeout(endRun, 200);
+          return;
+        }
+        if (dm[1] === 'last') {
+          // 预览最后一回合：连过三回合，停在 round 4
+          state.events = 99;
+          for (var q2 = 0; q2 < (Z.MAX_ROUNDS || 4) - 1; q2++) Z.endRound(state);
+          setTimeout(function () { doUp('food'); refresh(); }, 200);
           return;
         }
         if (dm[1] === 'item') {

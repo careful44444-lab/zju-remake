@@ -99,7 +99,7 @@ function effectiveContent() {
   };
 }
 
-function urlPage(rec, alive) {
+function urlPage(rec, alive, saved) {
   var play = rec ? rec.url + '/play' : '';
   var body = !rec
     ? '<div class="big dead">还没有启动过隧道</div>' +
@@ -135,7 +135,9 @@ function urlPage(rec, alive) {
     'button{background:linear-gradient(100deg,#ffe08a,#ffb347);color:#241a05;border:0;font-weight:700}' +
     '.hint{font-size:12.5px;color:#8294a3;line-height:1.8;margin:0}' +
     'b{color:#cfe0ea}' +
-'.cfg{margin-top:22px;border-top:1px solid #232e39;padding-top:16px}' +
+'.cfg{margin-top:22px;border-top:1px solid #232e39;padding-top:16px;display:block}' +
+    '.cfgtitle{font-size:13px;color:#8fa3b4;margin-bottom:2px}' +
+    '.okmsg{font-size:12.5px;color:#6fe0bd;background:rgba(111,224,189,.1);border:1px solid rgba(111,224,189,.35);border-radius:10px;padding:10px 12px;margin:10px 0 0}' +
 '.cfg summary{font-size:13px;color:#8fa3b4;cursor:pointer;outline:none}' +
 '.cfg label{display:block;font-size:11px;color:#8294a3;margin:12px 0 5px}' +
 '.cfg input,.cfg textarea{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:10px 12px;border-radius:10px;background:rgba(0,0,0,.35);border:1px solid #26313b;color:#e9eff6;resize:vertical}' +
@@ -145,18 +147,15 @@ function urlPage(rec, alive) {
     '<script>function cp(b){var t=document.querySelector(".url").textContent.trim();' +
     'navigator.clipboard&&navigator.clipboard.writeText(t).then(function(){b.textContent="已复制";' +
     'setTimeout(function(){b.textContent="复制链接"},1500)})}</script>' +
-'<script>var sv=document.getElementById("tSave");if(sv)sv.onclick=function(){' +
-'var h=document.getElementById("tHost").value,t=document.getElementById("tTok").value;' +
-'fetch("/api/tunnel",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({hostname:h,token:t})})' +
-'.then(function(r){return r.json()}).then(function(r){document.getElementById("tMsg").textContent=(r.msg||"")+"。重启「内测启动.bat」后生效。"})};</script>' +
-        '<details class="cfg"' + (rec && rec.fixed ? '' : ' open') + '>' +
-    '<summary>把它改成固定地址（可选）</summary>' +
+        '<form class="cfg" method="POST" action="/save-tunnel">' +
+    '<div class="cfgtitle">把它改成固定地址（可选）</div>' +
     '<p class="hint" style="margin:10px 0 12px">现在这个地址每次重启都会变。想固定：买域名 → 接进 Cloudflare → 建一条 Tunnel → 把 token 和域名填在下面（步骤见 <b>固定地址教程.md</b>）。</p>' +
-    '<label>域名</label><input id="tHost" placeholder="game.你的域名.com" value="' + esc((rec && rec.hostname) || '') + '">' +
-    '<label>tunnel token</label><textarea id="tTok" rows="3" placeholder="eyJhIjoi...">' + esc((rec && rec.token) || '') + '</textarea>' +
-    '<div class="row" style="margin-top:12px"><button id="tSave">保存</button>' +
+    (saved ? '<p class="okmsg">✅ 已保存。现在关掉黑色窗口，重新双击「内测启动.bat」。</p>' : '') +
+    '<label>域名</label><input name="hostname" placeholder="game.你的域名.com" value="' + esc((rec && rec.hostname) || '') + '">' +
+    '<label>tunnel token</label><textarea name="token" rows="3" placeholder="eyJhIjoi...">' + esc((rec && rec.token) || '') + '</textarea>' +
+    '<div class="row" style="margin-top:12px"><button type="submit">保存</button>' +
     '<a class="btn" href="https://one.dash.cloudflare.com/" target="_blank">打开 Cloudflare 后台</a></div>' +
-    '<p class="hint" id="tMsg"></p></details>' +
+    '</form>' +
 '</div></body></html>';
 }
 
@@ -179,7 +178,7 @@ http.createServer(function (req, res) {
     var alive = false;
     if (rec) { try { process.kill(rec.pid, 0); alive = true; } catch (e) { } }
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
-    return res.end(urlPage(rec, alive));
+    return res.end(urlPage(rec, alive, /(^|&)saved=1(&|$)/.test(qs)));
   }
 
   // 备份管理（只给本机看）
@@ -470,6 +469,40 @@ http.createServer(function (req, res) {
     return;
   }
 
+  // 表单提交保存（不依赖 JS；成功后 303 跳回 /url?saved=1）
+  if (p === '/save-tunnel' && req.method === 'POST') {
+    if (proxied) { res.writeHead(403); return res.end('403'); }
+    var fb = '';
+    req.on('data', function (c) { fb += c; if (fb.length > 65536) req.destroy(); });
+    req.on('end', function () {
+      try {
+        var form = new URLSearchParams(fb);
+        var host = String(form.get('hostname') || '').trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
+        var tok = String(form.get('token') || '').trim().replace(/^[\"'`]|[\"'`]$/g, '');
+        if (/service\s+install/i.test(tok)) {
+          var ps = tok.split(/\s+/);
+          tok = ps[ps.length - 1];
+        }
+        var tf = path.join(root, 'data', 'tunnel.json');
+        var cur2 = {};
+        try { cur2 = JSON.parse(fs.readFileSync(tf, 'utf8')); } catch (e) { }
+        cur2.token = tok;
+        cur2.hostname = host;
+        cur2.fixed = !!(tok && host);
+        if (host) {
+          cur2.url = 'https://' + host;
+          cur2.play = cur2.url + '/play';
+          cur2.dashboard = cur2.url + '/dashboard';
+        }
+        if (!fs.existsSync(path.join(root, 'data'))) fs.mkdirSync(path.join(root, 'data'), { recursive: true });
+        fs.writeFileSync(tf, JSON.stringify(cur2, null, 2), 'utf8');
+      } catch (e) { }
+      res.writeHead(303, { Location: '/url?saved=1' });
+      res.end();
+    });
+    return;
+  }
+
   // 保存固定隧道配置（后台「公网地址」页用）
   if (p === "/api/tunnel") {
     if (proxied) { res.writeHead(403); return res.end("403"); }
@@ -489,7 +522,13 @@ http.createServer(function (req, res) {
           fs.writeFileSync(tf, JSON.stringify(cur, null, 2), "utf8");
           return json(res, 200, { ok: true, msg: "已清除，下次启动会用临时地址" });
         }
-        cur.token = String(o.token || "").trim();
+        var rawTok = String(o.token || "").trim().replace(/^["'`]|["'`]$/g, "");
+        // 允许直接粘贴 Cloudflare 给的那整条命令：cloudflared.exe service install <token>
+        if (/service\s+install/i.test(rawTok)) {
+          var parts2 = rawTok.split(/\s+/);
+          rawTok = parts2[parts2.length - 1];
+        }
+        cur.token = rawTok;
         cur.hostname = String(o.hostname || "").trim().replace(/^https?:\/\//, "").replace(/\/$/, "");
         cur.fixed = !!(cur.token && cur.hostname);
         if (cur.hostname) {
@@ -498,7 +537,7 @@ http.createServer(function (req, res) {
           cur.dashboard = cur.url + "/dashboard";
         }
         fs.writeFileSync(tf, JSON.stringify(cur, null, 2), "utf8");
-        json(res, 200, { ok: true, msg: cur.fixed ? "已保存，下次启动「内测启动.bat」就生效" : "已保存（token 和域名都要填才生效）" });
+        json(res, 200, { ok: true, msg: cur.fixed ? "已保存" : "token 和域名都要填才生效", hostname: cur.hostname || "", tokenLen: (cur.token || "").length, fixed: !!cur.fixed });
       } catch (e) { json(res, 500, { ok: false, msg: String(e.message) }); }
     });
     return;
