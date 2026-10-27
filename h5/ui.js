@@ -23,6 +23,18 @@
     for (var i = 0; i < all.length; i++) all[i].classList.toggle("active", all[i].id === id);
   }
 
+  /* 按钮点击：斜切白光扫过，动画放完再执行回调 */
+  function triggerFlash(el2, callback, delay) {
+    if (!el2) { if (callback) callback(); return; }
+    if (el2.classList.contains("flashing")) return;
+    el2.classList.add("flashing");
+    if (!muted) beep(880, 0.05, "triangle", 0.02);
+    setTimeout(function () {
+      el2.classList.remove("flashing");
+      if (callback) callback();
+    }, delay || 340);
+  }
+
   /* ----------------------------- 音效 ----------------------------- */
   var ac = null;
   function beep(freq, dur, type, vol) {
@@ -363,7 +375,7 @@
     var rf = Z.refund(state, sel);
     down.innerHTML = t > 1 ? ('降一档 <small>返还 ' + rf + ' 点</small>') : ('已到底 <small>—</small>');
     if (t <= 1) down.disabled = true;
-    down.addEventListener('click', function () { doDown(sel); });
+    down.addEventListener('click', function () { triggerFlash(this, function () { doDown(sel); }, 260); });
 
     if (t < 5) {
       var cost = Z.cost(state, sel);
@@ -379,7 +391,7 @@
           var b = el('button', 'cap-btn');
           b.innerHTML = '<b>' + cap.name + '</b><small>' + cap.desc + '</small>';
           if (state.points < cost) b.disabled = true;
-          b.addEventListener('click', function () { doUp(sel, cap.id); });
+          b.addEventListener('click', function () { triggerFlash(this, function () { doUp(sel, cap.id); }, 260); });
           box.appendChild(b);
         });
         act.appendChild(box);
@@ -391,7 +403,7 @@
           (state.points >= cost ? '花 ' + cost + ' 点' + surTxt : '还差 ' + (cost - state.points) + ' 点' + surTxt) +
           '</small>';
         if (state.points < cost) up.disabled = true;
-        up.addEventListener('click', function () { doUp(sel, null); });
+        up.addEventListener('click', function () { triggerFlash(this, function () { doUp(sel, null); }, 260); });
         act.appendChild(up);
       }
     } else {
@@ -484,7 +496,7 @@
       var can = Z.afford(state, o);
       b.innerHTML = '<span>' + o.label + '</span>' + (o.cost ? '<span class="cost">-' + o.cost + ' 点</span>' : '');
       if (!can) b.disabled = true;
-      b.addEventListener('click', function () { pickEvent(i); });
+      b.addEventListener('click', function () { triggerFlash(this, function () { pickEvent(i); }, 300); });
       opts.appendChild(b);
     });
     $('evModal').classList.remove('hidden');
@@ -790,7 +802,7 @@
       openSheet(id);
     });
 
-    $('btnStart').addEventListener('click', function () { openTutor('intro'); });
+    $('btnStart').addEventListener('click', function () { triggerFlash(this, function () { openTutor('intro'); }, 340); });
     $('tutNext').addEventListener('click', function () {
       if (tutStep >= tutSlides().length - 1) { finishTutor(); return; }
       tutStep += 1; renderTutor();
@@ -815,12 +827,12 @@
       });
 
     $('btnUndo').addEventListener('click', undo);
-    $('btnEnd').addEventListener('click', endRun);
-    $('btnRound').addEventListener('click', nextRound);
+    $('btnEnd').addEventListener('click', function () { triggerFlash(this, endRun, 340); });
+    $('btnRound').addEventListener('click', function () { triggerFlash(this, nextRound, 340); });
     $('btnAgain').addEventListener('click', function () {
       beginRun('again', state ? state.grade : null);
     });
-    $('btnShare').addEventListener('click', drawShare);
+    $('btnShare').addEventListener('click', function () { triggerFlash(this, drawShare, 340); });
     $('shareClose').addEventListener('click', function () { $('shareWrap').classList.add('hidden'); });
 
     $('shClose').addEventListener('click', closeSheet);
@@ -832,7 +844,7 @@
       if (Date.now() - sheetOpenedAt < 400) return;
       closeSheet();
     });
-    $('evNext').addEventListener('click', closeEvent);
+    $('evNext').addEventListener('click', function () { triggerFlash(this, closeEvent, 340); });
 
     $('btnSound').addEventListener('click', function () {
       muted = !muted;

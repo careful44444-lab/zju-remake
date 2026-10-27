@@ -13,38 +13,38 @@
 
   var TIER_PAL = {
     1: {
-      bg: rgb(28, 33, 41), ground: rgb(52, 58, 55), grass: rgb(60, 68, 61),
-      road: rgb(38, 43, 48), water: rgb(46, 58, 66), accent: rgb(126, 138, 145),
-      glow: rgb(120, 140, 155), fog: 0.42, weather: 'rain'
+      bg: rgb(246, 248, 250), ground: rgb(238, 242, 246), grass: rgb(218, 236, 222),
+      road: rgb(222, 228, 235), water: rgb(180, 220, 245), accent: rgb(160, 175, 190),
+      glow: rgb(255, 255, 255), fog: 0.08, weather: 'drizzle'
     },
     2: {
-      bg: rgb(38, 45, 55), ground: rgb(64, 72, 66), grass: rgb(74, 84, 73),
-      road: rgb(50, 56, 62), water: rgb(56, 72, 82), accent: rgb(146, 158, 162),
-      glow: rgb(150, 170, 180), fog: 0.26, weather: 'drizzle'
+      bg: rgb(248, 250, 252), ground: rgb(241, 245, 249), grass: rgb(210, 238, 218),
+      road: rgb(226, 232, 240), water: rgb(165, 215, 245), accent: rgb(180, 195, 210),
+      glow: rgb(255, 255, 255), fog: 0.03, weather: 'none'
     },
     3: {
-      bg: rgb(52, 68, 84), ground: rgb(82, 98, 78), grass: rgb(96, 114, 84),
-      road: rgb(72, 78, 82), water: rgb(86, 132, 158), accent: rgb(176, 196, 196),
-      glow: rgb(220, 240, 230), fog: 0.1, weather: 'none'
+      bg: rgb(250, 252, 255), ground: rgb(244, 248, 252), grass: rgb(198, 240, 212),
+      road: rgb(228, 235, 242), water: rgb(140, 205, 245), accent: rgb(217, 119, 6),
+      glow: rgb(255, 255, 255), fog: 0.0, weather: 'none'
     },
     4: {
-      bg: rgb(72, 104, 134), ground: rgb(98, 122, 84), grass: rgb(118, 142, 90),
-      road: rgb(92, 96, 98), water: rgb(104, 164, 190), accent: rgb(226, 202, 140),
-      glow: rgb(255, 226, 160), fog: 0.0, weather: 'petal'
+      bg: rgb(255, 255, 255), ground: rgb(248, 250, 252), grass: rgb(185, 242, 205),
+      road: rgb(232, 238, 245), water: rgb(110, 195, 245), accent: rgb(234, 88, 12),
+      glow: rgb(255, 255, 255), fog: 0.0, weather: 'petal'
     },
     5: {
-      bg: rgb(86, 132, 178), ground: rgb(112, 142, 92), grass: rgb(136, 166, 100),
-      road: rgb(110, 116, 120), water: rgb(126, 194, 214), accent: rgb(255, 214, 106),
-      glow: rgb(255, 244, 184), fog: 0.0, weather: 'sparkle'
+      bg: rgb(255, 255, 255), ground: rgb(250, 252, 255), grass: rgb(172, 245, 198),
+      road: rgb(236, 242, 248), water: rgb(90, 188, 245), accent: rgb(217, 119, 6),
+      glow: rgb(255, 255, 255), fog: 0.0, weather: 'sparkle'
     }
   };
 
   var BUILD = {
-    1: { wall: rgb(94, 88, 80), roof: rgb(70, 66, 61), side: rgb(64, 60, 55), win: rgb(52, 50, 46), lit: rgb(120, 110, 92) },
-    2: { wall: rgb(124, 118, 106), roof: rgb(96, 92, 84), side: rgb(88, 84, 77), win: rgb(62, 62, 58), lit: rgb(160, 146, 112) },
-    3: { wall: rgb(186, 194, 196), roof: rgb(146, 160, 166), side: rgb(128, 140, 146), win: rgb(96, 124, 138), lit: rgb(214, 226, 190) },
-    4: { wall: rgb(228, 236, 238), roof: rgb(198, 212, 218), side: rgb(170, 186, 194), win: rgb(118, 168, 196), lit: rgb(255, 216, 140) },
-    5: { wall: rgb(246, 250, 252), roof: rgb(226, 238, 244), side: rgb(190, 210, 220), win: rgb(140, 200, 226), lit: rgb(255, 240, 170) }
+    1: { wall: rgb(210, 216, 222), roof: rgb(170, 178, 186), side: rgb(155, 164, 172), win: rgb(140, 160, 175), lit: rgb(255, 215, 130) },
+    2: { wall: rgb(225, 230, 235), roof: rgb(185, 192, 200), side: rgb(170, 178, 186), win: rgb(150, 180, 200), lit: rgb(255, 225, 145) },
+    3: { wall: rgb(240, 244, 248), roof: rgb(195, 208, 218), side: rgb(180, 192, 202), win: rgb(140, 195, 225), lit: rgb(255, 235, 160) },
+    4: { wall: rgb(250, 252, 255), roof: rgb(210, 225, 238), side: rgb(195, 210, 222), win: rgb(125, 205, 240), lit: rgb(255, 240, 175) },
+    5: { wall: rgb(255, 255, 255), roof: rgb(225, 238, 248), side: rgb(210, 225, 235), win: rgb(110, 215, 250), lit: rgb(255, 248, 190) }
   };
 
   // 专精色调

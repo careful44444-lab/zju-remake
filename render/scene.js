@@ -258,18 +258,18 @@
     var ctx = this.ctx, t = this.time;
     ctx.save();
     // 湖岸
-    ctx.fillStyle = P.css(P.shade(pal.ground, 1.12));
+    ctx.fillStyle = P.css(P.shade(pal.ground, 1.05));
     ctx.beginPath(); ctx.ellipse(CX, CY, 208, 158, 0, 0, 6.283); ctx.fill();
 
     var g = ctx.createRadialGradient(CX - 40, CY - 40, 20, CX, CY, 200);
-    g.addColorStop(0, P.css(P.shade(pal.water, 1.28)));
+    g.addColorStop(0, P.css(P.shade(pal.water, 1.15)));
     g.addColorStop(0.65, P.css(pal.water));
-    g.addColorStop(1, P.css(P.shade(pal.water, 0.72)));
+    g.addColorStop(1, P.css(P.shade(pal.water, 0.88)));
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.ellipse(CX, CY, 188, 140, 0, 0, 6.283); ctx.fill();
 
     // 波纹
-    ctx.strokeStyle = P.css(P.shade(pal.water, 1.5), 0.35);
+    ctx.strokeStyle = P.css(P.shade(pal.water, 1.3), 0.4);
     ctx.lineWidth = 2;
     for (var i = 0; i < 4; i++) {
       var ph = (t * 0.22 + i * 0.25) % 1;
@@ -281,15 +281,15 @@
     ctx.globalAlpha = 1;
 
     // 反光
-    ctx.fillStyle = P.css([255, 255, 255], 0.14);
+    ctx.fillStyle = P.css([255, 255, 255], 0.35);
     ctx.beginPath(); ctx.ellipse(CX - 60, CY - 44, 54, 20, -0.5, 0, 6.283); ctx.fill();
 
-    ctx.fillStyle = P.css([255, 255, 255], 0.4);
-    ctx.font = '600 20px ' + FONT;
+    ctx.fillStyle = 'rgba(30, 58, 95, 0.75)';
+    ctx.font = '700 20px ' + FONT;
     ctx.textAlign = 'center';
     ctx.fillText('求 是 湖', CX, CY + 6);
-    ctx.font = '400 13px ' + FONT;
-    ctx.fillStyle = P.css([255, 255, 255], 0.24);
+    ctx.font = '500 13px ' + FONT;
+    ctx.fillStyle = 'rgba(50, 80, 115, 0.55)';
     ctx.fillText('ZU  ·  ZIJINGANG', CX, CY + 30);
     ctx.restore();
   };
@@ -386,32 +386,32 @@
     ctx.translate(-p.x, -p.y);
 
     // 阴影
-    ctx.fillStyle = P.css([0, 0, 0], 0.26);
-    ctx.beginPath(); ctx.ellipse(p.x + 4, p.y + PAD_H / 2 - 6, PAD_W / 2 - 6, 26, 0, 0, 6.283); ctx.fill();
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.08)';
+    ctx.beginPath(); ctx.ellipse(p.x + 4, p.y + PAD_H / 2 - 4, PAD_W / 2 - 4, 24, 0, 0, 6.283); ctx.fill();
 
     // 台基
-    ctx.fillStyle = P.css(P.shade(pal.ground, 0.7));
-    rr(ctx, p.x - PAD_W / 2, p.y - PAD_H / 2 + 8, PAD_W, PAD_H, 26); ctx.fill();
+    ctx.fillStyle = 'rgba(226, 232, 240, 0.8)';
+    rr(ctx, p.x - PAD_W / 2, p.y - PAD_H / 2 + 6, PAD_W, PAD_H, 24); ctx.fill();
 
     var pg = ctx.createLinearGradient(0, p.y - PAD_H / 2, 0, p.y + PAD_H / 2);
-    pg.addColorStop(0, P.css(P.shade(pal.ground, 1.22)));
-    pg.addColorStop(1, P.css(P.shade(pal.ground, 0.94)));
+    pg.addColorStop(0, '#ffffff');
+    pg.addColorStop(1, '#f1f5f9');
     ctx.fillStyle = pg;
-    rr(ctx, p.x - PAD_W / 2, p.y - PAD_H / 2, PAD_W, PAD_H - 6, 26); ctx.fill();
+    rr(ctx, p.x - PAD_W / 2, p.y - PAD_H / 2, PAD_W, PAD_H - 6, 24); ctx.fill();
 
-    // 台基描边（越高级越亮）
-    ctx.strokeStyle = P.css(col, 0.16 + (tier - 1) * 0.14);
-    ctx.lineWidth = 2.5;
-    rr(ctx, p.x - PAD_W / 2 + 1, p.y - PAD_H / 2 + 1, PAD_W - 2, PAD_H - 8, 25); ctx.stroke();
+    // 台基描边
+    ctx.strokeStyle = 'rgba(203, 213, 225, 0.8)';
+    ctx.lineWidth = 1.5;
+    rr(ctx, p.x - PAD_W / 2 + 1, p.y - PAD_H / 2 + 1, PAD_W - 2, PAD_H - 8, 23); ctx.stroke();
 
     // 选中圈
     if (this.selected === d.id) {
       ctx.save();
-      ctx.strokeStyle = P.css([255, 255, 255], 0.75);
-      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#d97706';
+      ctx.lineWidth = 3.5;
       ctx.setLineDash([9, 9]);
       ctx.lineDashOffset = -this.time * 30;
-      rr(ctx, p.x - PAD_W / 2 - 9, p.y - PAD_H / 2 - 9, PAD_W + 18, PAD_H + 12, 32);
+      rr(ctx, p.x - PAD_W / 2 - 9, p.y - PAD_H / 2 - 9, PAD_W + 18, PAD_H + 12, 30);
       ctx.stroke();
       ctx.restore();
     }
@@ -432,32 +432,32 @@
 
     // 档位徽章
     var bx = p.x + PAD_W / 2 - 6, by = p.y - PAD_H / 2 + 4;
-    ctx.fillStyle = P.css(P.shade(col, 0.28), 0.95);
-    ctx.beginPath(); ctx.arc(bx, by, 22, 0, 6.283); ctx.fill();
-    ctx.strokeStyle = P.css(col, 0.95); ctx.lineWidth = 2.5; ctx.stroke();
-    ctx.fillStyle = P.css([255, 255, 255], 0.95);
-    ctx.font = 'bold 22px ' + FONT;
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath(); ctx.arc(bx, by, 20, 0, 6.283); ctx.fill();
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 20px ' + FONT;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(String(tier), bx, by + 1);
 
     // 名称
-    var ly = p.y + PAD_H / 2 + 40;
+    var ly = p.y + PAD_H / 2 + 38;
     ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-    ctx.fillStyle = P.css([0, 0, 0], 0.45);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
     ctx.font = 'bold 34px ' + FONT;
-    ctx.fillText(d.name, p.x + 1.5, ly + 2);
-    ctx.fillStyle = P.css([255, 255, 255], 0.96);
+    ctx.fillText(d.name, p.x + 1, ly + 1);
+    ctx.fillStyle = '#0f172a';
     ctx.fillText(d.name, p.x, ly);
 
     var ct = (this.contentLookup && this.contentLookup(d.id, tier)) || null;
     if (ct) {
-      ctx.font = '600 20px ' + FONT;
-      ctx.fillStyle = P.css(col, 1);
-      ctx.fillText(ct.title, p.x, ly + 27);
+      ctx.font = '700 19px ' + FONT;
+      ctx.fillStyle = '#2563eb';
+      ctx.fillText(ct.title, p.x, ly + 26);
     }
-    ctx.font = '500 15px ' + FONT;
-    ctx.fillStyle = P.css([255, 255, 255], 0.62);
-    ctx.fillText('T' + tier + ' · ' + C.TIERS[tier - 1].name, p.x, ly + 49);
+    ctx.font = '600 14px ' + FONT;
+    ctx.fillStyle = '#64748b';
+    ctx.fillText('T' + tier + ' · ' + C.TIERS[tier - 1].name, p.x, ly + 47);
 
     ctx.restore();
   };
@@ -711,9 +711,9 @@
   Scene.prototype.drawVignette = function () {
     var ctx = this.ctx;
     ctx.save();
-    var g = ctx.createRadialGradient(CX, CY, 280, CX, CY, 820);
-    g.addColorStop(0, 'rgba(0,0,0,0)');
-    g.addColorStop(1, 'rgba(0,0,0,0.45)');
+    var g = ctx.createRadialGradient(CX, CY, 320, CX, CY, 820);
+    g.addColorStop(0, 'rgba(255,255,255,0)');
+    g.addColorStop(1, 'rgba(240,244,248,0.3)');
     ctx.fillStyle = g;
     ctx.fillRect(-500, -500, 2000, 2000);
     ctx.restore();
