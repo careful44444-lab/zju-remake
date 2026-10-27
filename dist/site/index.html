@@ -1,0 +1,3568 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<meta name="theme-color" content="#0f1318">
+<title>紫金港改造计划</title>
+<style>
+:root{
+  --bg:#0a0d11;
+  --panel:#141a21;
+  --panel2:#1b232c;
+  --line:#26303a;
+  --fg:#e9eff6;
+  --dim:#8b9aa8;
+  --gold:#ffd76a;
+  --gold2:#ffb347;
+  --teal:#6fe0bd;
+  --red:#ff7a6b;
+  --r:18px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;touch-action:manipulation}
+body{
+  background:radial-gradient(1200px 800px at 50% -10%,#1a222b 0%,#0a0d11 60%);
+  color:var(--fg);
+  font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB",system-ui,-apple-system,sans-serif;
+  overscroll-behavior:none;
+}
+button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit}
+.hidden{display:none !important}
+
+#stage{
+  position:relative;
+  width:100%;max-width:480px;
+  height:100dvh;margin:0 auto;
+  background:#0f1318;
+  overflow:hidden;
+}
+@media (min-width:620px){
+  #stage{
+    height:min(920px,94vh);margin-top:3vh;
+    border-radius:30px;border:1px solid #222b34;
+    box-shadow:0 40px 90px rgba(0,0,0,.65),0 0 0 8px rgba(255,255,255,.02);
+  }
+}
+
+.screen{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;
+  background:#0e1319;
+  opacity:0;pointer-events:none;transition:opacity .28s ease;
+}
+.screen.active{opacity:1;pointer-events:auto}
+.screen:not(.active){visibility:hidden}
+
+/* ---------------- 开屏 ---------------- */
+#intro{padding:38px 26px 26px;justify-content:space-between}
+.intro-top .kicker{
+  font-size:12px;letter-spacing:.22em;color:var(--gold);
+  text-transform:uppercase;margin-bottom:18px;opacity:.85;
+}
+#intro h1{
+  font-size:46px;line-height:1.12;margin:0 0 18px;font-weight:800;letter-spacing:-.02em;
+}
+#intro h1 span{
+  background:linear-gradient(100deg,#ffe9a8,#ffb347 60%,#ff8f5e);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.lead{color:var(--dim);font-size:15px;line-height:1.85;margin:0}
+.intro-cards{display:flex;flex-direction:column;gap:10px;margin:26px 0}
+.intro-cards .card{
+  display:flex;align-items:center;gap:14px;
+  background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015));
+  border:1px solid var(--line);border-radius:14px;padding:14px 16px;
+  font-size:14px;color:#c9d5e0;
+}
+.intro-cards .card b{
+  width:26px;height:26px;flex:0 0 26px;border-radius:50%;
+  display:grid;place-items:center;font-size:13px;
+  background:rgba(255,215,106,.14);color:var(--gold);border:1px solid rgba(255,215,106,.35);
+}
+.intro-foot{display:flex;flex-direction:column;gap:10px}
+.tiny{font-size:11px;color:#5d6a77;margin:6px 0 0}
+.tiny.center{text-align:center}
+
+.primary{
+  display:block;width:100%;padding:17px;border-radius:16px;
+  background:linear-gradient(100deg,#ffe08a,#ffb347);
+  color:#251c07;font-weight:800;font-size:17px;letter-spacing:.04em;
+  box-shadow:0 12px 30px rgba(255,171,71,.28);
+  transition:transform .12s ease,box-shadow .2s ease;
+  text-align:center;text-decoration:none;
+}
+.primary:active{transform:scale(.98)}
+.primary[disabled]{opacity:.4;box-shadow:none}
+.ghost{
+  display:block;width:100%;padding:15px;border-radius:16px;
+  border:1px solid var(--line);color:#c7d3de;font-size:15px;
+  background:rgba(255,255,255,.02);
+}
+.icon{
+  width:36px;height:36px;border-radius:11px;border:1px solid var(--line);
+  display:grid;place-items:center;font-size:17px;color:#c3cfda;
+  background:rgba(255,255,255,.03);
+}
+.icon.on{color:var(--gold);border-color:rgba(255,215,106,.4)}
+.mini{
+  padding:9px 16px;border-radius:11px;font-size:13px;font-weight:700;
+  background:rgba(255,215,106,.14);color:var(--gold);border:1px solid rgba(255,215,106,.35);
+}
+
+/* ---------------- HUD ---------------- */
+#hud{
+  display:flex;align-items:center;gap:18px;
+  padding:14px 16px 10px;flex:0 0 auto;
+}
+.hud-stat{display:flex;flex-direction:column;gap:2px}
+.hud-stat .num{font-size:24px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.hud-stat .lbl{font-size:10px;color:#6c7a88;letter-spacing:.08em}
+#pts{color:var(--gold)}
+#hud.flash #pts{animation:pop .35s ease}
+@keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.28)}100%{transform:scale(1)}}
+.hud-btns{margin-left:auto;display:flex;gap:8px;align-items:center}
+
+/* ---------------- 地图 ---------------- */
+#mapWrap{position:relative;flex:1 1 auto;min-height:0}
+#map{display:block;width:100%;height:100%;
+  touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+#hint{
+  position:absolute;left:50%;bottom:12px;transform:translateX(-50%);
+  font-size:12px;color:#9fb0bf;background:rgba(10,14,18,.6);
+  border:1px solid rgba(255,255,255,.08);padding:7px 14px;border-radius:999px;
+  backdrop-filter:blur(6px);transition:opacity .5s ease;white-space:nowrap;
+  pointer-events:none;
+}
+#toast{
+  position:absolute;left:50%;top:16px;transform:translate(-50%,-8px);
+  padding:8px 16px;border-radius:999px;font-size:13px;font-weight:700;
+  background:rgba(20,26,33,.92);border:1px solid rgba(255,215,106,.4);color:var(--gold);
+  opacity:0;transition:all .25s ease;pointer-events:none;white-space:nowrap;
+}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* ---------------- 回合条 ---------------- */
+#roundBar{
+  flex:0 0 auto;display:flex;align-items:center;gap:10px;
+  padding:8px 14px 0;
+}
+#roundInfo{font-size:11.5px;color:#8b9aa8;flex:1;min-width:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#roundInfo b{color:var(--gold);font-weight:700}
+#btnRound{
+  flex:0 0 auto;font-size:12.5px;font-weight:700;padding:8px 14px;border-radius:10px;
+  background:rgba(255,215,106,.14);color:var(--gold);border:1px solid rgba(255,215,106,.4);
+}
+#btnRound.final{background:linear-gradient(100deg,#ffe08a,#ffb347);color:#241a05;border:0}
+#btnRound[disabled]{opacity:.4}
+
+/* ---------------- 道具条 ---------------- */
+#itemBar{flex:0 0 auto;display:flex;gap:8px;padding:8px 14px 0;flex-wrap:wrap}
+#itemBar:empty{display:none}
+.item-chip{display:flex;align-items:center;gap:6px;font-size:12px;padding:6px 11px;border-radius:10px;
+  background:rgba(111,224,189,.12);border:1px solid rgba(111,224,189,.34);color:#6fe0bd;cursor:pointer}
+.item-chip:hover{background:rgba(111,224,189,.2)}
+.item-chip b{font-weight:700;color:#9ef0d5}
+.item-chip .cnt{font-size:11px;opacity:.8}
+.item-chip[disabled]{opacity:.4;cursor:default}
+
+/* ---------------- 底部条 ---------------- */
+#strip{
+  flex:0 0 auto;display:flex;gap:8px;padding:10px 12px 14px;
+  overflow-x:auto;scrollbar-width:none;
+}
+#strip::-webkit-scrollbar{display:none}
+.pill{
+  flex:1 0 auto;min-width:0;
+  background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015));
+  border:1px solid var(--line);border-radius:14px;
+  padding:9px 6px 8px;display:flex;flex-direction:column;align-items:center;gap:5px;
+  transition:border-color .2s,transform .12s;
+}
+.pill:active{transform:scale(.96)}
+.pill.sel{border-color:rgba(255,215,106,.5)}
+.pill .pc{font-size:19px;font-weight:800;line-height:1}
+.pill .pn{font-size:9px;color:#72808c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:54px}
+.pips{display:flex;gap:3px}
+.pips i{width:6px;height:6px;border-radius:2px;background:#2c3742;display:block}
+.pips i.on{background:var(--gold)}
+.pips i.on.t5{background:#ffe89a;box-shadow:0 0 6px rgba(255,215,106,.9)}
+
+/* ---------------- 抽屉 ---------------- */
+.mask{
+  position:absolute;inset:0;background:rgba(0,0,0,.55);
+  backdrop-filter:blur(2px);z-index:20;opacity:0;transition:opacity .25s;
+}
+.mask.show{opacity:1}
+.sheet{
+  position:absolute;left:0;right:0;bottom:0;z-index:21;
+  background:linear-gradient(180deg,#1a2129,#12181f);
+  border-top-left-radius:26px;border-top-right-radius:26px;
+  border-top:1px solid #2b3540;
+  box-shadow:0 -20px 50px rgba(0,0,0,.6);
+  transform:translateY(105%);transition:transform .3s cubic-bezier(.22,1,.36,1);
+  padding:8px 20px 22px;
+  max-height:76%;overflow-y:auto;
+  touch-action:pan-y;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+}
+.sheet.show{transform:translateY(0)}
+.sheet-grab{width:40px;height:4px;border-radius:2px;background:#39434e;margin:6px auto 12px}
+.sheet-head{display:flex;align-items:center;gap:12px}
+.sheet-tag{
+  width:42px;height:42px;border-radius:13px;display:grid;place-items:center;
+  font-size:21px;font-weight:800;color:#10151a;
+  background:linear-gradient(140deg,#ffe08a,#ffb347);
+}
+.sheet-meta{display:flex;flex-direction:column;gap:2px}
+.sheet-tier{font-size:14px;font-weight:700}
+.sheet-peer{font-size:11px;color:var(--dim)}
+.sheet-head .icon{margin-left:auto}
+.sheet-body h3{margin:16px 0 8px;font-size:22px;letter-spacing:-.01em}
+.sheet-body p{margin:0;color:#a9b8c6;font-size:13.5px;line-height:1.75}
+.tags{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0 16px}
+.tags span{
+  font-size:11.5px;padding:5px 10px;border-radius:8px;
+  background:rgba(255,255,255,.05);border:1px solid #26313b;color:#9fb0bf;
+}
+.pips.big{margin:0 0 18px}
+.pips.big i{width:100%;flex:1;height:7px;border-radius:4px}
+.tax-line{font-size:11.5px;line-height:1.6;color:#7f8e9c;background:rgba(255,255,255,.03);
+  border:1px solid #222b34;border-radius:10px;padding:8px 11px;margin:-8px 0 16px;display:none}
+.tax-line.on{display:block}
+.tax-line b{color:var(--gold);font-weight:600}
+.sheet-actions{display:flex;gap:10px}
+.sheet-actions.col{flex-direction:column}
+.sheet-actions.col .cap-pick{width:100%}
+.sheet-actions.col .btn-down{width:100%;flex-direction:row;justify-content:center;gap:8px;padding:13px}
+.sheet-actions button{
+  flex:1;padding:15px 10px;border-radius:14px;font-weight:700;font-size:14px;
+  display:flex;flex-direction:column;align-items:center;gap:3px;line-height:1.2;
+}
+.sheet-actions .btn-up{background:linear-gradient(100deg,#ffe08a,#ffb347);color:#241a05}
+.sheet-actions .btn-up[disabled]{background:#222a33;color:#59656f;box-shadow:none}
+.sheet-actions .btn-down{background:rgba(255,122,107,.12);color:#ff9d92;border:1px solid rgba(255,122,107,.3)}
+.sheet-actions .btn-down[disabled]{background:rgba(255,255,255,.03);color:#59656f;border-color:#26313b}
+.sheet-actions .btn-up small,.sheet-actions .btn-down small{font-size:10.5px;font-weight:500;opacity:.8}
+.cap-pick{display:flex;flex-direction:column;gap:8px;width:100%}
+.cap-title{font-size:12px;color:var(--dim);margin-bottom:2px}
+.cap-btn{
+  text-align:left;padding:13px 14px;border-radius:13px;
+  border:1px solid rgba(255,215,106,.3);background:rgba(255,215,106,.06);
+  display:flex;flex-direction:column;gap:3px;
+}
+.cap-btn b{font-size:14px;color:#ffe6a3}
+.cap-btn small{font-size:11px;color:#8c9aa6;line-height:1.5}
+.cap-btn[disabled]{opacity:.4}
+
+/* ---------------- 事件 ---------------- */
+.modal{
+  position:absolute;inset:0;z-index:40;
+  display:flex;align-items:center;justify-content:center;padding:22px;
+  background:rgba(6,9,12,.72);backdrop-filter:blur(6px);
+}
+.ev-card{
+  width:100%;max-width:380px;
+  background:linear-gradient(180deg,#1d252e,#141a21);
+  border:1px solid #2c3742;border-radius:24px;padding:24px 22px;
+  box-shadow:0 30px 70px rgba(0,0,0,.6);
+  animation:evIn .32s cubic-bezier(.22,1,.36,1);
+}
+@keyframes evIn{from{transform:translateY(18px) scale(.97);opacity:0}to{transform:none;opacity:1}}
+.ev-kicker{font-size:10.5px;letter-spacing:.16em;color:var(--red);margin-bottom:10px}
+.ev-card h3{margin:0 0 10px;font-size:21px}
+.ev-card p{margin:0;font-size:13.5px;line-height:1.8;color:#a9b8c6}
+.ev-opts{display:flex;flex-direction:column;gap:9px;margin-top:20px}
+.ev-opt{
+  text-align:left;padding:14px 15px;border-radius:13px;
+  border:1px solid #2b3540;background:rgba(255,255,255,.03);
+  font-size:13.5px;display:flex;justify-content:space-between;gap:10px;align-items:center;
+}
+.ev-opt .cost{font-size:11px;color:var(--gold);white-space:nowrap}
+.ev-opt[disabled]{opacity:.38}
+.ev-opt:active{background:rgba(255,255,255,.07)}
+.ev-result{margin-top:18px}
+.ev-result p{color:#cfe0ea;background:rgba(255,255,255,.04);border-radius:12px;padding:13px;margin-bottom:14px}
+
+/* ---------------- 选年级 ---------------- */
+.grade-card{
+  width:100%;max-width:380px;
+  background:linear-gradient(180deg,#1d252e,#141a21);
+  border:1px solid #2c3742;border-radius:24px;padding:26px 22px;
+  box-shadow:0 30px 70px rgba(0,0,0,.6);
+  animation:evIn .32s cubic-bezier(.22,1,.36,1);
+}
+.grade-card h3{margin:4px 0 8px;font-size:23px}
+.grade-lead{margin:0 0 18px;font-size:12.5px;line-height:1.75;color:#8b9aa8}
+.grade-opts{display:flex;flex-direction:column;gap:9px}
+.grade-opt{
+  display:flex;align-items:center;gap:14px;text-align:left;
+  padding:14px 16px;border-radius:14px;border:1px solid #2b3540;
+  background:rgba(255,255,255,.03);transition:all .15s;
+}
+.grade-opt:active{background:rgba(255,215,106,.12);border-color:rgba(255,215,106,.45)}
+.grade-opt b{
+  flex:0 0 52px;font-size:19px;font-weight:800;color:var(--gold);
+}
+.grade-opt small{font-size:12px;color:#8b9aa8;line-height:1.5}
+.grade-opt .arrow{margin-left:auto;color:#4e5c69;font-size:16px}
+
+/* ---------------- 结算 ---------------- */
+#result{overflow:hidden}
+.res-scroll{height:100%;overflow-y:auto;padding:34px 24px 30px;display:flex;flex-direction:column}
+.res-ach{display:flex;flex-wrap:wrap;gap:7px;margin:4px 0 16px}
+.ach-badge{font-size:12px;padding:5px 11px;border-radius:999px;background:rgba(111,224,189,.12);color:var(--teal);border:1px solid rgba(111,224,189,.3)}
+.ach-none{font-size:12px;color:#6c7a88}
+.res-grade{display:flex;align-items:center;gap:18px;margin-bottom:14px}
+.grade-letter{
+  width:88px;height:88px;border-radius:24px;display:grid;place-items:center;
+  font-size:46px;font-weight:900;color:#20170a;
+  background:linear-gradient(140deg,#ffe89a,#ffb347);
+  box-shadow:0 16px 40px rgba(255,171,71,.3);
+}
+.grade-meta{display:flex;flex-direction:column}
+.res-score{font-size:34px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.res-max{font-size:12px;color:#6c7a88;margin-top:4px}
+#resTitle{margin:6px 0 6px;font-size:26px}
+.res-line{margin:0 0 20px;font-size:13px;line-height:1.75;color:#93a2b0}
+.res-dims{display:flex;flex-direction:column;gap:7px;margin-bottom:16px}
+.res-row{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;
+  background:rgba(255,255,255,.035);border:1px solid #212a33;
+}
+.res-row .rn{font-size:15px;font-weight:800;width:20px;text-align:center}
+.res-row .rt{font-size:12.5px;color:#aebbc7;flex:1}
+.res-row .rp{font-size:12px;color:#7e8c99;font-variant-numeric:tabular-nums}
+.res-row .rbar{display:flex;gap:3px}
+.res-row .rbar i{width:12px;height:4px;border-radius:2px;background:#2b3540}
+.res-row .rbar i.on{background:var(--gold)}
+.res-syn{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:18px}
+.res-syn span{
+  font-size:11.5px;padding:4px 9px;border-radius:8px;
+  background:rgba(111,224,189,.1);color:var(--teal);border:1px solid rgba(111,224,189,.25);
+}
+.res-actions{display:flex;gap:10px;margin-top:auto;padding-top:10px}
+.res-actions .primary,.res-actions .ghost{flex:1;padding:15px 10px;font-size:14.5px}
+
+/* ---------------- 分享 ---------------- */
+.share-card{max-height:92%;display:flex;flex-direction:column;gap:12px;align-items:center}
+#shareCanvas{
+  width:min(320px,70vw);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.6);
+}
+.share-actions{display:flex;gap:10px;width:min(320px,70vw)}
+.share-actions .primary,.share-actions .ghost{padding:13px;font-size:14px}
+
+</style>
+<script>
+/* 仅 ?debug=1 时把 JS 报错显示在页面底部，方便截图排查 */
+if (/debug=1/.test(location.search)) {
+  window.addEventListener('error', function (e) {
+    try {
+      var d = document.createElement('div');
+      d.style.cssText = 'position:fixed;z-index:9999;left:0;right:0;bottom:0;background:#b00020;color:#fff;font:12px/1.5 monospace;padding:8px;white-space:pre-wrap';
+      d.textContent = 'JS ERROR: ' + e.message + ' @ ' + String(e.filename || '').split('/').pop() + ':' + e.lineno;
+      document.body.appendChild(d);
+    } catch (x) { }
+  });
+}
+</script>
+</head>
+<body>
+<div id="stage">
+
+  <!-- ============ 开屏 ============ -->
+  <section id="intro" class="screen active">
+    <div class="intro-top">
+      <div class="kicker">ZJU · 改造总规划师 · 第 1 学期</div>
+      <h1>紫金港<br><span>改造计划</span></h1>
+      <p class="lead">六个维度，一张地图，四个回合。<br>你要把浙大改成什么样？</p>
+    </div>
+    <div class="intro-cards">
+      <div class="card"><b>1</b><span>点地图上的地块</span></div>
+      <div class="card"><b>2</b><span>升档花点数，越升越贵；砍档退点</span></div>
+      <div class="card"><b>3</b><span>每回合结束抽一张事件卡</span></div>
+    </div>
+    <div class="intro-foot">
+      <button id="btnStart" class="primary">开始改造</button>
+      <button id="btnResume" class="ghost hidden">继续上次的改造</button>
+      <p class="tiny">同人创作 · 与浙江大学官方无关</p>
+    </div>
+  </section>
+
+  <!-- ============ 主界面 ============ -->
+  <section id="game" class="screen">
+    <header id="hud">
+      <div class="hud-stat">
+        <span class="num" id="pts">65</span>
+        <span class="lbl">剩余点数</span>
+      </div>
+      <div class="hud-stat">
+        <span class="num" id="ach">0</span>
+        <span class="lbl">成就</span>
+      </div>
+      <div class="hud-btns">
+        <button id="btnSound" class="icon" title="音效">♪</button>
+        <button id="btnUndo" class="icon" title="撤销">↶</button>
+        <button id="btnEnd" class="mini">提交</button>
+      </div>
+    </header>
+
+    <div id="mapWrap">
+      <canvas id="map"></canvas>
+      <div id="hint">点一个地块开始改造</div>
+      <div id="toast"></div>
+    </div>
+
+    <div id="roundBar">
+      <span id="roundInfo">第 1/4 回合</span>
+      <button id="btnRound">结束本回合</button>
+    </div>
+
+    <div id="itemBar"></div>
+
+    <div id="strip"></div>
+  </section>
+
+  <!-- ============ 详情抽屉 ============ -->
+  <div id="sheetMask" class="mask hidden"></div>
+  <div id="sheet" class="sheet">
+    <div class="sheet-grab"></div>
+    <div class="sheet-head">
+      <div class="sheet-tag" id="shTag">食</div>
+      <div class="sheet-meta">
+        <div class="sheet-tier" id="shTier">T4 · 领先</div>
+        <div class="sheet-peer" id="shPeer">华五前列</div>
+      </div>
+      <button id="shClose" class="icon">×</button>
+    </div>
+    <div class="sheet-body">
+      <h3 id="shTitle">食在浙大</h3>
+      <p id="shDesc"></p>
+      <div class="tags" id="shTags"></div>
+      <div class="pips big" id="shPips"></div>
+      <div class="tax-line" id="shTax"></div>
+      <div class="sheet-actions" id="shActions"></div>
+    </div>
+  </div>
+
+  <!-- ============ 选年级 ============ -->
+  <div id="gradeModal" class="modal hidden">
+    <div class="grade-card">
+      <div class="ev-kicker">第 1 步 · 先说说你</div>
+      <h3>你现在大几？</h3>
+      <p class="grade-lead">不同年级看到的浙大不一样。统计只按年级分组，不收集任何个人信息。</p>
+      <div class="grade-opts" id="gradeOpts"></div>
+    </div>
+  </div>
+
+  <!-- ============ 事件卡 ============ -->
+  <div id="evModal" class="modal hidden">
+    <div class="ev-card">
+      <div class="ev-kicker">回合结束事件 · <span id="evIdx">1/3</span></div>
+      <h3 id="evTitle">校车又晚点</h3>
+      <p id="evText"></p>
+      <div class="ev-opts" id="evOpts"></div>
+      <div class="ev-result hidden" id="evResult">
+        <p id="evResultText"></p>
+        <button class="primary" id="evNext">继续改造</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 结算 ============ -->
+  <section id="result" class="screen">
+    <div class="res-scroll">
+      <h2 id="resTitle">六边形战士</h2>
+      <p class="res-line" id="resLine"></p>
+      <div class="res-ach" id="resAch"></div>
+      <div class="res-dims" id="resDims"></div>
+      <div class="res-actions">
+        <button class="primary" id="btnShare">保存战绩图</button>
+        <button class="ghost" id="btnAgain">再改一局</button>
+      </div>
+      <p class="tiny center">同人创作 · 与浙江大学官方无关</p>
+    </div>
+  </section>
+
+  <div id="shareWrap" class="modal hidden">
+    <div class="share-card">
+      <canvas id="shareCanvas" width="750" height="1180"></canvas>
+      <div class="share-actions">
+        <a id="shareDl" class="primary" download="紫金港改造计划.png">下载图片</a>
+        <button class="ghost" id="shareClose">关闭</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* game/config.js */
+/* 紫金港改造计划 · 全局配置
+ * 所有数值集中在这里，改完刷新即可。 */
+(function (root, factory) {
+  var mod = factory();
+  if (typeof module === 'object' && module.exports) module.exports = mod;
+  else {
+    root.ZJU = root.ZJU || {};
+    for (var k in mod) root.ZJU[k] = mod[k];
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+
+  // 五个档位：数字越小越差
+  var TIERS = [
+    { n: 1, name: '掉队', peer: '不如省属重点' },
+    { n: 2, name: '落后', peer: '双非里算好的' },
+    { n: 3, name: '合格', peer: '985 中游' },
+    { n: 4, name: '领先', peer: '华五前列' },
+    { n: 5, name: '封神', peer: '全国第一' }
+  ];
+
+  // 六个维度。angle 决定在地图上的方位（-90 = 正上方）
+  // 初始档比上一版整体低一档，腾出来的点数折算成开局预算（见 INIT_POINTS）
+  var DIMS = [
+    { id: 'food',    name: '食', sub: '食堂与餐饮', init: 3, angle: -90,  motif: 'steam' },
+    { id: 'dorm',    name: '住', sub: '宿舍与生活区', init: 1, angle: -30, motif: 'window' },
+    { id: 'study',   name: '学', sub: '课程与自习', init: 3, angle: 30,   motif: 'book' },
+    { id: 'sport',   name: '体', sub: '场馆与体测', init: 2, angle: 90,   motif: 'track' },
+    { id: 'culture', name: '文', sub: '社团与风景', init: 2, angle: 150,  motif: 'stage' },
+    { id: 'move',    name: '行', sub: '校车与通勤', init: 1, angle: 210,  motif: 'bus' }
+  ];
+
+  // 开局要选的年级。id 会随每个事件上报，统计按它分组。
+  var GRADES = [
+    { id: 'y1', name: '大一', desc: '刚来，什么都新鲜' },
+    { id: 'y2', name: '大二', desc: '开始有点意见了' },
+    { id: 'y3', name: '大三', desc: '什么都经历过，什么都想改' },
+    { id: 'y4', name: '大四', desc: '要走了，只想留下点东西' }
+  ];
+
+  // 每一档的价钱。
+  // 原来是「基础价 + 深度税」两段相加，现在合并成一个数，可在后台直接改：
+  //   STEP_COST[0] = 升到 T2 要多少点
+  //   STEP_COST[1] = 升到 T3
+  //   STEP_COST[2] = 升到 T4
+  //   STEP_COST[3] = 升到 T5
+  // 这组数对所有维度都一样（不管从哪一档开始，升到同一档同价），
+  // 所以「起点低的维度更贵」只体现在需要的步数更多。
+  var STEP_COST = [3, 5, 8, 14];
+
+  // 每回合发放的点数（可在后台改，长度 = 回合数）。
+  // 关键：**剩余点数不清零**，上一回合没花完的会累积到下一回合。
+  // 现在的 14/14/15/15 加起来是 58，跟原来的一次性预算等价。
+  var ROUND_POINTS = [14, 14, 15, 15];
+  var INIT_POINTS = ROUND_POINTS.reduce(function (a, b) { return a + b; }, 0);
+
+  // 回合结束时，没花完的点数先乘这个系数再带进下一回合：
+  //   1   = 全部保留（不打折）
+  //   0.5 = 剩一半
+  //   0   = 直接清零
+  var CARRY_RATIO = 1;
+
+  // 「阵痛补偿」：首次跌破初始档额外返点。0 = 关闭。
+  // 默认关闭：模拟显示它会把预算变相抬高（约 +60%），且最优解退化成
+  // 「每个维度反复升降涮点数」，既不紧也不好玩。
+  var RELIEF = 0;
+
+  // 广度税（对数）：只在「同一回合里又开了一个新维度」时收一次。
+  //   本回合已开工 n 个维度，再开新的 → + round(B * log2(1+n))
+  //   换回合会清零 —— 所以它有另一层含义：N 个回合 = 最多 N 个维度可以并行推进，
+  //   想同时改更多的维度，就得挨罚。
+  var BREADTH_BASE = 2;
+  var MAX_ROUNDS = ROUND_POINTS.length;
+
+  // 成就与称号：都是「规则数据」，可在后台增删改。
+  // 条件 cond 是一组子句，必须全部成立：
+NaN
+NaN
+  //   { t:'top',   of:['food'] }                      这个维度是唯一最高的
+  var ACHIEVEMENTS = [
+    { id: 'life',   name: '生活区天堂', desc: '食和住都到 T4',   cond: [{ t: 'every', of: ['food', 'dorm'], min: 4 }] },
+    { id: 'edu',    name: '五育并举',   desc: '学和体都到 T4',   cond: [{ t: 'every', of: ['study', 'sport'], min: 4 }] },
+    { id: 'city',   name: '城市校园',   desc: '行和文都到 T4',   cond: [{ t: 'every', of: ['move', 'culture'], min: 4 }] },
+    { id: 'noweak', name: '没有短板',   desc: '六项都不低于 T3', cond: [{ t: 'every', of: '*', min: 3 }] }
+  ];
+
+  // 称号：从上往下匹配，**第一条成立的**就是结果；最后一条 cond 为空 = 兜底。
+  var TITLES = [
+    { id: 'utopia', name: '紫金港乌托邦', line: '你把浙大改成了一所学校该有的样子，也改成了一个传说。', cond: [{ t: 'every', of: '*', min: 5 }] },
+    { id: 'reverse', name: '反向改造第一人', line: '六个维度，你砍了六个。学校还在，你心态已经没了。', cond: [{ t: 'every', of: '*', max: 2 }] },
+    { id: 'textbook', name: '教科书级改造', line: '没有短板，没有短板，还是没有短板。评委会想给你发个奖。', cond: [{ t: 'every', of: '*', min: 4 }] },
+    { id: 'lopsided', name: '偏科的疯子', line: '你把一个维度改到了全国第一，然后把两个维度改没了。', cond: [{ t: 'count', of: '*', n: 1, min: 5 }, { t: 'count', of: '*', n: 1, max: 2 }] },
+    { id: 'hexagon', name: '六边形战士', line: '每一项都及格，每一项都封不了神。稳，但没什么可吹的。', cond: [{ t: 'every', of: '*', min: 3 }] },
+    { id: 'solo', name: '单项封神', line: '有一项，你可以吹一辈子。别的，能过就行。', cond: [{ t: 'count', of: '*', n: 1, min: 5 }] },
+    { id: 'foodie', name: '你把钱都花在吃上了', line: '食堂封神，宿舍漏水，校车照旧。人生总要有所取舍。', cond: [{ t: 'top', of: ['food'] }, { t: 'count', of: ['dorm', 'move'], n: 1, max: 2 }] },
+    { id: 'meh', name: '就这样吧，反正也要毕业了', line: '改造这个词，有时候只是一种美好的愿望。', cond: [{ t: 'every', of: '*', max: 3 }] },
+    { id: 'minor', name: '小修小补的这一年', line: '没改出什么大动静，但你至少试过了。', cond: [] }
+  ];
+
+  // ---- 道具系统 ----
+  // ITEMS_ENABLED = false 时，事件不会发道具、界面也不显示道具条。
+  var ITEMS_ENABLED = true;
+  var ITEMS = [
+    { id: 'up',  name: '升档卡',  desc: '免费给任意一个维度升一档', type: 'freeUp' },
+    { id: 'x15', name: '1.5 倍卡', desc: '剩余点数 ×1.5，向上取整', type: 'multiply', factor: 1.5 }
+  ];
+
+  var SPECIAL = {};
+
+  // 数据上报。endpoint 留空 = 只写本地队列，不发网络。
+  // 想收数据：把收集服务地址填进来（本地测试 tools/collect.js 会给一个），
+  // 或者用 ?collect=https://xxx/collect 临时指定。
+  var TRACK = {
+    endpoint: '',
+    enabled: true,
+    debug: false,
+    version: '0.1.0'
+  };
+
+  return {
+    TIERS: TIERS,
+    GRADES: GRADES,
+    DIMS: DIMS,
+
+    INIT_POINTS: INIT_POINTS,
+    ROUND_POINTS: ROUND_POINTS,
+    CARRY_RATIO: CARRY_RATIO,
+    STEP_COST: STEP_COST,
+    RELIEF: RELIEF,
+
+    BREADTH_BASE: BREADTH_BASE,
+    MAX_ROUNDS: MAX_ROUNDS,
+    ACHIEVEMENTS: ACHIEVEMENTS,
+    TITLES: TITLES,
+    ITEMS_ENABLED: ITEMS_ENABLED,
+    ITEMS: ITEMS,
+    TRACK: TRACK
+  };
+});
+
+</script>
+<script>
+/* game/content.js */
+/* 紫金港改造计划 · 文案库
+ * 每个维度 5 档 + 2 个封神专精 = 42 段。
+ * 基调：学生自嘲，不点名具体食堂/领导/院系。 */
+(function (root, factory) {
+  var mod = factory();
+  if (typeof module === 'object' && module.exports) module.exports = mod;
+  else {
+    root.ZJU = root.ZJU || {};
+    for (var k in mod) root.ZJU[k] = mod[k];
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+
+  var CONTENT = {
+    /* ---------------------------------- 食 ---- */
+    food: {
+      tiers: [
+        {
+          title: '泡面纪元', stars: 1,
+          desc: '打饭窗口只剩三个还开着，荤菜和素菜是同一种颜色。外卖柜比图书馆还热闹，宿舍楼下的电动车一天要充三次电。',
+          tags: ['窗口 3 个', '队伍 35 分钟', '人均 8 元']
+        },
+        {
+          title: '温饱线', stars: 2,
+          desc: '能吃饱，也能吃腻。每学期最后两周，全校都在等新窗口开张——开张那天排的队伍比开学典礼还长。',
+          tags: ['窗口 8 个', '队伍 20 分钟', '人均 12 元']
+        },
+        {
+          title: '食堂的正常水平', stars: 3,
+          desc: '有几道菜值得专门跑一趟，也有几道菜十年没换过。校外朋友来了，你会犹豫三秒，才决定带不带他去食堂。',
+          tags: ['窗口 15 个', '队伍 10 分钟', '人均 15 元']
+        },
+        {
+          title: '食在浙大', stars: 4,
+          desc: '本地人开始办卡进来蹭饭，美食博主把这里当取景地。你终于敢在饭桌上说一句：来浙大，我请你吃饭。',
+          tags: ['窗口 25 个', '队伍 5 分钟', '人均 20 元']
+        },
+        {
+          title: '米其林紫金港', stars: 5,
+          desc: '食堂开始有等位号、有季节菜单、有主厨。招生简章第一页是一碗面。隔壁学校的学生坐一小时地铁来吃午饭，吃完在门口拍照。',
+          tags: ['预约制', '零排队', '人均 30 元']
+        }
+      ],
+      caps: [
+        {
+          id: 'quality', name: '品质流 · 米其林紫金港',
+          desc: '主厨、季节菜单、侍餐。你开始研究"这道菜用的是哪家农场的菜"，并且真的能查到。',
+          tags: ['黑珍珠 2 钻', '等位 40 分钟', '学生价 5 折']
+        },
+        {
+          id: 'value', name: '性价比流 · 十元吃饱',
+          desc: '十块钱三个菜一碗汤，米饭无限续。食堂门口挂着横幅："本月客流 6 万人次"。没人拍照，但没人饿着。',
+          tags: ['人均 10 元', '米饭免费', '日供 2 万份']
+        }
+      ]
+    },
+
+    /* ---------------------------------- 住 ---- */
+    dorm: {
+      tiers: [
+        {
+          title: '八人间幸存者', stars: 1,
+          desc: '热水限时，插座抽签，室友的闹钟和你的作息是两套时区。夜里十一点，走廊里有人用一口锅在煮全宿舍的宵夜。',
+          tags: ['热水 1 小时', '人均 2.1㎡', '23:30 断电']
+        },
+        {
+          title: '标准六人间', stars: 2,
+          desc: '该有的都有，只是都要排队。你练就了 30 秒洗完澡的核心竞争力，并且对"公共洗衣机要等 40 分钟"这件事毫无波澜。',
+          tags: ['热水看运气', '人均 4.5㎡', '23:00 熄灯']
+        },
+        {
+          title: '正常宿舍', stars: 3,
+          desc: '四人间、上床下桌、空调自由。室友关系从"忍耐"升级为"还行"，熄灯之后还能在桌上继续卷。',
+          tags: ['独立卫浴(部分)', '人均 6㎡', '不断电']
+        },
+        {
+          title: '公寓级', stars: 4,
+          desc: '电梯、洗衣房、公共厨房，楼下有个能通宵的自习室。你开始管宿舍叫"家"，回寝室不再是回"那个地方"。',
+          tags: ['独立卫浴', '人均 12㎡', '24h 热水']
+        },
+        {
+          title: '一人一卫', stars: 5,
+          desc: '独立卫浴、独立阳台、独立空调，室友只是来串门的。招生咨询时，家长问的第一个问题从"多少分"变成了"宿舍什么样"。',
+          tags: ['单人套间', '人均 25㎡', '想住多久住多久']
+        }
+      ],
+      caps: [
+        {
+          id: 'luxury', name: '豪华流 · 一人一卫',
+          desc: '落地窗、烘干机、地暖。缺点是：你越来越不想去教室，并且开始认真考虑读个博。',
+          tags: ['单人 25㎡', '地暖', '退宿率 0%']
+        },
+        {
+          id: 'social', name: '社交流 · 宿舍即客厅',
+          desc: '每层一个公共客厅、一个桌游区、一个共享厨房。你四年认识的人比上课多，期末周的互助文档有 200 个编辑者。',
+          tags: ['公共客厅', '22 点最热闹', '脱单率最高']
+        }
+      ]
+    },
+
+    /* ---------------------------------- 行 ---- */
+    move: {
+      tiers: [
+        {
+          title: '校车玄学', stars: 1,
+          desc: '你永远不知道下一班车什么时候来，就像你永远不知道教务系统什么时候崩。跨校区一趟，半天就没了，车上的人像被真空包装过。',
+          tags: ['等车 25 分钟', '跨校区 70 分钟', '单车 0 辆']
+        },
+        {
+          title: '挤得上去算你赢', stars: 2,
+          desc: '早八的校车是一块压缩饼干，你能在里面悬空站立 20 分钟，还腾出一只手回消息。上不去的人，会在群里收到一句"下一班吧"。',
+          tags: ['等车 12 分钟', '跨校区 50 分钟', '单车靠抢']
+        },
+        {
+          title: '正常大学', stars: 3,
+          desc: '校车按时发车，地铁就在门口。你偶尔还是会迟到，但那是你自己的问题，怪不到交通上。',
+          tags: ['等车 8 分钟', '跨校区 35 分钟', '有车可骑']
+        },
+        {
+          title: '通勤自由', stars: 4,
+          desc: '班次密到不用看时刻表，跨校区有直达专线。你开始敢选早八的课，并且真的能准时出现在教室里。',
+          tags: ['等车 4 分钟', '跨校区 22 分钟', '随处可停']
+        },
+        {
+          title: '五分钟到教室', stars: 5,
+          desc: '从宿舍到教室，导航显示 4 分 50 秒，你甚至能回宿舍拿个充电宝再出发。有人在校园里迷了路，因为他一直在坐车、从没走完过一圈。',
+          tags: ['等车 2 分钟', '跨校区 10 分钟', '校内小火车']
+        }
+      ],
+      caps: [
+        {
+          id: 'fast', name: '效率流 · 五分钟到教室',
+          desc: '无人接驳车按需呼叫，三分钟到楼下。你的迟到理由少了一个，生活突然变得很难解释。',
+          tags: ['按需呼叫', '准点率 99%', '迟到率 -80%']
+        },
+        {
+          id: 'romance', name: '浪漫流 · 校园小火车',
+          desc: '环湖一圈 18 分钟，有讲解员、有夕阳、有一节车厢专门用来发呆。迟到率上升了，幸福感也上升了。',
+          tags: ['环湖 18 分钟', '末班 23:00', '约会圣地']
+        }
+      ]
+    },
+
+    /* ---------------------------------- 学 ---- */
+    study: {
+      tiers: [
+        {
+          title: '抢课奥运会', stars: 1,
+          desc: '选课系统在 12:00:00 崩了，你在 12:00:03 学会了接受命运。图书馆的座位要用书包、水杯、一张纸条三件套提前占住。',
+          tags: ['选课成功率 40%', '座位靠抢', '通宵室 1 个']
+        },
+        {
+          title: '够用但不好用', stars: 2,
+          desc: '一半的投影仪是坏的，另一半要自己带转接头。你想自习，得先想清楚去哪、几点去、以及要不要带充电宝和外套。',
+          tags: ['成功率 60%', '常排队', '通宵室 2 个']
+        },
+        {
+          title: '正常水平', stars: 3,
+          desc: '图书馆够大，教室够新，选课系统偶尔崩但你能忍。这就是大多数 985 应有的样子，你已经很知足。',
+          tags: ['成功率 75%', '有座', '通宵室 4 个']
+        },
+        {
+          title: '学术氛围拉满', stars: 4,
+          desc: '24 小时自习室、讨论间、座位预约系统，凌晨两点还有人在改论文。你开始为自己不够努力而感到一丝焦虑。',
+          tags: ['成功率 90%', '随时有座', '每栋楼都有']
+        },
+        {
+          title: '24h 图书馆', stars: 5,
+          desc: '凌晨三点的图书馆比白天还满，但你想坐哪就坐哪。选课系统开抢前会给你发短信，末尾还附一句"祝你好运"。',
+          tags: ['成功率 100%', '永远有座', '通宵不打烊']
+        }
+      ],
+      caps: [
+        {
+          id: 'grind', name: '卷王流 · 24h 图书馆',
+          desc: '全年无休、四层通宵、咖啡免费。你已经分不清自己是来读书还是来上班的。',
+          tags: ['全年无休', '人均 6h/天', '咖啡免费']
+        },
+        {
+          id: 'chill', name: '躺平流 · 不点名大学',
+          desc: '出勤自由、作业自选、考试开卷。GPA 通胀了，睡眠也回来了，所有人看起来都健康了一点。',
+          tags: ['不点名', '全开卷', '睡眠 +2h']
+        }
+      ]
+    },
+
+    /* ---------------------------------- 体 ---- */
+    sport: {
+      tiers: [
+        {
+          title: '体测恐怖片', stars: 1,
+          desc: '一千米跑完，你在跑道边重新思考人生。体育馆的开放时间像谜语，永远和你的课表完美错开。',
+          tags: ['场馆 2 个', '体测通过 62%', '校园跑强制']
+        },
+        {
+          title: '勉强及格', stars: 2,
+          desc: '场地要抢，器械老得能进博物馆。你的主要运动量来自赶校车，以及一边爬楼一边看手机。',
+          tags: ['场馆 4 个', '通过 78%', '校园跑强制']
+        },
+        {
+          title: '够用的体育', stars: 3,
+          desc: '该有的场馆都有，跑道上永远有人在夜跑。体测依然让人破防，但至少操场是新的，灯是亮的。',
+          tags: ['场馆 8 个', '通过 88%', '自愿打卡']
+        },
+        {
+          title: '运动自由', stars: 4,
+          desc: '恒温泳池、攀岩墙、24 小时健身房。校队开始出现在全国赛场上，你开始出现在健身房镜子前。',
+          tags: ['场馆 15 个', '通过 96%', '积分换装备']
+        },
+        {
+          title: '奥运场馆', stars: 5,
+          desc: '场馆好到你开始怀疑自己配不配进来。体测变成了一场嘉年华，跑完还有人递运动饮料。隔壁学校来借场地，要提前半年预约。',
+          tags: ['场馆 30 个', '通过 99%', '场场爆满']
+        }
+      ],
+      caps: [
+        {
+          id: 'elite', name: '竞技流 · 奥运场馆',
+          desc: '专业跑道、体能实验室、运动康复中心。你开始认真思考自己是不是错过了一条奥运赛道。',
+          tags: ['专业级', '省队驻训', '校队 12 支']
+        },
+        {
+          id: 'joy', name: '快乐流 · 随便玩',
+          desc: '没有体测，没有打卡，只有草坪、飞盘和一群不想回宿舍的人。体育课变成了"今天玩点什么"。',
+          tags: ['零体测', '草坪开放', '快乐 +100']
+        }
+      ]
+    },
+
+    /* ---------------------------------- 文 ---- */
+    culture: {
+      tiers: [
+        {
+          title: '周末空城', stars: 1,
+          desc: '周五晚上，整个校区安静得像在放寒假。社团活动中心的门锁着，公告栏上是三年前的海报，边角还翘着。',
+          tags: ['每周 2 场', '社团 30 个', '21:00 熄灯']
+        },
+        {
+          title: '有活动，但没人去', stars: 2,
+          desc: '海报贴了三天没人撕，因为也没人贴新的。你想参加点什么，翻了半小时公众号，最后回宿舍躺着。',
+          tags: ['每周 6 场', '社团 60 个', '22:00 散场']
+        },
+        {
+          title: '正常的大学氛围', stars: 3,
+          desc: '有音乐节，有讲座，有摆摊。你偶尔会去，大部分时候在宿舍刷手机看别人发的现场，然后点个赞。',
+          tags: ['每周 15 场', '社团 120 个', '23:00 收摊']
+        },
+        {
+          title: '热闹起来', stars: 4,
+          desc: '草坪上常年有活动，社团招新能堵住一条路。你开始烦恼的是"今晚去哪个"，而不是"今晚干嘛"。',
+          tags: ['每周 40 场', '社团 200 个', '通宵场']
+        },
+        {
+          title: '永不落幕', stars: 5,
+          desc: '周五到周日，草坪上同时有三场音乐节和一场诺奖讲座。有人为了活动专门考进来，有人为了活动舍不得毕业。',
+          tags: ['每天都有', '社团 300 个', '24h']
+        }
+      ],
+      caps: [
+        {
+          id: 'fireworks', name: '烟火流 · 音乐节',
+          desc: '草坪、舞台、篝火，学期末那场音乐节能把整片湖岸坐满。宿舍楼下有人弹吉他到凌晨三点，没人投诉。',
+          tags: ['学期 4 场', '万人规模', '通宵']
+        },
+        {
+          id: 'academic', name: '学术流 · 诺奖讲座',  //
+          desc: '每周一位诺奖得主开讲，座位靠抢课系统分配。你开始习惯在食堂排队时和陌生人讨论超导。',
+          tags: ['每周 1 场', '抢座率 100%', '全程直播']
+        }
+      ]
+    }
+  };
+
+  // 开局提示：让玩家 3 秒内知道该干嘛
+  var INTRO_LINES = [
+    '你是浙大新任「改造总规划师」，分四个回合拨款。',
+    '点地块 → 花点数升档，砍档退点数；回合结算时抽事件卡。',
+    '上限六个「封神」，但你一局只够改三分之一。'
+  ];
+
+  return { CONTENT: CONTENT, INTRO_LINES: INTRO_LINES };
+});
+
+</script>
+<script>
+/* game/core.js */
+/* 紫金港改造计划 · 核心逻辑
+ * 纯状态机，不碰 DOM、不碰 wx。浏览器 / Node / 小程序共用。 */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) {
+    module.exports = factory(require('./config.js'));
+  } else {
+    var z = root.ZJU || {};
+    var mod = factory(z);
+    for (var k in mod) root.ZJU[k] = mod[k];
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (C) {
+
+  var DIMS = C.DIMS;
+
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+
+  function createState() {
+    var tiers = {}, caps = {}, relief = {};
+    DIMS.forEach(function (d) {
+      tiers[d.id] = d.init;
+      caps[d.id] = null;
+      relief[d.id] = false;
+    });
+    return {
+      points: grantFor(1),
+      spent: 0,
+      round: 1,
+      items: {},
+      roundDims: [],
+      breadthPaid: {},
+      tiers: tiers,
+      caps: caps,
+      relief: relief,
+      bonus: 0,
+      ops: 0,
+      events: 0,
+      history: [],
+      finished: false
+    };
+  }
+
+  // 第 r 回合发多少点（超出数组就沿用最后一个值）
+  function grantFor(r) {
+    var arr = C.ROUND_POINTS || [C.INIT_POINTS];
+    var v = arr[r - 1];
+    return typeof v === "number" ? v : arr[arr.length - 1];
+  }
+
+  function snapshot(s) {
+    // 注意：events 不进快照，避免「撤销 → 重做」重复触发同一张事件卡
+    return JSON.stringify({
+      points: s.points, spent: s.spent, round: s.round, items: s.items, roundDims: s.roundDims, breadthPaid: s.breadthPaid,
+      tiers: s.tiers, caps: s.caps,
+      relief: s.relief, bonus: s.bonus, ops: s.ops
+    });
+  }
+
+  function push(s) {
+    s.history.push(snapshot(s));
+    if (s.history.length > 80) s.history.shift();
+  }
+
+  function dim(id) {
+    for (var i = 0; i < DIMS.length; i++) if (DIMS[i].id === id) return DIMS[i];
+    return null;
+  }
+
+  // ---- 两种税 ----
+  // 升到第 to 档的价钱（to = 2..5）。原「基础价 + 深度税」已合并成 STEP_COST 一个数组。
+  function stepPrice(to) {
+    if (to <= 1) return 0;
+    var arr = C.STEP_COST || [3, 5, 8, 14];
+    var v = arr[to - 2];
+    return typeof v === 'number' ? v : arr[arr.length - 1];
+  }
+  // 广度税（对数）：本回合已经开了 n 个维度，再开新的 → + round(B * log2(1+n))
+  function breadthTax(n) {
+    if (n <= 0) return 0;
+    return Math.round((C.BREADTH_BASE || 0) * Math.log(1 + n) / Math.LN2);
+  }
+
+  function roundDims(s) { return s.roundDims || []; }
+  function inRound(s, id) { return roundDims(s).indexOf(id) >= 0; }
+  function roundsLeft(s) { return (C.MAX_ROUNDS || 99) - (s.round || 1); }
+  function isLocked(s) { return (s.round || 1) > (C.MAX_ROUNDS || 99); }
+
+  // 这一档的广度税：本回合第一次开这个维度才收
+  function breadthFor(s, id) {
+    if (inRound(s, id)) return 0;
+    return breadthTax(roundDims(s).length);
+  }
+
+  // 升这一档要多少点（深度税 + 广度税）
+  function cost(s, id) {
+    var t = s.tiers[id];
+    if (t >= 5) return 0;
+    return stepPrice(t + 1) + breadthFor(s, id);
+  }
+
+  // 降档退还这一步当初付的钱（广度税按本回合实际付过的退）
+  function refund(s, id) {
+    var t = s.tiers[id];
+    if (t <= 1) return 0;
+    var paid = (s.breadthPaid && s.breadthPaid[id]) || 0;
+    return stepPrice(t) + paid;
+  }
+
+  // 当前状态里两种税各占多少（给界面显示用）
+  function taxInfo(s, id) {
+    var t = s.tiers[id];
+    if (t >= 5) return { step: 0, breadth: 0, total: 0 };
+    var sp = stepPrice(t + 1), br = breadthFor(s, id);
+    return { step: sp, breadth: br, total: sp + br };
+  }
+
+  // 升级。tier 4 -> 5 必须带专精 capId
+  function upgrade(s, id, capId) {
+    if (isLocked(s)) return { ok: false, msg: '回合已用完，点「提交」看结果' };
+    var t = s.tiers[id];
+    if (t >= 5) return { ok: false, msg: '已经是「封神」了' };
+    var c = cost(s, id);
+    if (s.points < c) return { ok: false, msg: '点数不够，还差 ' + (c - s.points) + ' 点' };
+    if (t === 4 && !capId) return { ok: false, msg: 'need-cap' };
+    push(s);
+    // 本回合第一次开这个维度：收广度税，记下来（降档时原样退）
+    if (!inRound(s, id)) {
+      s.roundDims = roundDims(s).concat([id]);
+      s.breadthPaid = s.breadthPaid || {};
+      s.breadthPaid[id] = breadthTax(roundDims(s).length - 1);
+    }
+    s.points -= c;
+    s.spent = (s.spent || 0) + c;
+    s.tiers[id] = t + 1;
+    if (s.tiers[id] === 5) s.caps[id] = capId || null;
+    s.ops += 1;
+    return { ok: true, cost: c, tier: s.tiers[id] };
+  }
+
+  // 结束本回合：广度税清零，进入下一回合
+  function endRound(s) {
+    if (isLocked(s)) return { ok: false, msg: '已经是最后一回合了' };
+    push(s);
+    s.round = (s.round || 1) + 1;
+    s.roundDims = [];
+    s.breadthPaid = {};
+    // 剩余点数按比例结转，再加上新回合的额度
+    if (!isLocked(s)) {
+      var ratio = (typeof C.CARRY_RATIO === "number") ? C.CARRY_RATIO : 1;
+      var keep = Math.floor(s.points * ratio + 1e-9);
+      s.points = keep + grantFor(s.round);
+    }
+    return { ok: true, round: s.round, locked: isLocked(s) };
+  }
+
+  // 降档，全额返还已投入点数（含两种税）
+  function downgrade(s, id) {
+    if (isLocked(s)) return { ok: false, msg: '回合已用完，点「提交」看结果' };
+    var t = s.tiers[id];
+    if (t <= 1) return { ok: false, msg: '已经到底了' };
+    push(s);
+    var r = refund(s, id);
+    s.points += r;
+    s.spent = (s.spent || 0) - r;
+    s.tiers[id] = t - 1;
+    if (t === 5) s.caps[id] = null;
+    // 阵痛补偿（默认关闭，见 config）
+    if (C.RELIEF > 0 && !s.relief[id] && s.tiers[id] < dim(id).init) {
+      s.relief[id] = true;
+      s.points += C.RELIEF;
+      r += C.RELIEF;
+    }
+    s.ops += 1;
+    return { ok: true, refund: r, tier: s.tiers[id] };
+  }
+
+  function canUndo(s) { return s.history.length > 0; }
+
+  function undo(s) {
+    if (!s.history.length) return { ok: false, msg: '没有可撤销的操作' };
+    var prev = JSON.parse(s.history.pop());
+    s.points = prev.points; s.spent = prev.spent || 0;
+    s.round = prev.round || 1; s.items = prev.items || {}; s.roundDims = prev.roundDims || []; s.breadthPaid = prev.breadthPaid || {};
+    s.tiers = prev.tiers; s.caps = prev.caps;
+    s.relief = prev.relief; s.bonus = prev.bonus; s.ops = prev.ops;
+    return { ok: true };
+  }
+
+  // ---- 事件对状态的影响 ----
+  function addPoints(s, n) { s.points = Math.max(0, s.points + n); }
+
+  function shiftTier(s, id, delta) {
+    var t = s.tiers[id];
+    var nt = Math.max(1, Math.min(5, t + delta));
+    if (nt === t) return false;
+    s.tiers[id] = nt;
+    if (nt < 5) s.caps[id] = null;
+    if (nt === 5 && !s.caps[id]) s.caps[id] = null; // 事件白给的 T5 没有专精加分
+    return true;
+  }
+
+  function addBonus(s, n) { s.bonus += n; }
+
+  // ---- 评价：只有「成就」和「称号」，没有分数 ----
+  function tierName(n) { return C.TIERS[n - 1]; }
+
+  // 一条子句是否成立
+  function clauseOK(s, c) {
+    if (!c || !c.t) return true;
+    var ids;
+    if (!c.of || c.of === "*") ids = DIMS.map(function (d) { return d.id; });
+    else ids = Array.isArray(c.of) ? c.of : [c.of];
+    if (!ids.length) return true;
+
+    if (c.t === "top") {
+      var id = ids[0], v = s.tiers[id] || 0, higher = false;
+      DIMS.forEach(function (d) { if (d.id !== id && (s.tiers[d.id] || 0) >= v) higher = true; });
+      return !higher;
+    }
+    var hit = ids.filter(function (id) {
+      var v = s.tiers[id] || 0;
+      if (c.min != null && v < c.min) return false;
+      if (c.max != null && v > c.max) return false;
+      return true;
+    }).length;
+    if (c.t === "every") return hit === ids.length;
+    if (c.t === "count") return hit >= (c.n || 1);
+    return false;
+  }
+
+  // 一整套条件（子句之间是「并且」）
+  function ruleOK(s, cond) {
+    var cs = cond || [];
+    for (var i = 0; i < cs.length; i++) {
+      var c = { t: cs[i].t, of: cs[i].of, min: cs[i].min, max: cs[i].max, n: cs[i].n };
+      if (!clauseOK(s, c)) return false;
+    }
+    return true;
+  }
+
+  function achievements(s) {
+    return (C.ACHIEVEMENTS || []).filter(function (a) { return ruleOK(s, a.cond); })
+      .map(function (a) { return { id: a.id, name: a.name, desc: a.desc }; });
+  }
+
+  function titleOf(s) {
+    var list = C.TITLES || [];
+    for (var i = 0; i < list.length; i++) {
+      if (ruleOK(s, list[i].cond)) return { id: list[i].id, name: list[i].name, line: list[i].line };
+    }
+    return { id: "", name: "改造完成", line: "" };
+  }
+
+  function summary(s) {
+    var dims = {}, ups = 0;
+    DIMS.forEach(function (d) {
+      var t = s.tiers[d.id];
+      dims[d.id] = { tier: t, steps: Math.max(0, t - d.init) };
+      ups += dims[d.id].steps;
+    });
+    return { dims: dims, steps: ups, achievements: achievements(s), title: titleOf(s) };
+  }
+
+  // 给定最终档位，估算完成它最少要花多少点。
+  // 回合制的关系：最多 4 个维度可以「一个回合开一个」，不收广度税；
+  // 第 5、第 6 个维度只能挤进已有回合里，按对数收广度税。
+  function costOfTiers(tiers) {
+    var work = [];
+    DIMS.forEach(function (d) {
+      var steps = (tiers[d.id] || 0) - d.init;
+      if (steps > 0) work.push({ d: d, steps: steps });
+    });
+    work.sort(function (a, b) { return b.steps - a.steps; });
+    var total = 0;
+    work.forEach(function (w, i) {
+      // i < 4：独占一个回合，不罚；i >= 4：挤进同一个回合，第 5 个 +breadth(1)，第 6 个 +breadth(2)
+      var br = i < (C.MAX_ROUNDS || 4) ? 0 : breadthTax(i - (C.MAX_ROUNDS || 4) + 1);
+      for (var t = w.d.init + 1; t <= tiers[w.d.id]; t++) {
+        total += stepPrice(t) + br;
+      }
+    });
+    return total;
+  }
+
+  // ---- 道具 ----
+  function addItem(s, id, n) {
+    if (!id) return;
+    s.items = s.items || {};
+    s.items[id] = (s.items[id] || 0) + (n || 1);
+  }
+  function itemCount(s, id) { return (s.items && s.items[id]) || 0; }
+  function itemDef(id) {
+    var list = C.ITEMS || [];
+    for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+    return null;
+  }
+  // 用掉一个道具（先扣再执行，失败会还回去）
+  function consume(s, id) {
+    if (itemCount(s, id) <= 0) return false;
+    s.items[id] -= 1;
+    return true;
+  }
+  // 升档卡：免费升一档，不花点数、不触发广度税
+  function useFreeUp(s, dimId, capId) {
+    if (isLocked(s)) return { ok: false, msg: "回合已用完" };
+    var t = s.tiers[dimId];
+    if (t == null) return { ok: false, msg: "没有这个维度" };
+    if (t >= 5) return { ok: false, msg: "已经是「封神」了" };
+    if (t === 4 && !capId) return { ok: false, msg: "need-cap" };
+    if (!consume(s, "up")) return { ok: false, msg: "没有升档卡" };
+    push(s);
+    s.tiers[dimId] = t + 1;
+    if (s.tiers[dimId] === 5) s.caps[dimId] = capId || null;
+    s.ops += 1;
+    return { ok: true, tier: s.tiers[dimId] };
+  }
+  // 倍率卡：剩余点数 × factor，向上取整
+  function useMultiply(s, id) {
+    var def = itemDef(id);
+    var f = (def && def.factor) || 1.5;
+    if (!consume(s, id)) return { ok: false, msg: "没有这个道具" };
+    push(s);
+    var before = s.points;
+    s.points = Math.ceil(s.points * f);
+    return { ok: true, before: before, after: s.points };
+  }
+
+  // 净投入点数：直接记账（升档加、降档减），不靠公式反推——两种税让反推不可靠
+  function budget(s) {
+    return typeof s.spent === 'number' ? s.spent : 0;
+  }
+
+  function save(s) {
+    try { return JSON.stringify({ v: 1, s: s }); } catch (e) { return null; }
+  }
+
+  function load(raw) {
+    try {
+      var o = JSON.parse(raw);
+      if (!o || !o.s || !o.s.tiers) return null;
+      var s = o.s;
+      // 兼容性修补
+      DIMS.forEach(function (d) {
+        if (typeof s.tiers[d.id] !== 'number') s.tiers[d.id] = d.init;
+        if (typeof s.spent !== 'number') s.spent = 0;
+        if (typeof s.round !== 'number') s.round = 1;
+        if (!Array.isArray(s.roundDims)) s.roundDims = [];
+        if (!s.breadthPaid) s.breadthPaid = {};
+        if (!(d.id in s.caps)) s.caps[d.id] = null;
+        if (!(d.id in s.relief)) s.relief[d.id] = false;
+      });
+      if (typeof s.bonus !== 'number') s.bonus = 0;
+      if (typeof s.ops !== 'number') s.ops = 0;
+      if (typeof s.events !== 'number') s.events = 0;
+      if (!Array.isArray(s.history)) s.history = [];
+      return s;
+    } catch (e) { return null; }
+  }
+
+  return {
+    clone: clone,
+    createState: createState,
+    dim: dim,
+    cost: cost,
+    refund: refund,
+    taxInfo: taxInfo,
+    endRound: endRound,
+    addItem: addItem,
+    itemCount: itemCount,
+    itemDef: itemDef,
+    useFreeUp: useFreeUp,
+    useMultiply: useMultiply,
+    grantFor: grantFor,
+    roundGrant: function (s) { return grantFor(s.round || 1); },
+    isLocked: isLocked,
+    roundsLeft: roundsLeft,
+    inRound: inRound,
+    costOfTiers: costOfTiers,
+    upgrade: upgrade,
+    downgrade: downgrade,
+    canUndo: canUndo,
+    undo: undo,
+    addPoints: addPoints,
+    shiftTier: shiftTier,
+    addBonus: addBonus,
+    shiftTierClamp: shiftTier,
+    summary: summary,
+    achievements: achievements,
+    titleOf: titleOf,
+    ruleOK: ruleOK,
+    tierName: tierName,
+    budget: budget,
+
+    save: save,
+    load: load,
+    snapshot: snapshot
+  };
+});
+
+</script>
+<script>
+/* game/events.js */
+/* 紫金港改造计划 · 事件卡
+ * 开局连抽 3 张（不消耗操作、不需要先加点），二选一：花钱保平安 / 硬扛吃后果。
+ *
+ * 每个选项都是纯数据，管理员可以在后台改：
+ *   label      选项文字
+ *   cost       选它要花的点数（0/不写 = 免费）
+ *   result     结果文案（干净的文字，不要写"预算 +2 点"这种，系统会自动补）
+ *   altResult  有条件但没触发时显示的文字
+ *   cond       条件：{ dim:'sport', lt:3 } 表示「体 < T3 时才生效」
+ *   effect     效果：{ points:-4, tiers:{ food:-1 }, cap:4 }
+ *   elseEffect 条件不满足时的效果（一般不写）
+ *   item       选它就送一个道具（id 见 config.ITEMS）
+ *   random     随机结果：{ p:0.6, resultB:'...', effectB:{...} }
+ *              p = 走「上面那套结果」的概率，(1-p) = 走 B。给了 random 就忽略 cond。
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) {
+    module.exports = factory(require('./core.js'));
+  } else {
+    var z = root.ZJU || {};
+    var mod = factory(z);
+    for (var k in mod) root.ZJU[k] = mod[k];
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (Core) {
+
+  var DIMS = (Core && Core.DIMS) || [];
+
+  function bump(s, id, delta, max) {
+    var cap = max || 5;
+    var t = s.tiers[id];
+    var nt = Math.max(1, Math.min(cap, t + delta));
+    if (nt === t) return false;
+    s.tiers[id] = nt;
+    if (nt < 5) s.caps[id] = null;
+    return true;
+  }
+
+  var EVENTS = [
+    {
+      id: 'bus', title: '校车又晚点', icon: 'bus',
+      text: '早八的校车晚了 25 分钟。站台上有人在啃早饭，有人在背单词，有人在群里问"有没有人一起走回去"。',
+      options: [
+        { label: '加钱加密班次', cost: 3, result: '车来了，一次两辆，队伍短了一半。' },
+        { label: '算了，忍了', result: '全车的怨气凝结成了一种新的校园文化。', effect: { tiers: { move: -1 } } }
+      ]
+    },
+    {
+      id: 'donate', title: '校友捐赠到账', icon: 'money',
+      text: '一位不愿透露姓名的 98 级校友给学校打了笔钱，指定用于"改善学生生活"。',
+      options: [
+        { label: '全部收下', result: '账上多了一笔预算，你可以假装没看见财务处的表情。', effect: { points: 4 } }
+      ]
+    },
+    {
+      id: 'fitness', title: '体测周', icon: 'run',
+      text: '本学期体测开始。一千米、引体向上、坐位体前屈，三件套齐活。',
+      options: [
+        { label: '请教练特训', cost: 2, result: '教练说你的问题不在腿，在心态。但体测过了。' },
+        {
+          label: '裸考',
+          cond: { dim: 'sport', lt: 3 },
+          result: '一千米跑完，你在跑道边重新思考人生。',
+          altResult: '场馆够好，你居然轻松过了。什么都没发生。',
+          effect: { points: -4 }
+        }
+      ]
+    },
+    {
+      id: 'hair', title: '食堂吃出头发', icon: 'food',
+      text: '一位同学在食堂吃出了头发，照片已经传到了校园墙。评论区正在自动分成三派。',
+      options: [
+        { label: '全额整改', cost: 5, result: '明厨亮灶 + 全流程抽检。一周后全校都忘了这件事。' },
+        {
+          label: '让它上热搜',
+          result: '学校连夜道歉，食堂连夜整改。你成了校园网红。',
+          effect: { points: 2, tiers: { food: -1 } }
+        }
+      ]
+    },
+    {
+      id: 'course', title: '选课系统崩了', icon: 'pc',
+      text: '12:00:00 系统崩溃。12:00:03，教务处的电话被打爆。12:00:05，群里开始流传一张"退学申请表"表情包。',
+      options: [
+        { label: '找教务哭着求扩容', cost: 3, item: 'up', result: '服务器扩容了，下个学期再也没崩过（这次）。' },
+        {
+          label: '硬着头皮抢',
+          cond: { dim: 'study', lt: 5 },
+          result: '课没抢到，学分也没到手。',
+          altResult: '你早就拿到预约了，全程围观别人崩溃。什么都没发生。',
+          effect: { tiers: { study: -1 } }
+        }
+      ]
+    },
+    {
+      id: 'influencer', title: '网红来打卡', icon: 'camera',
+      text: '一位百万粉博主在校园里拍了一条视频，标题是《国内最美大学没有之一》。',
+      options: [
+        {
+          label: '安排接驳和拍摄许可',
+          result: '视频爆了，报考咨询量涨了三成。',
+          effect: { tiers: { culture: 1 }, cap: 4 }
+        },
+        { label: '保持安静', result: '没有游客，没有排队，图书馆还是图书馆。', effect: { points: 2 } }
+      ]
+    },
+    {
+      id: 'flood', title: '暴雨淹了紫金港', icon: 'rain',
+      text: '一场大雨，路面成河。有人划着充气船去上课，视频在群里转了三圈。',
+      options: [
+        { label: '做排水改造', cost: 4, item: 'x15', result: '海绵校园上线，下一场雨你甚至没带伞。' },
+        { label: '买双雨靴', result: '雨靴销量全校第一。', effect: { tiers: { move: -1 } } }
+      ]
+    },
+    {
+      id: 'roomie', title: '宿舍矛盾', icon: 'home',
+      text: '室友的闹钟响在 6:30，你的入睡时间是 2:30。第三个室友开始在群里发长文。',
+      options: [
+        { label: '申请调换', cost: 2, result: '换了宿舍，新室友的闹钟响在 6:00。但你睡得更好了。' },
+        { label: '继续磨合', result: '你们达成了一个脆弱的协议，为期两周。', effect: { tiers: { dorm: -1 } } }
+      ]
+    },
+    {
+      id: 'bike', title: '共享单车围城', icon: 'bike',
+      text: '校门口堆了两千辆共享单车，人行道已经看不见地面。三家运维公司在互相甩锅。',
+      options: [
+        { label: '统一整治', cost: 3, result: '划了停车区，清了两千辆，路终于能走了。' },
+        {
+          label: '让它们自生自灭',
+          result: '你收了管理费，但路被堵了。',
+          effect: { points: 2, tiers: { move: -1 } }
+        }
+      ]
+    },
+    {
+      id: 'finals', title: '期末周', icon: 'book',
+      text: '图书馆的位置在早上 7:00 就满了。有人在便利店门口拿着 iPad 复习，表情平静得像在度假。',
+      options: [
+        {
+          label: '开 24h 自习室', cost: 2,
+          result: '通宵自习室开了，灯亮了一整周。',
+          effect: { tiers: { study: 1 }, cap: 4 }
+        },
+        { label: '早点睡', result: '你睡得不错，但 GPA 不太行。', effect: { points: -4 } }
+      ]
+    },
+    {
+      id: 'chef', title: '大师傅要跳槽', icon: 'chef',
+      text: '食堂最受欢迎的那个窗口，师傅被隔壁学校挖走了，工资翻了 1.5 倍。',
+      options: [
+        { label: '涨薪留人', cost: 4, result: '师傅留下来了，还带了个徒弟。队伍又长了十米。' },
+        { label: '祝他前程似锦', result: '窗口换了个新人，糖醋里脊再也没有过那个味道。', effect: { tiers: { food: -1 } } }
+      ]
+    },
+    {
+      id: 'promo', title: '招生宣传片', icon: 'film',
+      text: '宣传部想拍一支片子，预算不多，问你有没有什么想法。',
+      options: [
+        {
+          label: '认真拍一条', cost: 3,
+          result: '片子火了，评论区在问"这是哪个国家的学校"。',
+          effect: { tiers: { culture: 1 }, cap: 4 }
+        },
+        { label: '用去年的', result: '省下的钱买了新的投影仪。', effect: { points: 1 } }
+      ]
+    }
+  ];
+
+  function shuffle(arr) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  function drawQueue(n) { return shuffle(EVENTS).slice(0, n || 3); }
+
+  function afford(s, opt) { return !opt.cost || s.points >= opt.cost; }
+
+  function condMet(s, c) {
+    if (!c || !c.dim) return true;
+    var t = s.tiers[c.dim];
+    if (c.lt != null) return t < c.lt;
+    if (c.gte != null) return t >= c.gte;
+    return true;
+  }
+
+  function applyEffect(s, e) {
+    if (!e) return;
+    if (e.points) Core.addPoints(s, e.points);
+    if (e.tiers) {
+      Object.keys(e.tiers).forEach(function (id) {
+        if (s.tiers[id] == null) return;
+        bump(s, id, e.tiers[id], e.cap || 5);
+      });
+    }
+  }
+
+  var NAME = {};
+  function dimName(id) {
+    if (!NAME[id]) {
+      var d = DIMS.filter(function (x) { return x.id === id; })[0];
+      NAME[id] = d ? d.name : id;
+    }
+    return NAME[id];
+  }
+
+  // 掷一次随机：返回 'b' 表示走第二种结果
+  function rollRandom(opt) {
+    if (!opt.random) return null;
+    var p = (typeof opt.random.p === 'number') ? opt.random.p : 0.5;
+    p = Math.max(0, Math.min(1, p));
+    return (Math.random() < p) ? 'a' : 'b';
+  }
+
+  // 执行选项：返回 { text, delta, branch }
+  // text 是纯文案，delta 是系统自动补的数值变化，branch 是随机走了哪一支
+  function apply(s, opt) {
+    var before = { p: s.points, t: {} };
+    DIMS.forEach(function (d) { before.t[d.id] = s.tiers[d.id]; });
+    if (opt.cost) Core.addPoints(s, -opt.cost);
+
+    if (opt.item && Core.addItem) Core.addItem(s, opt.item, 1);
+
+    var branch = rollRandom(opt);
+    var met = true, eff, text;
+    if (branch === 'b') {
+      eff = opt.random.effectB;
+      text = opt.random.resultB || '';
+    } else {
+      met = condMet(s, opt.cond);
+      eff = met ? opt.effect : opt.elseEffect;
+      text = met ? (opt.result || '') : (opt.altResult || opt.result || '');
+    }
+    applyEffect(s, eff);
+
+    var bits = [];
+    var dp = s.points - before.p;
+    if (dp) bits.push('预算 ' + (dp > 0 ? '+' : '') + dp + ' 点');
+    DIMS.forEach(function (d) {
+      var dt = s.tiers[d.id] - before.t[d.id];
+      if (dt) bits.push(d.name + ' ' + (dt > 0 ? '+' : '') + dt + ' 档');
+    });
+
+    if (opt.item) {
+      var idef = Core.itemDef ? Core.itemDef(opt.item) : null;
+      bits.push('获得「' + (idef ? idef.name : opt.item) + '」');
+    }
+    if (opt.cost && !bits.length) bits.push('花了 ' + opt.cost + ' 点');
+    return { text: text, delta: bits.join('，'), branch: branch };
+  }
+
+  // 兼容旧调用：只要字符串
+  function applyText(s, opt) {
+    var r = apply(s, opt);
+    return r.text + (r.delta ? '（' + r.delta + '）' : '');
+  }
+
+  return { EVENTS: EVENTS, drawQueue: drawQueue, afford: afford, apply: applyText, applyResult: apply, rollRandom: rollRandom, bump: bump };
+});
+
+</script>
+<script>
+/* game/track.js */
+/* 紫金港改造计划 · 数据上报（可插拔）
+ *
+ * 设计原则：
+ * 1. 默认不上报（endpoint 为空时只写本地），不会把玩家数据发到任何地方
+ * 2. 任何异常都不影响游戏：全部 try/catch，失败就进本地队列，下次补发
+ * 3. 传输层可替换（h5 用 fetch / 小程序换成 wx.request）
+ *
+ * 事件模型（统一信封）：
+ *   { v, eid, sid, uid, ts, app, ver, env, ev, rid, seq, props }
+ *
+ * 事件类型：
+ *   run_start   开局
+ *   action      一次升/降档或撤销
+ *   card        事件卡的选择
+ *   run_end     结算（含六维最终档位 + 分数）
+ *   run_abandon 中途离开（用于算流失）
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else {
+    var mod = factory();
+    root.ZJU = root.ZJU || {};
+    for (var k in mod) root.ZJU[k] = mod[k];
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+
+  var CFG = {
+    app: 'zju-remake',
+    version: '0.1.0',
+    env: 'h5',
+    endpoint: '',      // 收集服务地址；为空 = 只存本地
+    enabled: true,
+    debug: false,
+    flushMs: 4000,
+    maxBatch: 8,
+    maxQueue: 300
+  };
+
+  var st = {
+    uid: null, sid: null, rid: null,
+    seq: 0, buf: [], ended: true,
+    timer: null, inited: false
+  };
+
+  // 玩家画像（年级）。挂在每个事件的信封上，统计按它分组。
+  var PROFILE = {};
+
+  function setProfile(p) {
+    if (!p) return PROFILE;
+    for (var k in p) if (p[k] !== undefined) PROFILE[k] = p[k];
+    return PROFILE;
+  }
+
+  var K_UID = 'zju.track.uid';
+  var K_Q = 'zju.track.q';
+  var K_SID = 'zju.track.sid';
+
+  function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { } }
+
+  function uuid() {
+    var s = '';
+    for (var i = 0; i < 4; i++) s += Math.floor((1 + Math.random()) * 0x10000).toString(16).slice(1);
+    return s;
+  }
+
+  function log() {
+    if (!CFG.debug || typeof console === 'undefined') return;
+    var a = Array.prototype.slice.call(arguments);
+    a.unshift('[track]');
+    console.log.apply(console, a);
+  }
+
+  function now() { return Date.now(); }
+
+  function base(ev, props) {
+    return {
+      v: 1,
+      eid: uuid(),
+      sid: st.sid,
+      uid: st.uid,
+      prof: { year: PROFILE.year || null },
+      ts: now(),
+      app: CFG.app,
+      ver: CFG.version,
+      env: CFG.env,
+      ev: ev,
+      rid: st.rid,
+      seq: ++st.seq,
+      props: props || {}
+    };
+  }
+
+  // ---------------- 队列 ----------------
+  function persistQueue() {
+    try {
+      lsSet(K_Q, JSON.stringify(st.buf));
+    } catch (e) { }
+  }
+
+  function pushQueue(list) {
+    st.buf = st.buf.concat(list);
+    if (st.buf.length > CFG.maxQueue) st.buf = st.buf.slice(st.buf.length - CFG.maxQueue);
+    if (CFG.endpoint) persistQueue();   // 没配地址时只在内存里留一份，不写盘
+  }
+
+  var transport = null;   // 自定义传输层（小程序注入 wx.request）
+
+  function defaultTransport(url, body) {
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: body,
+      keepalive: true,
+      mode: 'cors',
+      credentials: 'omit'
+    });
+  }
+
+  function flush(useBeacon) {
+    if (!CFG.endpoint || !st.buf.length) return;
+    var list = st.buf.splice(0, CFG.maxBatch);
+    var body = JSON.stringify({ app: CFG.app, ver: CFG.version, batch: list });
+
+    var ok = function () { log('sent', list.length); };
+    var fail = function (e) {
+      log('send failed', e && e.message);
+      st.buf = list.concat(st.buf);   // 原样放回队首，下次再发
+      persistQueue();
+    };
+
+    try {
+      if (useBeacon && typeof navigator !== 'undefined' && navigator.sendBeacon) {
+        var blob = new Blob([body], { type: 'application/json' });
+        if (navigator.sendBeacon(CFG.endpoint, blob)) { ok(); persistQueue(); return; }
+      }
+    } catch (e) { }
+
+    try {
+      if (transport) {
+        transport(CFG.endpoint, body, function (err) { if (err) fail(err); else ok(); });
+      } else if (typeof fetch === 'function') {
+        defaultTransport(CFG.endpoint, body).then(function (r) {
+          if (!r || !r.ok) fail(new Error('http ' + (r && r.status)));
+          else ok();
+        }).catch(fail);
+      } else {
+        fail(new Error('no transport'));
+      }
+    } catch (e) { fail(e); }
+    persistQueue();
+  }
+
+  function emit(ev, props) {
+    if (!CFG.enabled) return null;
+    var e = base(ev, props);
+    log(ev, props);
+    pushQueue([e]);
+    if (st.buf.length >= CFG.maxBatch) flush(false);
+    return e;
+  }
+
+  // ---------------- 生命周期 ----------------
+  function configure(opt) {
+    opt = opt || {};
+    for (var k in opt) if (opt[k] !== undefined) CFG[k] = opt[k];
+    if (st.inited) return CFG;
+    st.inited = true;
+
+    // 匿名 id（只用于串同一台设备的多次游戏，不含任何个人信息）
+    st.uid = lsGet(K_UID);
+    if (!st.uid) { st.uid = uuid(); lsSet(K_UID, st.uid); }
+    st.sid = uuid();
+    lsSet(K_SID, st.sid);
+
+    // 补发上次没发出去的
+    if (CFG.endpoint) {
+      try {
+        var q = JSON.parse(lsGet(K_Q) || '[]');
+        if (q && q.length) {
+          st.buf = q.concat(st.buf);
+          log('restored queue', q.length);
+          setTimeout(function () { flush(false); }, 1200);
+        }
+      } catch (e) { }
+    }
+
+    if (CFG.enabled && CFG.endpoint) {
+      st.timer = setInterval(function () { flush(false); }, CFG.flushMs);
+    }
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'hidden') { flush(true); }
+      });
+      window.addEventListener('pagehide', function () {
+        if (!st.ended) abandon();
+        flush(true);
+      });
+    }
+    return CFG;
+  }
+
+  function setTransport(fn) { transport = fn; }
+
+  function startRun(meta) {
+    st.rid = uuid();
+    st.seq = 0;
+    st.ended = false;
+    return { rid: st.rid, e: emit('run_start', meta || {}) };
+  }
+
+  function action(props) { return emit('action', props || {}); }
+  function card(props) { return emit('card', props || {}); }
+
+  function endRun(props, finished) {
+    if (st.ended || !st.rid) return null;
+    st.ended = true;
+    var p = {};
+    for (var k in (props || {})) p[k] = props[k];
+    p.finished = finished !== false;
+    var e = emit('run_end', p);
+    flush(false);
+    flush(false);
+    return e;
+  }
+
+  function abandon(reason) {
+    if (st.ended || !st.rid) return null;
+    return endRun({ leftReason: reason || 'leave' }, false);
+  }
+
+  function queueSize() { return st.buf.length; }
+
+  return {
+    Track: {
+      configure: configure,
+      setTransport: setTransport,
+      setProfile: setProfile,
+      startRun: startRun,
+      action: action,
+      card: card,
+      endRun: endRun,
+      abandon: abandon,
+      flush: function () { flush(false); },
+      queueSize: queueSize,
+      config: function () { return CFG; },
+      _state: st
+    }
+  };
+});
+
+</script>
+<script>
+/* render/palette.js */
+/* 紫金港改造计划 · 色谱
+ * 5 档色板 + 建筑材质 + 混合工具。 */
+(function (root, factory) {
+  var mod = factory();
+  if (typeof module === 'object' && module.exports) module.exports = mod;
+  else {
+    root.ZJU = root.ZJU || {};
+    for (var k in mod) root.ZJU[k] = mod[k];
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+
+  function rgb(r, g, b) { return [r, g, b]; }
+
+  var TIER_PAL = {
+    1: {
+      bg: rgb(28, 33, 41), ground: rgb(52, 58, 55), grass: rgb(60, 68, 61),
+      road: rgb(38, 43, 48), water: rgb(46, 58, 66), accent: rgb(126, 138, 145),
+      glow: rgb(120, 140, 155), fog: 0.42, weather: 'rain'
+    },
+    2: {
+      bg: rgb(38, 45, 55), ground: rgb(64, 72, 66), grass: rgb(74, 84, 73),
+      road: rgb(50, 56, 62), water: rgb(56, 72, 82), accent: rgb(146, 158, 162),
+      glow: rgb(150, 170, 180), fog: 0.26, weather: 'drizzle'
+    },
+    3: {
+      bg: rgb(52, 68, 84), ground: rgb(82, 98, 78), grass: rgb(96, 114, 84),
+      road: rgb(72, 78, 82), water: rgb(86, 132, 158), accent: rgb(176, 196, 196),
+      glow: rgb(220, 240, 230), fog: 0.1, weather: 'none'
+    },
+    4: {
+      bg: rgb(72, 104, 134), ground: rgb(98, 122, 84), grass: rgb(118, 142, 90),
+      road: rgb(92, 96, 98), water: rgb(104, 164, 190), accent: rgb(226, 202, 140),
+      glow: rgb(255, 226, 160), fog: 0.0, weather: 'petal'
+    },
+    5: {
+      bg: rgb(86, 132, 178), ground: rgb(112, 142, 92), grass: rgb(136, 166, 100),
+      road: rgb(110, 116, 120), water: rgb(126, 194, 214), accent: rgb(255, 214, 106),
+      glow: rgb(255, 244, 184), fog: 0.0, weather: 'sparkle'
+    }
+  };
+
+  var BUILD = {
+    1: { wall: rgb(94, 88, 80), roof: rgb(70, 66, 61), side: rgb(64, 60, 55), win: rgb(52, 50, 46), lit: rgb(120, 110, 92) },
+    2: { wall: rgb(124, 118, 106), roof: rgb(96, 92, 84), side: rgb(88, 84, 77), win: rgb(62, 62, 58), lit: rgb(160, 146, 112) },
+    3: { wall: rgb(186, 194, 196), roof: rgb(146, 160, 166), side: rgb(128, 140, 146), win: rgb(96, 124, 138), lit: rgb(214, 226, 190) },
+    4: { wall: rgb(228, 236, 238), roof: rgb(198, 212, 218), side: rgb(170, 186, 194), win: rgb(118, 168, 196), lit: rgb(255, 216, 140) },
+    5: { wall: rgb(246, 250, 252), roof: rgb(226, 238, 244), side: rgb(190, 210, 220), win: rgb(140, 200, 226), lit: rgb(255, 240, 170) }
+  };
+
+  // 专精色调
+  var CAP_TINT = {
+    quality: rgb(255, 214, 120), value: rgb(255, 176, 92),
+    luxury: rgb(198, 214, 255), social: rgb(255, 196, 150),
+    fast: rgb(150, 224, 255), romance: rgb(255, 190, 210),
+    grind: rgb(255, 236, 150), chill: rgb(160, 230, 200),
+    elite: rgb(255, 160, 120), joy: rgb(170, 240, 170),
+    fireworks: rgb(255, 150, 190), academic: rgb(170, 190, 255)
+  };
+
+  function mix(a, b, t) {
+    t = Math.max(0, Math.min(1, t));
+    return [
+      Math.round(a[0] + (b[0] - a[0]) * t),
+      Math.round(a[1] + (b[1] - a[1]) * t),
+      Math.round(a[2] + (b[2] - a[2]) * t)
+    ];
+  }
+  function css(c, alpha) {
+    if (alpha === undefined) return 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')';
+    return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + alpha + ')';
+  }
+  function shade(c, k) {
+    return [Math.max(0, Math.min(255, Math.round(c[0] * k))),
+            Math.max(0, Math.min(255, Math.round(c[1] * k))),
+            Math.max(0, Math.min(255, Math.round(c[2] * k)))];
+  }
+
+  // 连续档位（1..5）插值出整套色板
+  function palAt(m) {
+    m = Math.max(1, Math.min(5, m));
+    var lo = Math.floor(m), hi = Math.min(5, lo + 1), t = m - lo;
+    if (lo === hi) t = 0;
+    var a = TIER_PAL[lo], b = TIER_PAL[hi];
+    var out = {};
+    ['bg', 'ground', 'grass', 'road', 'water', 'accent', 'glow'].forEach(function (k) {
+      out[k] = mix(a[k], b[k], t);
+    });
+    out.fog = a.fog + (b.fog - a.fog) * t;
+    out.weather = t < 0.5 ? a.weather : b.weather;
+    return out;
+  }
+
+  function buildAt(m) {
+    m = Math.max(1, Math.min(5, m));
+    var lo = Math.floor(m), hi = Math.min(5, lo + 1), t = m - lo;
+    if (lo === hi) t = 0;
+    var a = BUILD[lo], b = BUILD[hi], out = {};
+    ['wall', 'roof', 'side', 'win', 'lit'].forEach(function (k) { out[k] = mix(a[k], b[k], t); });
+    return out;
+  }
+
+  return { TIER_PAL: TIER_PAL, BUILD: BUILD, CAP_TINT: CAP_TINT, mix: mix, css: css, shade: shade, palAt: palAt, buildAt: buildAt };
+});
+
+</script>
+<script>
+/* render/scene.js */
+/* 紫金港改造计划 · 地图渲染
+ * Canvas 2D，逻辑坐标 1000x1000，浏览器与小程序共用。 */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) {
+    module.exports = factory(require('./palette.js'), require('../game/config.js'));
+  } else {
+    var z = root.ZJU || {};
+    var mod = factory(z, z);
+    for (var k in mod) root.ZJU[k] = mod[k];
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (P, C) {
+
+  var FONT = '"PingFang SC","Microsoft YaHei","Hiragino Sans GB",sans-serif';
+  var CX = 500, CY = 500, R = 300;
+  var PAD_W = 216, PAD_H = 152;
+
+  var TIER_COLOR = {
+    1: [122, 136, 148],
+    2: [147, 165, 160],
+    3: [121, 184, 160],
+    4: [224, 185, 104],
+    5: [255, 215, 106]
+  };
+
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      var t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  function rr(ctx, x, y, w, h, r) {
+    var m = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + m, y);
+    ctx.lineTo(x + w - m, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + m);
+    ctx.lineTo(x + w, y + h - m);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - m, y + h);
+    ctx.lineTo(x + m, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - m);
+    ctx.lineTo(x, y + m);
+    ctx.quadraticCurveTo(x, y, x + m, y);
+    ctx.closePath();
+  }
+
+  function Scene(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.dims = C.DIMS;
+    this.anim = {};
+    this.target = {};
+    this.pulse = {};
+    this.caps = {};
+    this.zones = {};
+    this.synergy = [];
+    this.selected = null;
+    this.bursts = [];
+    this.time = 0;
+    this.last = 0;
+    this.mood = 3;
+    this.moodTarget = 3;
+    this.running = false;
+
+    var self = this;
+    this.dims.forEach(function (d) {
+      var a = d.angle * Math.PI / 180;
+      self.zones[d.id] = { x: CX + Math.cos(a) * R, y: CY + Math.sin(a) * R };
+      self.anim[d.id] = d.init;
+      self.target[d.id] = d.init;
+      self.pulse[d.id] = 0;
+    });
+
+    var rnd = mulberry32(20240917);
+    this.rand = rnd;
+    this.trees = [];
+    var rr2 = mulberry32(777);
+    for (var i = 0; i < 150; i++) {
+      var ok = false, x = 0, y = 0;
+      for (var tryN = 0; tryN < 40 && !ok; tryN++) {
+        x = -320 + rr2() * 1640;
+        y = -320 + rr2() * 1640;
+        ok = true;
+        var dxl = (x - CX) / 200, dyl = (y - CY) / 150;
+        if (dxl * dxl + dyl * dyl < 1) ok = false;
+        for (var j = 0; j < this.dims.length && ok; j++) {
+          var p = this.zones[this.dims[j].id];
+          if (Math.hypot(x - p.x, y - p.y) < 165) ok = false;
+        }
+      }
+      if (ok) this.trees.push({ x: x, y: y, s: 0.6 + rr2() * 0.9, ph: rr2() * 6.28 });
+    }
+
+    this.drops = [];
+    for (var k = 0; k < 70; k++) {
+      this.drops.push({ x: rnd() * 1000, y: rnd() * 1000, sp: 260 + rnd() * 340, ln: 12 + rnd() * 22 });
+    }
+    this.petals = [];
+    for (var m = 0; m < 46; m++) {
+      this.petals.push({ x: rnd() * 1000, y: rnd() * 1000, sp: 14 + rnd() * 30, ph: rnd() * 6.28, r: 2 + rnd() * 3 });
+    }
+    this.stars = [];
+    for (var n = 0; n < 60; n++) {
+      this.stars.push({ x: rnd() * 1000, y: rnd() * 1000, ph: rnd() * 6.28, r: 1 + rnd() * 2.2 });
+    }
+
+    this.resize();
+    this._loop = this.loop.bind(this);
+  }
+
+  Scene.prototype.resize = function () {
+    var c = this.canvas;
+    var cssW = c.clientWidth || 360;
+    var cssH = c.clientHeight || 480;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    c.width = Math.round(cssW * dpr);
+    c.height = Math.round(cssH * dpr);
+    this.cssW = cssW; this.cssH = cssH; this.dpr = dpr;
+    this.scale = Math.min(cssW, cssH) / 820;
+    this.ox = (cssW - 1000 * this.scale) / 2;
+    this.oy = (cssH - 1000 * this.scale) / 2;
+  };
+
+  Scene.prototype.setState = function (s) {
+    var self = this;
+    this.dims.forEach(function (d) {
+      var t = s.tiers[d.id];
+      if (t !== self.target[d.id]) {
+        self.pulse[d.id] = 1;
+        if (t > self.target[d.id]) self.burst(d.id, TIER_COLOR[t]);
+      }
+      self.target[d.id] = t;
+      self.caps[d.id] = s.caps ? s.caps[d.id] : null;
+    });
+    var sum = 0;
+    this.dims.forEach(function (d) { sum += self.target[d.id]; });
+    this.moodTarget = sum / this.dims.length;
+    this.synergy = (s.synergyIds || []).slice();
+  };
+
+  Scene.prototype.select = function (id) { this.selected = id; };
+
+  Scene.prototype.burst = function (id, color) {
+    var p = this.zones[id];
+    for (var i = 0; i < 26; i++) {
+      var a = Math.random() * Math.PI * 2, sp = 40 + Math.random() * 150;
+      this.bursts.push({
+        x: p.x, y: p.y - 30,
+        vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 40,
+        life: 0.7 + Math.random() * 0.5, t: 0,
+        r: 1.5 + Math.random() * 3,
+        c: color || [255, 230, 160]
+      });
+    }
+  };
+
+  Scene.prototype.hitTest = function (clientX, clientY) {
+    var r = this.canvas.getBoundingClientRect();
+    var lx = (clientX - r.left - this.ox) / this.scale;
+    var ly = (clientY - r.top - this.oy) / this.scale;
+    var best = null, bestD = 1e9;
+    for (var i = 0; i < this.dims.length; i++) {
+      var d = this.dims[i], p = this.zones[d.id];
+      var dx = Math.abs(lx - p.x) - PAD_W / 2;
+      var dy = Math.abs(ly - p.y) - PAD_H / 2;
+      var dist = Math.max(0, Math.hypot(Math.max(0, dx), Math.max(0, dy)));
+      if (dist < 90 && dist < bestD) { best = d.id; bestD = dist; }
+    }
+    return best;
+  };
+
+  Scene.prototype.start = function () {
+    if (this.running) return;
+    this.running = true;
+    this.last = 0;
+    this.raf = requestAnimationFrame(this._loop);
+  };
+  Scene.prototype.stop = function () {
+    this.running = false;
+    if (this.raf) cancelAnimationFrame(this.raf);
+  };
+
+  Scene.prototype.loop = function (ts) {
+    if (!this.running) return;
+    var dt = this.last ? Math.min(0.05, (ts - this.last) / 1000) : 0.016;
+    this.last = ts;
+    this.time += dt;
+    var k = 1 - Math.pow(0.0008, dt);
+    for (var i = 0; i < this.dims.length; i++) {
+      var id = this.dims[i].id;
+      this.anim[id] += (this.target[id] - this.anim[id]) * k * 0.9;
+      this.pulse[id] = Math.max(0, this.pulse[id] - dt * 1.8);
+    }
+    this.mood += (this.moodTarget - this.mood) * k * 0.7;
+
+    for (var b = this.bursts.length - 1; b >= 0; b--) {
+      var q = this.bursts[b];
+      q.t += dt; q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 190 * dt; q.vx *= 0.98;
+      if (q.t > q.life) this.bursts.splice(b, 1);
+    }
+    this.draw();
+    this.raf = requestAnimationFrame(this._loop);
+  };
+
+  // ---------------------------------------------------------------- 绘制
+
+  Scene.prototype.draw = function () {
+    var ctx = this.ctx, W = this.cssW, H = this.cssH, dpr = this.dpr;
+    var pal = P.palAt(this.mood);
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var gg = ctx.createLinearGradient(0, 0, 0, H);
+    gg.addColorStop(0, P.css(P.shade(pal.grass, 1.04)));
+    gg.addColorStop(0.55, P.css(pal.grass));
+    gg.addColorStop(1, P.css(P.shade(pal.grass, 0.72)));
+    ctx.fillStyle = gg;
+    ctx.fillRect(0, 0, W, H);
+    var rg = ctx.createRadialGradient(W * 0.5, H * 0.34, 10, W * 0.5, H * 0.5, Math.max(W, H) * 0.95);
+    rg.addColorStop(0, 'rgba(255,255,255,.085)');
+    rg.addColorStop(0.6, 'rgba(255,255,255,0)');
+    rg.addColorStop(1, 'rgba(0,0,0,.22)');
+    ctx.fillStyle = rg;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.setTransform(dpr * this.scale, 0, 0, dpr * this.scale, dpr * this.ox, dpr * this.oy);
+
+    this.drawGround(pal);
+    this.drawLake(pal);
+    this.drawRoads(pal);
+    this.drawTrees(pal);
+
+    var order = this.dims.slice();
+    for (var i = 0; i < order.length; i++) this.drawZone(order[i], pal);
+
+    this.drawSynergy(pal);
+    this.drawWeather(pal);
+    this.drawBursts();
+    this.drawVignette();
+  };
+
+  Scene.prototype.drawGround = function (pal) {
+    var ctx = this.ctx;
+    ctx.save();
+    // 草地斑块（延伸到画布外，避免上下留白）
+    var rnd = mulberry32(4242);
+    for (var i = 0; i < 90; i++) {
+      var x = -320 + rnd() * 1640, y = -320 + rnd() * 1640;
+      var r = 18 + rnd() * 60;
+      ctx.fillStyle = P.css(P.shade(pal.grass, 0.9 + rnd() * 0.18), 0.42);
+      ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.62, rnd() * 3, 0, 6.283); ctx.fill();
+    }
+    ctx.restore();
+  };
+
+  Scene.prototype.drawLake = function (pal) {
+    var ctx = this.ctx, t = this.time;
+    ctx.save();
+    // 湖岸
+    ctx.fillStyle = P.css(P.shade(pal.ground, 1.12));
+    ctx.beginPath(); ctx.ellipse(CX, CY, 208, 158, 0, 0, 6.283); ctx.fill();
+
+    var g = ctx.createRadialGradient(CX - 40, CY - 40, 20, CX, CY, 200);
+    g.addColorStop(0, P.css(P.shade(pal.water, 1.28)));
+    g.addColorStop(0.65, P.css(pal.water));
+    g.addColorStop(1, P.css(P.shade(pal.water, 0.72)));
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.ellipse(CX, CY, 188, 140, 0, 0, 6.283); ctx.fill();
+
+    // 波纹
+    ctx.strokeStyle = P.css(P.shade(pal.water, 1.5), 0.35);
+    ctx.lineWidth = 2;
+    for (var i = 0; i < 4; i++) {
+      var ph = (t * 0.22 + i * 0.25) % 1;
+      ctx.globalAlpha = 0.35 * (1 - ph);
+      ctx.beginPath();
+      ctx.ellipse(CX + 10, CY - 6, 40 + ph * 130, 26 + ph * 92, 0.1, 0, 6.283);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    // 反光
+    ctx.fillStyle = P.css([255, 255, 255], 0.14);
+    ctx.beginPath(); ctx.ellipse(CX - 60, CY - 44, 54, 20, -0.5, 0, 6.283); ctx.fill();
+
+    ctx.fillStyle = P.css([255, 255, 255], 0.4);
+    ctx.font = '600 20px ' + FONT;
+    ctx.textAlign = 'center';
+    ctx.fillText('求 是 湖', CX, CY + 6);
+    ctx.font = '400 13px ' + FONT;
+    ctx.fillStyle = P.css([255, 255, 255], 0.24);
+    ctx.fillText('ZU  ·  ZIJINGANG', CX, CY + 30);
+    ctx.restore();
+  };
+
+  Scene.prototype.drawRoads = function (pal) {
+    var ctx = this.ctx;
+    var pts = this.dims.map(function (d) { return this.zones[d.id]; }, this);
+    ctx.save();
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    // 路基
+    ctx.strokeStyle = P.css(P.shade(pal.road, 0.6), 0.85);
+    ctx.lineWidth = 44;
+    this.pathPoly(pts); ctx.stroke();
+    // 路面
+    ctx.strokeStyle = P.css(pal.road);
+    ctx.lineWidth = 34;
+    this.pathPoly(pts); ctx.stroke();
+    // 中线
+    ctx.strokeStyle = P.css([255, 255, 255], 0.3);
+    ctx.lineWidth = 3;
+    ctx.setLineDash([16, 24]);
+    ctx.lineDashOffset = -this.time * 26;
+    this.pathPoly(pts); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  };
+
+  Scene.prototype.pathPoly = function (pts) {
+    var ctx = this.ctx;
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (var i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.closePath();
+  };
+
+  Scene.prototype.polyPoint = function (pts, u) {
+    var n = pts.length;
+    var seg = 1 / n;
+    var i = Math.min(n - 1, Math.floor(u / seg));
+    var f = (u - i * seg) / seg;
+    var a = pts[i], b = pts[(i + 1) % n];
+    return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, ang: Math.atan2(b.y - a.y, b.x - a.x) };
+  };
+
+  Scene.prototype.drawTrees = function (pal) {
+    var ctx = this.ctx;
+    for (var i = 0; i < this.trees.length; i++) {
+      var tr = this.trees[i];
+      var s = tr.s * 9;
+      var sway = Math.sin(this.time * 1.1 + tr.ph) * 1.6;
+      ctx.fillStyle = P.css(P.shade(pal.grass, 0.55), 0.5);
+      ctx.beginPath(); ctx.ellipse(tr.x + 2, tr.y + 3, s * 0.8, s * 0.34, 0, 0, 6.283); ctx.fill();
+      ctx.fillStyle = P.css(P.shade(pal.grass, 0.74 + (i % 3) * 0.08));
+      ctx.beginPath(); ctx.arc(tr.x + sway, tr.y - s * 0.5, s * 0.62, 0, 6.283); ctx.fill();
+      ctx.fillStyle = P.css(P.shade(pal.grass, 1.06), 0.7);
+      ctx.beginPath(); ctx.arc(tr.x + sway - s * 0.18, tr.y - s * 0.72, s * 0.36, 0, 6.283); ctx.fill();
+    }
+  };
+
+  Scene.prototype.drawSynergy = function (pal) {
+    if (!this.synergy.length) return;
+    var ctx = this.ctx, t = this.time;
+    var map = { life: ['food', 'dorm'], edu: ['study', 'sport'], city: ['move', 'culture'] };
+    var self = this;
+    this.synergy.forEach(function (id) {
+      var pair = map[id];
+      if (!pair) return;
+      var a = self.zones[pair[0]], b = self.zones[pair[1]];
+      ctx.save();
+      ctx.strokeStyle = P.css([255, 218, 120], 0.35 + 0.25 * Math.sin(t * 2.4));
+      ctx.lineWidth = 5;
+      ctx.setLineDash([14, 14]);
+      ctx.lineDashOffset = -t * 40;
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      ctx.restore();
+    });
+  };
+
+  // ---- 单个地块 ----
+  Scene.prototype.drawZone = function (d, pal) {
+    var ctx = this.ctx, self = this;
+    var t = this.anim[d.id];
+    var p = this.zones[d.id];
+    var tier = Math.max(1, Math.min(5, Math.round(t)));
+    var col = TIER_COLOR[tier];
+    var build = P.buildAt(t);
+    var pulse = this.pulse[d.id];
+    var sc = 1 + pulse * 0.07;
+
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.scale(sc, sc);
+    ctx.translate(-p.x, -p.y);
+
+    // 阴影
+    ctx.fillStyle = P.css([0, 0, 0], 0.26);
+    ctx.beginPath(); ctx.ellipse(p.x + 4, p.y + PAD_H / 2 - 6, PAD_W / 2 - 6, 26, 0, 0, 6.283); ctx.fill();
+
+    // 台基
+    ctx.fillStyle = P.css(P.shade(pal.ground, 0.7));
+    rr(ctx, p.x - PAD_W / 2, p.y - PAD_H / 2 + 8, PAD_W, PAD_H, 26); ctx.fill();
+
+    var pg = ctx.createLinearGradient(0, p.y - PAD_H / 2, 0, p.y + PAD_H / 2);
+    pg.addColorStop(0, P.css(P.shade(pal.ground, 1.22)));
+    pg.addColorStop(1, P.css(P.shade(pal.ground, 0.94)));
+    ctx.fillStyle = pg;
+    rr(ctx, p.x - PAD_W / 2, p.y - PAD_H / 2, PAD_W, PAD_H - 6, 26); ctx.fill();
+
+    // 台基描边（越高级越亮）
+    ctx.strokeStyle = P.css(col, 0.16 + (tier - 1) * 0.14);
+    ctx.lineWidth = 2.5;
+    rr(ctx, p.x - PAD_W / 2 + 1, p.y - PAD_H / 2 + 1, PAD_W - 2, PAD_H - 8, 25); ctx.stroke();
+
+    // 选中圈
+    if (this.selected === d.id) {
+      ctx.save();
+      ctx.strokeStyle = P.css([255, 255, 255], 0.75);
+      ctx.lineWidth = 3;
+      ctx.setLineDash([9, 9]);
+      ctx.lineDashOffset = -this.time * 30;
+      rr(ctx, p.x - PAD_W / 2 - 9, p.y - PAD_H / 2 - 9, PAD_W + 18, PAD_H + 12, 32);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 场馆类：先画跑道
+    if (d.motif === 'track') this.drawTrack(p, t);
+
+    // 建筑
+    var boxes = this.layout(d.motif, t);
+    boxes.sort(function (a, b) { return a.dy - b.dy; });
+    for (var i = 0; i < boxes.length; i++) {
+      var b = boxes[i];
+      this.box(p.x + b.dx, p.y + b.dy, b.w, b.h, b.hh, build, t, tier, d.motif);
+    }
+
+    // 母题装饰
+    this.decor(d, p, t, tier, col);
+
+    // 档位徽章
+    var bx = p.x + PAD_W / 2 - 6, by = p.y - PAD_H / 2 + 4;
+    ctx.fillStyle = P.css(P.shade(col, 0.28), 0.95);
+    ctx.beginPath(); ctx.arc(bx, by, 22, 0, 6.283); ctx.fill();
+    ctx.strokeStyle = P.css(col, 0.95); ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.fillStyle = P.css([255, 255, 255], 0.95);
+    ctx.font = 'bold 22px ' + FONT;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(String(tier), bx, by + 1);
+
+    // 名称
+    var ly = p.y + PAD_H / 2 + 40;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = P.css([0, 0, 0], 0.45);
+    ctx.font = 'bold 34px ' + FONT;
+    ctx.fillText(d.name, p.x + 1.5, ly + 2);
+    ctx.fillStyle = P.css([255, 255, 255], 0.96);
+    ctx.fillText(d.name, p.x, ly);
+
+    var ct = (this.contentLookup && this.contentLookup(d.id, tier)) || null;
+    if (ct) {
+      ctx.font = '600 20px ' + FONT;
+      ctx.fillStyle = P.css(col, 1);
+      ctx.fillText(ct.title, p.x, ly + 27);
+    }
+    ctx.font = '500 15px ' + FONT;
+    ctx.fillStyle = P.css([255, 255, 255], 0.62);
+    ctx.fillText('T' + tier + ' · ' + C.TIERS[tier - 1].name, p.x, ly + 49);
+
+    ctx.restore();
+  };
+
+  Scene.prototype.layout = function (motif, t) {
+    var hh = function (base, per) { return base + per * t; };
+    if (motif === 'steam') {
+      return [
+        { dx: 0, dy: 18, w: 112, h: 60, hh: hh(28, 9) },
+        { dx: -72, dy: 40, w: 54, h: 34, hh: hh(12, 3) }
+      ];
+    }
+    if (motif === 'window') {
+      return [
+        { dx: -58, dy: 30, w: 42, h: 34, hh: hh(34, 15) },
+        { dx: 0, dy: 16, w: 46, h: 36, hh: hh(42, 18) },
+        { dx: 60, dy: 34, w: 42, h: 34, hh: hh(30, 14) }
+      ];
+    }
+    if (motif === 'book') {
+      return [
+        { dx: -16, dy: 20, w: 98, h: 58, hh: hh(26, 10) },
+        { dx: 66, dy: 44, w: 46, h: 32, hh: hh(14, 5) }
+      ];
+    }
+    if (motif === 'track') {
+      return [
+        { dx: 0, dy: -14, w: 122, h: 40, hh: hh(12, 7) }
+      ];
+    }
+    if (motif === 'stage') {
+      return [
+        { dx: 0, dy: 40, w: 116, h: 54, hh: hh(14, 5) },
+        { dx: -74, dy: 52, w: 26, h: 26, hh: hh(34, 7) },
+        { dx: 74, dy: 52, w: 26, h: 26, hh: hh(34, 7) }
+      ];
+    }
+    // bus
+    return [
+      { dx: -22, dy: 34, w: 108, h: 44, hh: hh(20, 4) },
+      { dx: 52, dy: 20, w: 30, h: 28, hh: hh(38, 9) }
+    ];
+  };
+
+  Scene.prototype.box = function (x, y, w, h, hh, build, t, tier, motif) {
+    var ctx = this.ctx;
+    var dep = 12 + t * 2.5;
+    var top = y - hh;
+
+    // 右侧面
+    ctx.fillStyle = P.css(build.side);
+    ctx.beginPath();
+    ctx.moveTo(x + w / 2, y);
+    ctx.lineTo(x + w / 2 + dep, y - dep);
+    ctx.lineTo(x + w / 2 + dep, top - dep);
+    ctx.lineTo(x + w / 2, top);
+    ctx.closePath(); ctx.fill();
+
+    // 正面
+    ctx.fillStyle = P.css(build.wall);
+    ctx.fillRect(x - w / 2, top, w, hh);
+
+    // 顶面
+    ctx.fillStyle = P.css(build.roof);
+    ctx.beginPath();
+    ctx.moveTo(x - w / 2, top);
+    ctx.lineTo(x + w / 2, top);
+    ctx.lineTo(x + w / 2 + dep, top - dep);
+    ctx.lineTo(x - w / 2 + dep, top - dep);
+    ctx.closePath(); ctx.fill();
+
+    // 窗
+    if (hh > 22) {
+      var rows = Math.max(2, Math.floor(hh / 22));
+      var cols = Math.max(2, Math.floor(w / 22));
+      var padX = w * 0.14, padY = hh * 0.16;
+      var cw = (w - padX * 2) / cols, ch = (hh - padY * 2) / rows;
+      for (var r = 0; r < rows; r++) {
+        for (var c = 0; c < cols; c++) {
+          var lit = (tier >= 3) && ((r * 7 + c * 3 + Math.floor(this.time * 0.6 + r)) % 4 !== 0);
+          ctx.fillStyle = lit ? P.css(build.lit, 0.55 + 0.35 * Math.sin(this.time + r + c)) : P.css(build.win, 0.85);
+          ctx.fillRect(x - w / 2 + padX + c * cw + 1.5, top + padY + r * ch + 1.5, cw - 3.5, ch - 3.5);
+        }
+      }
+      if (tier >= 4) {
+        ctx.save();
+        ctx.shadowColor = P.css(build.lit, 0.9);
+        ctx.shadowBlur = 16;
+        ctx.fillStyle = P.css(build.lit, 0.12);
+        ctx.fillRect(x - w / 2, top, w, hh);
+        ctx.restore();
+      }
+    }
+  };
+
+  Scene.prototype.drawTrack = function (p, t) {
+    var ctx = this.ctx;
+    ctx.save();
+    ctx.strokeStyle = P.css([190, 96, 82], 0.85);
+    ctx.lineWidth = 16 + t * 1.5;
+    ctx.beginPath(); ctx.ellipse(p.x, p.y + 30, 94, 42, 0, 0, 6.283); ctx.stroke();
+    ctx.strokeStyle = P.css([255, 255, 255], 0.5);
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(p.x, p.y + 30, 94, 42, 0, 0, 6.283); ctx.stroke();
+    ctx.restore();
+  };
+
+  Scene.prototype.decor = function (d, p, t, tier, col) {
+    var ctx = this.ctx;
+    if (d.motif === 'steam') {
+      for (var i = 0; i < 4; i++) {
+        var ph = (this.time * 0.5 + i * 0.25) % 1;
+        var px = p.x - 10 + i * 12 + Math.sin(this.time + i) * 8;
+        var py = p.y + 10 - ph * (60 + t * 12);
+        ctx.fillStyle = P.css([255, 255, 255], 0.16 * (1 - ph));
+        ctx.beginPath(); ctx.arc(px, py, 8 + ph * 16, 0, 6.283); ctx.fill();
+      }
+      if (t > 4.4) {
+        var roofY = p.y + 18 - (28 + 9 * t) - 4;
+        ctx.fillStyle = P.css([255, 214, 110], 0.92);
+        ctx.beginPath(); ctx.arc(p.x, roofY - 8, 13, 0, 6.283); ctx.fill();
+        ctx.strokeStyle = P.css(col, 0.9); ctx.lineWidth = 2; ctx.stroke();
+      }
+    } else if (d.motif === 'stage') {
+      if (t > 4.2) {
+        ctx.save();
+        for (var b = 0; b < 5; b++) {
+          var a = -Math.PI / 2 + (b - 2) * 0.32 + Math.sin(this.time * 1.2 + b) * 0.06;
+          ctx.strokeStyle = P.css([255, 220, 150], 0.18);
+          ctx.lineWidth = 14;
+          ctx.beginPath();
+          ctx.moveTo(p.x + (b - 2) * 18, p.y + 30);
+          ctx.lineTo(p.x + (b - 2) * 18 + Math.cos(a) * 190, p.y + 30 + Math.sin(a) * 190);
+          ctx.stroke();
+        }
+        ctx.restore();
+        // 烟花
+        for (var f = 0; f < 3; f++) {
+          var ft = (this.time * 0.5 + f * 0.33) % 1;
+          var fx = p.x + Math.sin(f * 2.1) * 54, fy = p.y - 60 - ft * 70;
+          ctx.strokeStyle = P.css([255, 180 + f * 20, 200], 0.6 * (1 - ft));
+          ctx.lineWidth = 2;
+          for (var k = 0; k < 8; k++) {
+            var ang = k / 8 * 6.283 + ft * 2;
+            ctx.beginPath();
+            ctx.moveTo(fx + Math.cos(ang) * 6, fy + Math.sin(ang) * 6);
+            ctx.lineTo(fx + Math.cos(ang) * (10 + ft * 26), fy + Math.sin(ang) * (10 + ft * 26));
+            ctx.stroke();
+          }
+        }
+      }
+    } else if (d.motif === 'track' && t > 2.5) {
+      for (var r = 0; r < 3; r++) {
+        var ang2 = this.time * (0.5 + r * 0.12) + r * 2.1;
+        var rx = p.x + Math.cos(ang2) * 94, ry = p.y + 30 + Math.sin(ang2) * 42;
+        ctx.fillStyle = P.css([255, 255, 255], 0.8);
+        ctx.beginPath(); ctx.arc(rx, ry, 3.4, 0, 6.283); ctx.fill();
+      }
+    } else if (d.motif === 'book') {
+      // 一堆书
+      var bx = p.x - 84, by = p.y + 44;
+      var ws = [30, 25, 20];
+      for (var bi = 0; bi < 3; bi++) {
+        ctx.fillStyle = P.css([[168, 96, 68], [198, 132, 92], [222, 178, 120]][bi], 0.92);
+        ctx.fillRect(bx + (bi === 1 ? 2 : 0), by - bi * 8, ws[bi], 7);
+      }
+    } else if (d.motif === 'bus' && t > 2) {
+      // 候车的人
+      for (var q = 0; q < 3; q++) {
+        var qx = p.x - 18 + q * 16, qy = p.y + 44 + Math.sin(this.time * 1.5 + q) * 1.2;
+        ctx.fillStyle = P.css([40, 46, 52], 0.75);
+        ctx.beginPath(); ctx.arc(qx, qy - 8, 3.6, 0, 6.283); ctx.fill();
+        ctx.fillRect(qx - 3, qy - 4, 6, 9);
+      }
+    }
+
+    // 封神专精的小旗
+    var cap = this.caps[d.id];
+    if (cap) {
+      var tint = P.CAP_TINT[cap] || [255, 220, 140];
+      ctx.save();
+      ctx.strokeStyle = P.css([255, 255, 255], 0.55);
+      ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(p.x - 90, p.y - 18); ctx.lineTo(p.x - 90, p.y - 70); ctx.stroke();
+      ctx.fillStyle = P.css(tint, 0.95);
+      ctx.beginPath();
+      ctx.moveTo(p.x - 90, p.y - 70);
+      ctx.lineTo(p.x - 52, p.y - 61);
+      ctx.lineTo(p.x - 90, p.y - 50);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+  };
+
+  Scene.prototype.drawWeather = function (pal) {
+    var ctx = this.ctx, w = pal.weather;
+    if (w === 'rain' || w === 'drizzle') {
+      var a = w === 'rain' ? 0.28 : 0.14;
+      ctx.save();
+      ctx.strokeStyle = P.css([200, 220, 240], a);
+      ctx.lineWidth = w === 'rain' ? 2.4 : 1.3;
+      for (var i = 0; i < this.drops.length; i++) {
+        var d = this.drops[i];
+        var y = (d.y + this.time * d.sp) % 1080 - 40;
+        var x = (d.x + y * 0.18) % 1000;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + d.ln * 0.18, y + d.ln);
+        ctx.stroke();
+      }
+      ctx.restore();
+    } else if (w === 'petal') {
+      ctx.save();
+      for (var j = 0; j < this.petals.length; j++) {
+        var p = this.petals[j];
+        var yy = (p.y + this.time * p.sp) % 1040;
+        var xx = (p.x + Math.sin(this.time * 0.8 + p.ph) * 26 + 1000) % 1000;
+        ctx.fillStyle = P.css([255, 190, 210], 0.42);
+        ctx.beginPath(); ctx.ellipse(xx, yy, p.r, p.r * 0.62, this.time + p.ph, 0, 6.283); ctx.fill();
+      }
+      ctx.restore();
+    } else if (w === 'sparkle') {
+      ctx.save();
+      for (var k = 0; k < this.stars.length; k++) {
+        var s = this.stars[k];
+        var tw = 0.35 + 0.65 * Math.abs(Math.sin(this.time * 1.6 + s.ph));
+        ctx.fillStyle = P.css([255, 248, 210], 0.55 * tw);
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r * tw * 1.6, 0, 6.283); ctx.fill();
+      }
+      // 少量金线
+      ctx.strokeStyle = P.css([255, 226, 150], 0.25);
+      ctx.lineWidth = 1.5;
+      for (var m = 0; m < 6; m++) {
+        var ax = 120 + m * 150, ay = 120 + (m % 3) * 100;
+        ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax + 40, ay + 22); ctx.stroke();
+      }
+      ctx.restore();
+    }
+  };
+
+  Scene.prototype.drawBursts = function () {
+    var ctx = this.ctx;
+    for (var i = 0; i < this.bursts.length; i++) {
+      var b = this.bursts[i];
+      var a = Math.max(0, 1 - b.t / b.life);
+      ctx.fillStyle = P.css(b.c, a * 0.95);
+      ctx.beginPath(); ctx.arc(b.x, b.y, b.r * a + 0.6, 0, 6.283); ctx.fill();
+    }
+  };
+
+  Scene.prototype.drawVignette = function () {
+    var ctx = this.ctx;
+    ctx.save();
+    var g = ctx.createRadialGradient(CX, CY, 280, CX, CY, 820);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(1, 'rgba(0,0,0,0.45)');
+    ctx.fillStyle = g;
+    ctx.fillRect(-500, -500, 2000, 2000);
+    ctx.restore();
+  };
+
+  return { Scene: Scene };
+});
+
+</script>
+<script>
+/* h5/ui.js */
+/* 紫金港改造计划 · 浏览器界面层 */
+(function () {
+  'use strict';
+
+  var Z = window.ZJU;
+  var DIMS = Z.DIMS, CONTENT = Z.CONTENT, TIERS = Z.TIERS;
+  var KEY = 'zju.remake.v1';
+
+  var state = null, scene = null, queue = [], sel = null, muted = false, toastTimer = null;
+  var Track = null, runStartTs = 0, cardsUsed = [], lastAction = null;
+  var sheetOpenedAt = 0;   // 用来吃掉「打开面板那一下」的后续 click
+
+  function $(id) { return document.getElementById(id); }
+  function el(tag, cls, txt) {
+    var d = document.createElement(tag);
+    if (cls) d.className = cls;
+    if (txt !== undefined) d.textContent = txt;
+    return d;
+  }
+  function show(id) {
+    ['intro', 'game', 'result'].forEach(function (s) {
+      $(s).classList.toggle('active', s === id);
+    });
+  }
+
+  /* ----------------------------- 音效 ----------------------------- */
+  var ac = null;
+  function beep(freq, dur, type, vol) {
+    if (muted) return;
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      if (!ac) ac = new AC();
+      var o = ac.createOscillator(), g = ac.createGain();
+      o.type = type || 'sine';
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(0, ac.currentTime);
+      g.gain.linearRampToValueAtTime(vol || 0.05, ac.currentTime + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + (dur || 0.16));
+      o.connect(g); g.connect(ac.destination);
+      o.start(); o.stop(ac.currentTime + (dur || 0.16) + 0.02);
+    } catch (e) { /* 忽略 */ }
+  }
+  function sfxUp() { beep(520, 0.1, 'triangle', 0.05); setTimeout(function () { beep(780, 0.14, 'triangle', 0.045); }, 70); }
+  function sfxDown() { beep(420, 0.12, 'sawtooth', 0.03); setTimeout(function () { beep(260, 0.16, 'sawtooth', 0.03); }, 70); }
+  function sfxTap() { beep(660, 0.05, 'sine', 0.03); }
+
+  /* ----------------------------- 数据上报 ----------------------------- */
+  function initTrack() {
+    Track = Z.Track;
+    if (!Track) return;
+    var qm = /collect=([^&]+)/.exec(location.search);
+    Track.configure({
+      endpoint: qm ? decodeURIComponent(qm[1]) : (Z.TRACK.endpoint || ''),
+      enabled: Z.TRACK.enabled !== false && !/notrack=1/.test(location.search),
+      debug: Z.TRACK.debug,
+      version: Z.TRACK.version,
+      env: 'h5'
+    });
+    window.__zjuTrack = Track;
+  }
+
+  function trackStart(mode) {
+    if (!Track) return;
+    runStartTs = Date.now();
+    cardsUsed = [];
+    lastAction = null;
+    Track.startRun({
+      mode: mode,
+      year: state.grade || null,
+      points: state.points,
+      tiers: Z.clone(state.tiers)
+    });
+  }
+
+  /* ---------------------- 数值覆盖（设置页的修改） ---------------------- */
+  function applyConfigOverride(o) {
+    if (!o) return;
+    if (typeof o.points === "number") Z.INIT_POINTS = o.points;
+    if (typeof o.rounds === "number") Z.MAX_ROUNDS = o.rounds;
+    if (Object.prototype.toString.call(o.roundPoints) === "[object Array]" && o.roundPoints.length) {
+      Z.ROUND_POINTS = o.roundPoints.slice();
+      Z.MAX_ROUNDS = Z.ROUND_POINTS.length;
+      Z.INIT_POINTS = Z.ROUND_POINTS.reduce(function (a, b) { return a + b; }, 0);
+    }
+    if (typeof o.carryRatio === "number") Z.CARRY_RATIO = Math.max(0, Math.min(1, o.carryRatio));
+    if (typeof o.itemsEnabled === "boolean") Z.ITEMS_ENABLED = o.itemsEnabled;
+    if (Object.prototype.toString.call(o.items) === "[object Array]" && o.items.length) Z.ITEMS = o.items;
+    if (Object.prototype.toString.call(o.stepCost) === "[object Array]" && o.stepCost.length === 4) {
+      Z.STEP_COST = o.stepCost.map(function (v) { return Math.max(0, Math.round(v)); });
+    }
+    if (typeof o.breadthBase === "number") Z.BREADTH_BASE = o.breadthBase;
+    if (o.inits) {
+      Z.DIMS.forEach(function (d) {
+        var v = o.inits[d.id];
+        if (typeof v === "number" && v >= 1 && v <= 5) d.init = Math.round(v);
+      });
+    }
+  }
+
+  function loadConfigOverride() {
+    if (window.__ZJU_CONFIG__) { applyConfigOverride(window.__ZJU_CONFIG__); return Promise.resolve(); }
+    try {
+      return fetch("/config-edit", { cache: "no-store" }).then(function (r) { return r.json(); })
+        .then(function (d) { applyConfigOverride(d && d.current); }).catch(function () { });
+    } catch (e) { return Promise.resolve(); }
+  }
+
+  /* ---------------------- 文案覆盖（编辑器的修改） ---------------------- */
+  function applyOverrides(data) {
+    if (!data) return;
+    if (data.achievements && data.achievements.length) Z.ACHIEVEMENTS = data.achievements;
+    if (data.titles && data.titles.length) Z.TITLES = data.titles;
+    if (!data.content) return;
+    Object.keys(data.content).forEach(function (k) {
+      if (!CONTENT[k]) return;
+      var src = data.content[k];
+      (src.tiers || []).forEach(function (t, i) {
+        var b = CONTENT[k].tiers[i];
+        if (!b) return;
+        if (t.title != null) b.title = t.title;
+        if (t.desc != null) b.desc = t.desc;
+        if (t.tags && t.tags.length) b.tags = t.tags;
+      });
+      (src.caps || []).forEach(function (t, i) {
+        var b = CONTENT[k].caps[i];
+        if (!b) return;
+        if (t.name != null) b.name = t.name;
+        if (t.desc != null) b.desc = t.desc;
+      });
+    });
+    (data.events || []).forEach(function (e) {
+      var list = Z.EVENTS || [];
+      for (var i = 0; i < list.length; i++) {
+        if (list[i].id !== e.id) continue;
+        if (e.title != null) list[i].title = e.title;
+        if (e.text != null) list[i].text = e.text;
+        (e.options || []).forEach(function (o, k) {
+          if (!list[i].options[k]) return;
+          if (typeof o === 'string') { list[i].options[k].label = o; return; }
+          Object.keys(o).forEach(function (key) { list[i].options[k][key] = o[key]; });
+        });
+        break;
+      }
+    });
+  }
+
+  function loadOverrides() {
+    if (window.__ZJU_CONTENT__) { applyOverrides(window.__ZJU_CONTENT__); return Promise.resolve(); }
+    try {
+      return fetch("/content-edit", { cache: "no-store" }).then(function (r) { return r.json(); })
+        .then(applyOverrides).catch(function () { });
+    } catch (e) { return Promise.resolve(); }
+  }
+
+  /* ----------------------------- 渲染 ----------------------------- */
+  function refresh() {
+    var sm = Z.summary(state);
+    $('pts').textContent = state.points;
+    $('ach').textContent = sm.achievements.length;
+    $('hud').classList.remove('flash');
+    void $('hud').offsetWidth;
+    $('hud').classList.add('flash');
+
+    var ids = sm.achievements.map(function (a) { return a.id; });
+    var s2 = { tiers: state.tiers, caps: state.caps, synergyIds: ids };
+    scene.setState(s2);
+    renderStrip();
+    renderRound();
+    renderItems();
+    $('btnUndo').style.opacity = state.history.length ? 1 : 0.35;
+
+    if (state.points < 2 && !sel) {
+      var h = $('hint');
+      h.textContent = '点数用完了 · 点右上角「提交」看结果';
+      h.style.opacity = 1;
+    }
+  }
+
+  function renderItems() {
+    var bar = $("itemBar");
+    if (!bar) return;
+    bar.innerHTML = "";
+    if (!Z.ITEMS_ENABLED || !Z.ITEMS) return;
+    Z.ITEMS.forEach(function (def) {
+      var n = Z.itemCount ? Z.itemCount(state, def.id) : 0;
+      if (!n) return;
+      var b = el("button", "item-chip");
+      b.innerHTML = "<b>" + def.name + "</b>" + (n > 1 ? "<span class=\"cnt\">×" + n + "</span>" : "");
+      b.title = def.desc || "";
+      b.addEventListener("click", function () { useItem(def); });
+      bar.appendChild(b);
+    });
+  }
+
+  function useItem(def) {
+    if (def.type === "multiply") {
+      var r = Z.useMultiply(state, def.id);
+      if (!r.ok) { toast(r.msg); return; }
+      sfxUp();
+      toast(def.name + " 生效：" + r.before + " → " + r.after + " 点");
+      if (Track) Track.action({ type: "item", item: def.id, before: r.before, after: r.after, points: state.points, round: state.round });
+      persist(); refresh(); updateSheet();
+      return;
+    }
+    if (def.type === "freeUp") {
+      pendingItem = def.id;
+      closeSheet();
+      toast("点一个地块，用「" + def.name + "」免费升一档");
+      return;
+    }
+  }
+
+  function renderRound() {
+    var max = Z.MAX_ROUNDS || 4;
+    var r = state.round || 1;
+    var locked = Z.isLocked ? Z.isLocked(state) : false;
+    var dims = (state.roundDims || []).map(function (id) { return Z.dim(id).name; });
+
+    $('roundInfo').innerHTML = locked
+      ? '四个回合都用完了 · 不能再改，点右边结算'
+      : '第 <b>' + r + '/' + max + '</b> 回合' +
+        (dims.length ? ' · 本回合已开工 <b>' + dims.join('、') + '</b>' : ' · 本回合还没动工');
+
+    var btn = $('btnRound');
+    btn.textContent = locked ? '提交方案' : '结束本回合';
+    btn.classList.toggle('final', locked);
+  }
+
+  function nextRound() {
+    if (Z.isLocked(state)) { endRun(); return; }
+    var r = Z.endRound(state);
+    if (!r.ok) { toast(r.msg); return; }
+    beep(620, 0.06, 'sine', 0.03);
+    persist();
+    refresh();
+    updateSheet();
+    var grant = Z.grantFor ? Z.grantFor(r.round) : 0;
+    if (r.locked) {
+      toast('回合用完了，点「提交方案」看结果');
+    } else if (state.events < eventTotal()) {
+      // 除最后一回合外，每次回合结束都插一张事件卡
+      pendingToast = '第 ' + r.round + ' 回合开始 · 本回合 +' + grant + ' 点';
+      setTimeout(function () { openEvent(); }, 280);
+    } else {
+      toast('第 ' + r.round + ' 回合开始 · 本回合 +' + grant + ' 点');
+    }
+  }
+
+  function renderStrip() {
+    var wrap = $('strip');
+    if (!wrap.children.length) {
+      DIMS.forEach(function (d) {
+        var p = el('div', 'pill');
+        p.dataset.id = d.id;
+        p.innerHTML = '<div class="pc">' + d.name + '</div><div class="pips"></div><div class="pn"></div>';
+        p.addEventListener('click', function () { openSheet(d.id); });
+        wrap.appendChild(p);
+      });
+    }
+    for (var i = 0; i < wrap.children.length; i++) {
+      var p = wrap.children[i], d = DIMS[i], t = state.tiers[d.id];
+      var pips = p.querySelector('.pips');
+      pips.innerHTML = '';
+      for (var k = 1; k <= 5; k++) {
+        var it = el('i', k <= t ? 'on' : '');
+        if (k === 5 && k <= t) it.className += ' t5';
+        pips.appendChild(it);
+      }
+      p.querySelector('.pn').textContent = TIERS[t - 1].name;
+      p.classList.toggle('sel', sel === d.id);
+    }
+  }
+
+  /* ----------------------------- 抽屉 ----------------------------- */
+  function openSheet(id) {
+    sel = id;
+    sheetOpenedAt = Date.now();
+    scene.select(id);
+    sfxTap();
+    $('hint').style.opacity = 0;
+    $('sheet').classList.add('show');
+    $('sheetMask').classList.remove('hidden');
+    requestAnimationFrame(function () { $('sheetMask').classList.add('show'); });
+    renderStrip();
+    updateSheet();
+  }
+  function closeSheet() {
+    sel = null;
+    scene.select(null);
+    $('sheet').classList.remove('show');
+    $('sheetMask').classList.remove('show');
+    setTimeout(function () { $('sheetMask').classList.add('hidden'); }, 260);
+    renderStrip();
+  }
+
+  function updateSheet() {
+    if (!sel) return;
+    var d = Z.dim(sel), t = state.tiers[sel], c = CONTENT[sel];
+    var info = c.tiers[t - 1], tier = TIERS[t - 1];
+    $('shTag').textContent = d.name;
+    $('shTier').textContent = 'T' + t + ' · ' + tier.name;
+    $('shPeer').textContent = '横向对比：' + tier.peer;
+    $('shTitle').textContent = info.title;
+
+    var desc = info.desc;
+    if (t === 5 && state.caps[sel]) {
+      var cap = c.caps.filter(function (x) { return x.id === state.caps[sel]; })[0];
+      if (cap) desc = cap.desc;
+    }
+    $('shDesc').textContent = desc;
+
+    var tagsEl = $('shTags');
+    tagsEl.innerHTML = '';
+    var tags = info.tags;
+    if (t === 5 && state.caps[sel]) {
+      var cp = c.caps.filter(function (x) { return x.id === state.caps[sel]; })[0];
+      if (cp) tags = cp.tags;
+    }
+    tags.forEach(function (x) { tagsEl.appendChild(el('span', '', x)); });
+
+    var pips = $('shPips');
+    pips.innerHTML = '';
+    for (var k = 1; k <= 5; k++) pips.appendChild(el('i', k <= t ? 'on' : ''));
+
+    // 税与回合说明
+    var taxEl = $('shTax');
+    var ti = Z.taxInfo ? Z.taxInfo(state, sel) : null;
+    var maxR = Z.MAX_ROUNDS || 4;
+    var locked = Z.isLocked && Z.isLocked(state);
+    var others = (state.roundDims || []).filter(function (x) { return x !== sel; });
+    var lines = [];
+    if (locked) {
+      lines.push('四个回合已经用完了，不能再改——点下面「提交方案」结算。');
+    } else if (ti) {
+      if (Z.inRound && Z.inRound(state, sel)) {
+        lines.push('这个维度本回合已经在动工了，继续升不再收广度税。');
+      } else if (ti.breadth > 0) {
+        lines.push('本回合已经开工 ' + others.length + ' 个维度，现在新开这个要多付 <b>+' + ti.breadth + '</b> 点广度税。');
+      } else {
+        lines.push('本回合第一件事，不收广度税。');
+      }
+      if (ti.step > 0) lines.push('这一档 <b>' + ti.step + '</b> 点。');
+    }
+    if (lines.length) {
+      taxEl.innerHTML = lines.join(' ');
+      taxEl.classList.add('on');
+    } else {
+      taxEl.classList.remove('on');
+    }
+
+    var act = $('shActions');
+    act.innerHTML = '';
+    act.className = 'sheet-actions' + (t === 4 ? ' col' : '');
+
+    // 降档
+    var down = el('button', 'btn-down');
+    var rf = Z.refund(state, sel);
+    down.innerHTML = t > 1 ? ('降一档 <small>返还 ' + rf + ' 点</small>') : ('已到底 <small>—</small>');
+    if (t <= 1) down.disabled = true;
+    down.addEventListener('click', function () { doDown(sel); });
+
+    if (t < 5) {
+      var cost = Z.cost(state, sel);
+      var brTax = (Z.taxInfo && Z.taxInfo(state, sel).breadth) || 0;
+      var surTxt = brTax ? '（含广度税 +' + brTax + '）' : '';
+      if (t === 4) {
+        var box = el('div', 'cap-pick');
+        box.appendChild(el('div', 'cap-title',
+          state.points >= cost
+            ? '升到「封神」二选一 · 花 ' + cost + ' 点' + surTxt
+            : '点数不够（需要 ' + cost + ' 点，你还有 ' + state.points + ' 点）'));
+        c.caps.forEach(function (cap) {
+          var b = el('button', 'cap-btn');
+          b.innerHTML = '<b>' + cap.name + '</b><small>' + cap.desc + '</small>';
+          if (state.points < cost) b.disabled = true;
+          b.addEventListener('click', function () { doUp(sel, cap.id); });
+          box.appendChild(b);
+        });
+        act.appendChild(box);
+        act.appendChild(down);
+      } else {
+        act.appendChild(down);
+        var up = el('button', 'btn-up');
+        up.innerHTML = '升一档 <small>' +
+          (state.points >= cost ? '花 ' + cost + ' 点' + surTxt : '还差 ' + (cost - state.points) + ' 点' + surTxt) +
+          '</small>';
+        if (state.points < cost) up.disabled = true;
+        up.addEventListener('click', function () { doUp(sel, null); });
+        act.appendChild(up);
+      }
+    } else {
+      act.appendChild(down);
+      var done = el('button', 'btn-up');
+      var capName = state.caps[sel]
+        ? (c.caps.filter(function (x) { return x.id === state.caps[sel]; })[0] || {}).name
+        : '封神';
+      done.innerHTML = '已封神 <small>' + (capName || '') + '</small>';
+      done.disabled = true;
+      act.appendChild(done);
+    }
+  }
+
+  /* ----------------------------- 操作 ----------------------------- */
+  function toast(msg) {
+    var t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove('show'); }, 1700);
+  }
+
+  function doUp(id, capId) {
+    var from = state.tiers[id];
+    var r = Z.upgrade(state, id, capId);
+    if (!r.ok) { toast(r.msg); return; }
+    sfxUp();
+    toast(Z.dim(id).name + ' +1 档 · 花了 ' + r.cost + ' 点');
+    lastAction = { type: 'upgrade', dim: id, from: from, to: r.tier, cap: capId || null };
+    if (Track) Track.action({
+      type: 'upgrade', dim: id, from: from, to: r.tier, cost: r.cost,
+      cap: capId || null, points: state.points, round: state.round, ops: state.ops
+    });
+    afterOp();
+  }
+  function doDown(id) {
+    var from = state.tiers[id];
+    var r = Z.downgrade(state, id);
+    if (!r.ok) { toast(r.msg); return; }
+    sfxDown();
+    toast(Z.dim(id).name + ' -1 档 · 退回 ' + r.refund + ' 点');
+    lastAction = { type: 'downgrade', dim: id, from: from, to: r.tier };
+    if (Track) Track.action({
+      type: 'downgrade', dim: id, from: from, to: r.tier, refund: r.refund,
+      points: state.points, round: state.round, ops: state.ops
+    });
+    afterOp();
+  }
+
+  function doItemUp(id) {
+    var from = state.tiers[id];
+    var r = Z.useFreeUp(state, id, null);
+    if (!r.ok) {
+      if (r.msg === "need-cap") { toast("T4→T5 要先选专精，请用点数升"); return; }
+      toast(r.msg); return;
+    }
+    sfxUp();
+    toast("升档卡：" + Z.dim(id).name + " → T" + r.tier);
+    if (Track) Track.action({ type: "item", item: "up", dim: id, from: from, to: r.tier, points: state.points, round: state.round });
+    afterOp();
+  }
+
+  function afterOp() {
+    persist();
+    refresh();
+    updateSheet();
+    $('hint').style.opacity = 0;
+  }
+
+  /* 事件改为「回合结束时抽一张」，开局不再抽卡 */
+  function eventTotal() { return Math.max(1, (Z.MAX_ROUNDS || 4) - 1); }
+
+  /* ----------------------------- 事件 ----------------------------- */
+  var curEvent = null;
+  var pendingToast = '';
+  var pendingItem = '';
+  function openEvent() {
+    curEvent = queue[state.events];
+    if (!curEvent) return;
+    $('evIdx').textContent = Math.min(state.events + 1, eventTotal()) + '/' + eventTotal();
+    $('evTitle').textContent = curEvent.title;
+    $('evText').textContent = curEvent.text;
+    $('evResult').classList.add('hidden');
+    $('evOpts').classList.remove('hidden');
+    var opts = $('evOpts');
+    opts.innerHTML = '';
+    curEvent.options.forEach(function (o, i) {
+      var b = el('button', 'ev-opt');
+      var can = Z.afford(state, o);
+      b.innerHTML = '<span>' + o.label + '</span>' + (o.cost ? '<span class="cost">-' + o.cost + ' 点</span>' : '');
+      if (!can) b.disabled = true;
+      b.addEventListener('click', function () { pickEvent(i); });
+      opts.appendChild(b);
+    });
+    $('evModal').classList.remove('hidden');
+    beep(300, 0.2, 'sine', 0.04);
+  }
+
+  function pickEvent(i) {
+    var o = curEvent.options[i];
+    var text = Z.apply(state, o);
+    state.events += 1;
+    cardsUsed.push(curEvent.id);
+    if (Track) Track.card({
+      id: curEvent.id, title: curEvent.title, option: i,
+      label: o.label, cost: o.cost || 0,
+      points: state.points,
+      tiers: Z.clone(state.tiers)
+    });
+    persist();
+    $('evOpts').classList.add('hidden');
+    $('evResultText').textContent = text;
+    $('evResult').classList.remove('hidden');
+    beep(480, 0.14, 'triangle', 0.04);
+    refresh();
+  }
+
+  function closeEvent() {
+    $('evModal').classList.add('hidden');
+    updateSheet();
+    if (pendingToast) { toast(pendingToast); pendingToast = ''; }
+  }
+
+  /* ----------------------------- 撤销 ----------------------------- */
+  function undo() {
+    var r = Z.undo(state);
+    if (!r.ok) { toast(r.msg); return; }
+    sfxTap();
+    if (Track) Track.action({
+      type: 'undo', undone: lastAction,
+      points: state.points, ops: state.ops
+    });
+    lastAction = { type: 'undo' };
+    persist();
+    refresh();
+    updateSheet();
+    toast('已撤销一步');
+  }
+
+  /* ----------------------------- 结算 ----------------------------- */
+  function endRun() {
+    // 回合用完后必须能提交，否则「一步没改 + 空过四个回合」会卡死
+    var locked = Z.isLocked && Z.isLocked(state);
+    if (state.ops === 0 && !locked) { toast("先改点什么吧（或者把四个回合空过完，也会进入结算）"); return; }
+    var sm = Z.summary(state);
+    if (Track) Track.endRun({
+      title: sm.title.name,
+      achievements: sm.achievements.map(function (a) { return a.id; }),
+      year: state.grade || null,
+      pointsLeft: state.points, pointsSpent: Z.budget(state), round: state.round,
+      ops: state.ops, durationMs: runStartTs ? Date.now() - runStartTs : 0,
+      tiers: Z.clone(state.tiers),
+      caps: Z.clone(state.caps),
+      cards: cardsUsed.slice()
+    });
+
+    $('resTitle').textContent = sm.title.name;
+    $('resLine').textContent = sm.title.line;
+
+    var ach = $('resAch');
+    ach.innerHTML = '';
+    if (sm.achievements.length) {
+      sm.achievements.forEach(function (a) {
+        ach.appendChild(el('span', 'ach-badge', a.name));
+      });
+    } else {
+      ach.appendChild(el('span', 'ach-none', '这一局没有解锁任何成就'));
+    }
+
+    var rows = $('resDims');
+    rows.innerHTML = '';
+    DIMS.forEach(function (d) {
+      var t = state.tiers[d.id], info = CONTENT[d.id].tiers[t - 1];
+      var row = el('div', 'res-row');
+      var bar = '';
+      for (var k = 1; k <= 5; k++) bar += '<i class="' + (k <= t ? 'on' : '') + '"></i>';
+      row.innerHTML = '<div class="rn">' + d.name + '</div>' +
+        '<div class="rt">T' + t + ' ' + info.title + '</div>' +
+        '<div class="rbar">' + bar + '</div>' +
+        '<div class="rp">' + (t > d.init ? '+' + (t - d.init) : '—') + '</div>';
+      rows.appendChild(row);
+    });
+
+    state.finished = true;
+    try { localStorage.removeItem(KEY); } catch (e) { }
+    show('result');
+    sfxUp();
+  }
+
+  /* ----------------------------- 分享图 ----------------------------- */
+  function drawShare() {
+    var sm = Z.summary(state);
+    var cv = $('shareCanvas'), ctx = cv.getContext('2d');
+    var W = 750, H = 1180;
+    var g = ctx.createLinearGradient(0, 0, W, H);
+    g.addColorStop(0, '#141b22');
+    g.addColorStop(0.5, '#0f151b');
+    g.addColorStop(1, '#1a222b');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+    var rg = ctx.createRadialGradient(W * 0.5, 180, 40, W * 0.5, 200, 520);
+    rg.addColorStop(0, 'rgba(255,190,90,.20)');
+    rg.addColorStop(1, 'rgba(255,190,90,0)');
+    ctx.fillStyle = rg; ctx.fillRect(0, 0, W, 600);
+
+    ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(255,215,106,.85)';
+    ctx.font = '500 22px "PingFang SC","Microsoft YaHei",sans-serif';
+    ctx.fillText('紫 金 港 改 造 计 划 · 第 1 学 期', 64, 96);
+
+    ctx.fillStyle = '#f2f7fb';
+    ctx.font = 'bold 46px "PingFang SC","Microsoft YaHei",sans-serif';
+    ctx.fillText('我把浙大改成了', 64, 168);
+
+    ctx.font = 'bold 54px "PingFang SC","Microsoft YaHei",sans-serif';
+    ctx.fillStyle = '#ffe08a';
+    ctx.fillText('「' + sm.title.name + '」', 64, 238);
+
+    // 成就
+    ctx.textAlign = 'left';
+    if (sm.achievements.length) {
+      ctx.fillStyle = '#6fe0bd';
+      ctx.font = '500 24px "PingFang SC",sans-serif';
+      var names = sm.achievements.map(function (a) { return a.name; }).join('   ');
+      ctx.fillText(names, 64, 300);
+    }
+
+    // 六维
+    var y0 = 380;
+    DIMS.forEach(function (d, i) {
+      var t = state.tiers[d.id], info = CONTENT[d.id].tiers[t - 1];
+      var y = y0 + i * 82;
+      ctx.fillStyle = 'rgba(255,255,255,.04)';
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(64, y - 34, 622, 66, 16) : ctx.rect(64, y - 34, 622, 66);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffe08a';
+      ctx.font = 'bold 30px "PingFang SC",sans-serif';
+      ctx.fillText(d.name, 92, y + 10);
+
+      ctx.fillStyle = '#cfdae4';
+      ctx.font = '500 24px "PingFang SC",sans-serif';
+      ctx.fillText('T' + t + ' ' + info.title, 140, y + 9);
+
+      for (var k = 0; k < 5; k++) {
+        ctx.fillStyle = k < t ? '#ffd76a' : '#2c3742';
+        ctx.fillRect(540 + k * 26, y - 6, 18, 12);
+      }
+    });
+
+    ctx.fillStyle = '#5d6a77';
+    ctx.font = '500 20px "PingFang SC",sans-serif';
+    ctx.fillText('同人创作 · 与浙江大学官方无关', 64, H - 54);
+
+    ctx.fillStyle = '#ffd76a';
+    ctx.font = '500 20px "PingFang SC",sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText('第 ' + (state.round || 1) + '/' + (Z.MAX_ROUNDS || 4) + ' 回合结束', W - 64, H - 54);
+
+    $('shareDl').href = cv.toDataURL('image/png');
+    $('shareWrap').classList.remove('hidden');
+  }
+
+  /* ----------------------------- 存档 ----------------------------- */
+  function persist() {
+    try { localStorage.setItem(KEY, Z.save(state)); } catch (e) { }
+  }
+  function readSave() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (!raw) return null;
+      var s = Z.load(raw);
+      if (!s || s.finished) return null;
+      return s;
+    } catch (e) { return null; }
+  }
+
+  /* ----------------------------- 启动 ----------------------------- */
+  /* 手势自测：模拟「点地块 → 浏览器补发 click」，
+   * 用来确认面板不会被那一下 click 当场关掉（?demo=tap） */
+  function runTapTest() {
+    var cv = $('map');
+    var r = cv.getBoundingClientRect();
+    var p = scene.zones.food;
+    var x = r.left + scene.ox + p.x * scene.scale;
+    var y = r.top + scene.oy + p.y * scene.scale;
+    cv.dispatchEvent(new PointerEvent('pointerdown', {
+      clientX: x, clientY: y, bubbles: true, pointerType: 'touch', isPrimary: true
+    }));
+    var opened = $('sheet').classList.contains('show');
+    setTimeout(function () {
+      var hit = document.elementFromPoint(x, y);
+      if (hit) hit.dispatchEvent(new MouseEvent('click', { clientX: x, clientY: y, bubbles: true }));
+      setTimeout(function () {
+        var still = $('sheet').classList.contains('show');
+        var h = $('hint');
+        h.textContent = 'TAP-TEST opened=' + opened + ' afterClick=' + still +
+          ' hit=' + (hit ? (hit.id || hit.className) : 'null');
+        h.style.cssText = 'position:fixed;z-index:9999;top:40px;left:8px;right:8px;' +
+          'transform:none;opacity:1;background:#000;color:#0f0;padding:10px;' +
+          'border-radius:0;font:13px monospace;text-align:center';
+      }, 150);
+    }, 80);
+  }
+
+  /* 开局：先选年级，再进游戏 */
+  function openGradePicker() {
+    var box = $('gradeOpts');
+    box.innerHTML = '';
+    (Z.GRADES || []).forEach(function (g) {
+      var b = document.createElement('button');
+      b.className = 'grade-opt';
+      b.innerHTML = '<b>' + g.name + '</b><small>' + g.desc + '</small><span class="arrow">→</span>';
+      b.addEventListener('click', function () {
+        $('gradeModal').classList.add('hidden');
+        beep(520, 0.1, 'triangle', 0.04);
+        beginRun('new', g.id);
+      });
+      box.appendChild(b);
+    });
+    $('gradeModal').classList.remove('hidden');
+  }
+
+  function beginRun(mode, grade) {
+    state = Z.createState();
+    state.grade = grade || null;
+    queue = Z.drawQueue(Math.max(1, (Z.MAX_ROUNDS || 4) - 1)).slice();
+    sel = null;
+    if (Track) Track.setProfile({ year: state.grade });
+    trackStart(mode);
+    show('game');
+    scene.resize();
+    refresh();
+    setTimeout(function () { $('hint').style.opacity = 1; }, 100);
+  }
+
+  function boot() {
+    var started = false;
+    function go() { if (started) return; started = true; startUI(); }
+    try {
+      Promise.all([loadConfigOverride(), loadOverrides()]).then(go).catch(go);
+      setTimeout(go, 500);
+    } catch (e) { go(); }
+  }
+
+  function startUI() {
+    initTrack();
+    scene = new Z.Scene($('map'));
+    scene.contentLookup = function (id, tier) { return CONTENT[id].tiers[tier - 1]; };
+    scene.start();
+    window.__zjuScene = scene;
+
+    window.addEventListener('resize', function () { scene.resize(); });
+
+    $('map').addEventListener('pointerdown', function (e) {
+      var id = scene.hitTest(e.clientX, e.clientY);
+      if (!id) return;
+      if (pendingItem === 'up') {
+        pendingItem = '';
+        doItemUp(id);
+        return;
+      }
+      openSheet(id);
+    });
+
+    $('btnStart').addEventListener('click', openGradePicker);
+
+    $('btnResume').addEventListener('click', function () {
+      var s = readSave();
+      if (!s) return;
+      state = s;
+      if (Track) Track.setProfile({ year: s.grade || null });
+      queue = Z.drawQueue(Math.max(1, (Z.MAX_ROUNDS || 4) - 1)).slice();
+      trackStart('resume');
+      show('game');
+      scene.resize();
+      refresh();
+      toast('已恢复上次进度');
+      });
+
+    $('btnUndo').addEventListener('click', undo);
+    $('btnEnd').addEventListener('click', endRun);
+    $('btnRound').addEventListener('click', nextRound);
+    $('btnAgain').addEventListener('click', function () {
+      beginRun('again', state ? state.grade : null);
+    });
+    $('btnShare').addEventListener('click', drawShare);
+    $('shareClose').addEventListener('click', function () { $('shareWrap').classList.add('hidden'); });
+
+    $('shClose').addEventListener('click', closeSheet);
+
+    // 点遮罩关闭：用 pointerdown 而不是 click。
+    // 手机上「点地块」会在手指抬起后补发一个 click，那时遮罩已经盖在上面了，
+    // 用 click 会导致面板刚打开就被关掉（表现为「必须长按才能打开」）。
+    $('sheetMask').addEventListener('pointerdown', function () {
+      if (Date.now() - sheetOpenedAt < 400) return;
+      closeSheet();
+    });
+    $('evNext').addEventListener('click', closeEvent);
+
+    $('btnSound').addEventListener('click', function () {
+      muted = !muted;
+      this.classList.toggle('on', !muted);
+      this.textContent = muted ? '✕' : '♪';
+      if (!muted) beep(700, 0.08, 'sine', 0.04);
+    });
+    $('btnSound').classList.add('on');
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        if (!$('shareWrap').classList.contains('hidden')) $('shareWrap').classList.add('hidden');
+        else closeSheet();
+      }
+    });
+
+    // 有存档则显示继续
+    if (readSave()) $('btnResume').classList.remove('hidden');
+
+    show('intro');
+    setTimeout(function () { scene.resize(); }, 60);
+
+    // 开发预览：?demo=map / ?demo=sheet 直接进入一局并做两步改造
+    var dm = /demo=(\w+)/.exec(location.search);
+    if (dm && dm[1] === 'grade') {
+      setTimeout(openGradePicker, 400);
+    } else if (dm) {
+      beginRun('new', 'y3');
+      setTimeout(function () {
+        if (dm[1] === 'open3') {
+          // 自动把开局三张事件都选一遍，用来验证「连发 + 收尾」逻辑
+          var n = 0;
+          var iv = setInterval(function () {
+            if (n >= 3) { clearInterval(iv); $('hint').textContent = '开三张事件已处理完，事件计数=' + state.events; $('hint').style.opacity = 1; return; }
+            if ($('evModal').classList.contains('hidden')) return;
+            if (!$('evResult').classList.contains('hidden')) { $('evNext').click(); n++; return; }
+            var b = document.querySelector('#evOpts .ev-opt:not([disabled])');
+            if (b) b.click();
+          }, 500);
+          return;
+        }
+        if (dm[1] === 'empty') {
+          // 回归：一步不改、空过四个回合，然后提交
+          state.events = 99;
+          for (var q = 0; q < (Z.MAX_ROUNDS || 4); q++) Z.endRound(state);
+          setTimeout(endRun, 200);
+          return;
+        }
+        if (dm[1] === 'item') {
+          // 预览：发两个道具 + 做一步改造
+          state.events = 3;
+          if (Z.addItem) { Z.addItem(state, 'up', 1); Z.addItem(state, 'x15', 2); }
+          doUp('food');
+          persist(); refresh();
+          return;
+        }
+        if (dm[1] === 'roundend') {
+          // 验证「回合结算 → 弹事件卡」
+          setTimeout(function () { doUp('food'); setTimeout(nextRound, 160); }, 200);
+          return;
+        }
+        if (dm[1] !== 'open') state.events = 3;   // 除 ?demo=open 外都跳过开局三连，方便截图
+        if (dm[1] === 'open') return;
+        if (dm[1] === 'tap') { setTimeout(runTapTest, 250); return; }
+        if (dm[1] === 'hero') {
+          state.events = 3;            // 预览用：关掉事件弹窗
+          doUp('food', 'quality');     // 食 3 -> 4
+          doUp('food', 'quality');     // 食 4 -> 5（带专精）
+          doUp('dorm', null);          // 住 1 -> 2
+          doUp('dorm', null);          // 住 2 -> 3
+          doUp('dorm', null);          // 住 3 -> 4
+          doUp('move', null);          // 行 1 -> 2
+          doUp('move', null);          // 行 2 -> 3
+          doUp('sport', null);         // 体 2 -> 3
+          doUp('sport', null);         // 体 3 -> 4
+          return;
+        }
+        doUp('dorm', null);
+        doUp('dorm', null);
+        if (dm[1] === 'event') { doUp('move', null); return; }
+        if (dm[1] === 'sheet') openSheet('dorm');
+        if (dm[1] === 'result') { endRun(); }
+        if (dm[1] === 'share') { endRun(); setTimeout(drawShare, 300); }
+      }, 120);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+})();
+
+</script>
+</body>
+</html>

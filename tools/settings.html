@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>数值设置</title>
+<style>
+:root{--bg:#0b0f14;--line:#232e39;--fg:#e8eef5;--dim:#8294a3;--gold:#ffd76a;--teal:#6fe0bd;--red:#ff8d7e}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(900px 600px at 30% -10%,#16212b,#0b0f14 60%);color:var(--fg);
+  font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;padding:24px 26px 60px}
+header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+h1{font-size:19px;margin:0}
+.sub{font-size:11.5px;color:var(--dim)}
+.spacer{flex:1}
+button{font:inherit;font-size:12.5px;padding:8px 14px;border-radius:9px;cursor:pointer;
+  border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--fg)}
+button:hover{background:rgba(255,255,255,.09)}
+button.primary{background:linear-gradient(100deg,#ffe08a,#ffb347);color:#241a05;border:0;font-weight:700}
+button.danger{color:var(--red);border-color:rgba(255,141,126,.35)}
+.grid{display:grid;grid-template-columns:minmax(320px,420px) 1fr;gap:16px;align-items:start;max-width:1100px}
+.card{background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.012));
+  border:1px solid var(--line);border-radius:16px;padding:18px 18px 14px}
+.card h2{font-size:12.5px;margin:0 0 14px;color:#b9c7d3;font-weight:600;letter-spacing:.05em}
+.row{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.row label{flex:1;font-size:13px}
+.row label small{display:block;font-size:10.5px;color:var(--dim);margin-top:2px;font-weight:400}
+.row input{width:92px;font:inherit;font-size:14px;padding:8px 10px;border-radius:9px;text-align:right;
+  background:rgba(0,0,0,.3);border:1px solid #26313b;color:var(--fg);font-variant-numeric:tabular-nums}
+.row input:focus{outline:0;border-color:rgba(255,215,106,.5)}
+.big{font-size:30px;font-weight:800;color:var(--gold);font-variant-numeric:tabular-nums}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;font-weight:500;color:var(--dim);font-size:10.5px;padding:0 6px 8px}
+td{padding:7px 6px;border-top:1px solid rgba(255,255,255,.05);font-variant-numeric:tabular-nums}
+td.num{text-align:right}
+.ok{color:var(--teal)}.bad{color:var(--red)}
+.note{font-size:11.5px;color:var(--dim);line-height:1.8;margin-top:12px}
+.note b{color:#cfe0ea}
+#toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);padding:10px 20px;border-radius:999px;
+  background:rgba(20,26,33,.96);border:1px solid rgba(255,215,106,.4);color:var(--gold);font-size:13px;font-weight:600;
+  opacity:0;transition:opacity .2s;pointer-events:none}
+#toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>数值设置</h1>
+  <span class="sub">改完保存，游戏刷新即生效（不用重打包）</span>
+  <span class="spacer"></span>
+  <button class="primary" id="btnSave">保存</button>
+  <button class="danger" id="btnReset">还原默认</button>
+  <button onclick="window.open('/h5/','_blank')">打开游戏</button>
+</header>
+
+<div class="grid">
+  <div>
+    <div class="card">
+      <h2>每回合发放点数</h2>
+      <div id="roundPts"></div>
+      <div class="row" style="margin-top:12px">
+        <label>剩余点数结转比例 <small>1 = 全部保留　0.5 = 剩一半　0 = 清零</small></label>
+        <input type="number" id="carry" min="0" max="1" step="0.1">
+      </div>
+      <div style="text-align:right;margin-top:6px">合计 <span class="big" id="pointsBig">58</span> 点</div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h2>开局初始档位</h2>
+      <div id="inits"></div>
+      <div class="note" style="margin-top:6px">改这里只影响「起跑线」，不会自动改上面的点数。</div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h2>规则与价格</h2>
+      <div class="row">
+        <label>回合数 <small>每回合可以重新「开工」，广度税清零</small></label>
+        <input type="number" id="rounds" min="1" max="8" step="1">
+      </div>
+      <div class="row"><label>升到 T2 的价钱</label><input type="number" id="c2" min="0" max="60" step="1"></div>
+      <div class="row"><label>升到 T3 的价钱</label><input type="number" id="c3" min="0" max="60" step="1"></div>
+      <div class="row"><label>升到 T4 的价钱</label><input type="number" id="c4" min="0" max="60" step="1"></div>
+      <div class="row"><label>升到 T5 的价钱</label><input type="number" id="c5" min="0" max="60" step="1"></div>
+      <div class="row">
+        <label>广度税基准 <small>同回合新开第 n 个维度 +round(B·log₂(1+n))</small></label>
+        <input type="number" id="breadthBase" min="0" max="6" step="0.5">
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h2>道具</h2>
+      <div class="row" style="margin-bottom:12px">
+        <label>启用道具系统 <small>关掉后事件不发道具、界面不显示道具条</small></label>
+        <input type="checkbox" id="itemsOn" style="width:auto">
+      </div>
+      <div id="itemList"></div>
+    </div>
+
+  </div>
+
+  <div class="card">
+    <h2>预览：从当前初始档升级要花多少</h2>
+    <table id="ladder"></table>
+    <div class="note" id="summary"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+var DATA = null, inits = {}, roundPts = [14,14,15,15], items = [], itemsOn = true;
+
+function $(id){ return document.getElementById(id); }
+function toast(m){ var t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(function(){t.classList.remove('show');},2200); }
+
+function renderItemsSettings(){
+  var box = $("itemList");
+  if (!box) return;
+  box.innerHTML = items.map(function(it, i){
+    return '<div style="border-top:1px solid #232e39;padding-top:10px;margin-bottom:10px">' +
+      '<div style="display:flex;gap:10px;align-items:center">' +
+        '<input type="text" data-item="' + i + '" data-f="name" value="' + it.name + '" style="flex:1">' +
+        (it.type === "multiply" ? '<span style="font-size:11.5px;color:#8294a3">倍数</span><input type="number" min="1" max="5" step="0.1" data-item="' + i + '" data-f="factor" value="' + (it.factor||1.5) + '" style="width:78px">' : '') +
+      '</div>' +
+      '<label>说明</label><input type="text" data-item="' + i + '" data-f="desc" value="' + (it.desc||'') + '">' +
+    '</div>';
+  }).join("");
+  box.querySelectorAll("input[data-item]").forEach(function(el){
+    el.oninput = function(){
+      var it = items[+el.dataset.item];
+      if (!it) return;
+      if (el.dataset.f === "factor") it.factor = Math.max(1, Math.min(5, +el.value || 1.5));
+      else it[el.dataset.f] = el.value;
+    };
+  });
+}
+
+function renderRoundPts(){
+  var box = $("roundPts");
+  if (!box) return;
+  box.innerHTML = roundPts.map(function(v, i){
+    return '<div class="row" style="margin-bottom:9px"><label>第 ' + (i+1) + ' 回合</label>' +
+      '<input type="number" min="0" max="80" step="1" data-rp="' + i + '" value="' + v + '"></div>';
+  }).join("");
+  box.querySelectorAll("input[data-rp]").forEach(function(el){
+    el.oninput = function(){
+      roundPts[+el.dataset.rp] = Math.max(0, Math.round(+el.value || 0));
+      $("pointsBig").textContent = roundPts.reduce(function(a,b){return a+b;}, 0);
+      render();
+    };
+  });
+}
+
+function renderInits(){
+  var box = $("inits");
+  if (!box || !DATA) return;
+  box.innerHTML = DATA.dims.map(function(d){
+    var opts = [1,2,3,4,5].map(function(n){
+      return "<option value=\"" + n + "\"" + (inits[d.id] === n ? " selected" : "") + ">T" + n + "</option>";
+    }).join("");
+    return "<div class=\"row\" style=\"margin-bottom:9px\">" +
+      "<label>" + d.name + " <small>" + (DATA.tiersText || "") + "</small></label>" +
+      "<select data-dim=\"" + d.id + "\" style=\"width:92px;font:inherit;font-size:14px;padding:8px 10px;border-radius:9px;background:rgba(0,0,0,.3);border:1px solid #26313b;color:var(--fg)\">" + opts + "</select></div>";
+  }).join("");
+  box.querySelectorAll("select").forEach(function(sel){
+    sel.onchange = function(){ inits[sel.dataset.dim] = +sel.value; render(); };
+  });
+}
+
+function render(){
+  if (!DATA) return;
+  renderInits();
+  var points = roundPts.reduce(function(a,b){return a+b;}, 0);
+  var rounds = +$('rounds').value || 1;
+  var bb = +$('breadthBase').value || 0;
+  var step = [ +$('c2').value || 0, +$('c3').value || 0, +$('c4').value || 0, +$('c5').value || 0 ];
+
+  renderRoundPts();
+  renderItemsSettings();
+  $('pointsBig').textContent = roundPts.reduce(function(a,b){return a+b;}, 0);
+
+  var rows = ['<tr><th>维度</th><th>当前</th><th>→T2</th><th>→T3</th><th>→T4</th><th>→T5</th><th class="num">到 T4 累计</th></tr>'];
+  var allT4 = 0;
+  DATA.dims.forEach(function(d){
+    var base = inits[d.id] || d.init;
+    var cells = [], sum = 0;
+    for (var t = 2; t <= 5; t++) {
+      if (t <= base) { cells.push('—'); continue; }
+      var c = step[t-2];
+      if (t <= 4) sum += c;
+      cells.push(c);
+    }
+    allT4 += sum;
+    rows.push('<tr><td>' + d.name + '</td><td class="num" style="color:#8294a3">T' + base + '</td>' +
+      cells.map(function(x){ return '<td class="num">' + x + '</td>'; }).join('') +
+      '<td class="num" style="color:' + (sum ? '#cfe0ea' : '#5d6a77') + '">' + (sum || '—') + '</td></tr>');
+  });
+  $('ladder').innerHTML = rows.join('');
+
+  var reach = allT4 <= points;
+  $('summary').innerHTML =
+    '六维全部推到 T4 需要 <b>' + allT4 + '</b> 点，当前预算 <b>' + points + '</b> 点 —— ' +
+    (reach
+      ? '<span class="bad">够用（玩家可以把每一项都推到 T4，取舍会变弱）</span>'
+      : '<span class="ok">不够（必须放弃至少一个维度，这正是收集偏好数据的前提）</span>') +
+    '<br>回合数 <b>' + rounds + '</b>：最多有 ' + rounds + ' 个维度能独占一个回合、不挨广度税。' +
+    '<br>注：表里的价格不含广度税；同一回合里第 5、第 6 个维度还要另加广度税。开局事件卡也会 ±2~4 点。';
+}
+
+function fill(cur){
+  inits = {};
+  (DATA.dims || []).forEach(function(d){ inits[d.id] = (cur.inits && cur.inits[d.id]) || d.init; });
+  items = (cur.items || []).slice();
+  itemsOn = cur.itemsEnabled !== false;
+  $('itemsOn').checked = itemsOn;
+  roundPts = (cur.roundPoints || [14,14,15,15]).slice();
+  $('carry').value = (cur.carryRatio != null) ? cur.carryRatio : 1;
+  $('rounds').value = roundPts.length;
+  var sc = cur.stepCost || [3,5,8,14];
+  $('c2').value = sc[0]; $('c3').value = sc[1]; $('c4').value = sc[2]; $('c5').value = sc[3];
+  $('breadthBase').value = cur.breadthBase;
+  render();
+}
+
+function load(){
+  return fetch('/config-edit', {cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+    DATA = d; fill(d.current);
+  });
+}
+
+["carry","c2","c3","c4","c5","breadthBase"].forEach(function(id){
+  var el = $(id);
+  if (el) el.addEventListener("input", render);
+});
+$("itemsOn").addEventListener("change", render);
+$("rounds").addEventListener("input", function(){
+  var n = Math.max(1, Math.min(8, Math.round(+$("rounds").value || 4)));
+  while (roundPts.length < n) roundPts.push(roundPts.length ? roundPts[roundPts.length-1] : 14);
+  roundPts.length = n;
+  render();
+});
+
+$('btnSave').onclick = function(){
+  var body = {
+    points: roundPts.reduce(function(a,b){return a+b;}, 0),
+    rounds: roundPts.length,
+    roundPoints: roundPts.slice(),
+    itemsEnabled: $('itemsOn').checked,
+    items: items,
+    carryRatio: +$('carry').value || 0,
+    breadthBase: +$('breadthBase').value,
+    stepCost: [ +$('c2').value || 0, +$('c3').value || 0, +$('c4').value || 0, +$('c5').value || 0 ],
+    inits: inits
+  };
+  fetch('/api/config', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+    .then(function(r){return r.json();}).then(function(r){
+      toast(r.ok ? '已保存，回游戏刷新即可' : ('保存失败：' + (r.msg||'')));
+      if (r.ok) load();
+    }).catch(function(e){ toast('失败：' + e.message); });
+};
+
+$('btnReset').onclick = function(){
+  if (!confirm('还原成代码里的默认数值？')) return;
+  fetch('/api/config', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reset:true})})
+    .then(function(r){return r.json();}).then(function(r){ toast('已还原'); load(); });
+};
+
+load().catch(function(e){ toast('读取失败：' + e.message); });
+</script>
+</body>
+</html>

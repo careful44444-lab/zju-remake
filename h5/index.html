@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<meta name="theme-color" content="#0f1318">
+<title>紫金港改造计划</title>
+<link rel="stylesheet" href="style.css">
+<script>
+/* 仅 ?debug=1 时把 JS 报错显示在页面底部，方便截图排查 */
+if (/debug=1/.test(location.search)) {
+  window.addEventListener('error', function (e) {
+    try {
+      var d = document.createElement('div');
+      d.style.cssText = 'position:fixed;z-index:9999;left:0;right:0;bottom:0;background:#b00020;color:#fff;font:12px/1.5 monospace;padding:8px;white-space:pre-wrap';
+      d.textContent = 'JS ERROR: ' + e.message + ' @ ' + String(e.filename || '').split('/').pop() + ':' + e.lineno;
+      document.body.appendChild(d);
+    } catch (x) { }
+  });
+}
+</script>
+</head>
+<body>
+<div id="stage">
+
+  <!-- ============ 开屏 ============ -->
+  <section id="intro" class="screen active">
+    <div class="intro-top">
+      <div class="kicker">ZJU · 改造总规划师 · 第 1 学期</div>
+      <h1>紫金港<br><span>改造计划</span></h1>
+      <p class="lead">六个维度，一张地图，四个回合。<br>你要把浙大改成什么样？</p>
+    </div>
+    <div class="intro-cards">
+      <div class="card"><b>1</b><span>点地图上的地块</span></div>
+      <div class="card"><b>2</b><span>升档花点数，越升越贵；砍档退点</span></div>
+      <div class="card"><b>3</b><span>每回合结束抽一张事件卡</span></div>
+    </div>
+    <div class="intro-foot">
+      <button id="btnStart" class="primary">开始改造</button>
+      <button id="btnResume" class="ghost hidden">继续上次的改造</button>
+      <p class="tiny">同人创作 · 与浙江大学官方无关</p>
+    </div>
+  </section>
+
+  <!-- ============ 主界面 ============ -->
+  <section id="game" class="screen">
+    <header id="hud">
+      <div class="hud-stat">
+        <span class="num" id="pts">65</span>
+        <span class="lbl">剩余点数</span>
+      </div>
+      <div class="hud-stat">
+        <span class="num" id="ach">0</span>
+        <span class="lbl">成就</span>
+      </div>
+      <div class="hud-btns">
+        <button id="btnSound" class="icon" title="音效">♪</button>
+        <button id="btnUndo" class="icon" title="撤销">↶</button>
+        <button id="btnEnd" class="mini">提交</button>
+      </div>
+    </header>
+
+    <div id="mapWrap">
+      <canvas id="map"></canvas>
+      <div id="hint">点一个地块开始改造</div>
+      <div id="toast"></div>
+    </div>
+
+    <div id="roundBar">
+      <span id="roundInfo">第 1/4 回合</span>
+      <button id="btnRound">结束本回合</button>
+    </div>
+
+    <div id="itemBar"></div>
+
+    <div id="strip"></div>
+  </section>
+
+  <!-- ============ 详情抽屉 ============ -->
+  <div id="sheetMask" class="mask hidden"></div>
+  <div id="sheet" class="sheet">
+    <div class="sheet-grab"></div>
+    <div class="sheet-head">
+      <div class="sheet-tag" id="shTag">食</div>
+      <div class="sheet-meta">
+        <div class="sheet-tier" id="shTier">T4 · 领先</div>
+        <div class="sheet-peer" id="shPeer">华五前列</div>
+      </div>
+      <button id="shClose" class="icon">×</button>
+    </div>
+    <div class="sheet-body">
+      <h3 id="shTitle">食在浙大</h3>
+      <p id="shDesc"></p>
+      <div class="tags" id="shTags"></div>
+      <div class="pips big" id="shPips"></div>
+      <div class="tax-line" id="shTax"></div>
+      <div class="sheet-actions" id="shActions"></div>
+    </div>
+  </div>
+
+  <!-- ============ 选年级 ============ -->
+  <div id="gradeModal" class="modal hidden">
+    <div class="grade-card">
+      <div class="ev-kicker">第 1 步 · 先说说你</div>
+      <h3>你现在大几？</h3>
+      <p class="grade-lead">不同年级看到的浙大不一样。统计只按年级分组，不收集任何个人信息。</p>
+      <div class="grade-opts" id="gradeOpts"></div>
+    </div>
+  </div>
+
+  <!-- ============ 事件卡 ============ -->
+  <div id="evModal" class="modal hidden">
+    <div class="ev-card">
+      <div class="ev-kicker">回合结束事件 · <span id="evIdx">1/3</span></div>
+      <h3 id="evTitle">校车又晚点</h3>
+      <p id="evText"></p>
+      <div class="ev-opts" id="evOpts"></div>
+      <div class="ev-result hidden" id="evResult">
+        <p id="evResultText"></p>
+        <button class="primary" id="evNext">继续改造</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 结算 ============ -->
+  <section id="result" class="screen">
+    <div class="res-scroll">
+      <h2 id="resTitle">六边形战士</h2>
+      <p class="res-line" id="resLine"></p>
+      <div class="res-ach" id="resAch"></div>
+      <div class="res-dims" id="resDims"></div>
+      <div class="res-actions">
+        <button class="primary" id="btnShare">保存战绩图</button>
+        <button class="ghost" id="btnAgain">再改一局</button>
+      </div>
+      <p class="tiny center">同人创作 · 与浙江大学官方无关</p>
+    </div>
+  </section>
+
+  <div id="shareWrap" class="modal hidden">
+    <div class="share-card">
+      <canvas id="shareCanvas" width="750" height="1180"></canvas>
+      <div class="share-actions">
+        <a id="shareDl" class="primary" download="紫金港改造计划.png">下载图片</a>
+        <button class="ghost" id="shareClose">关闭</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="../game/config.js"></script>
+<script src="../game/content.js"></script>
+<script src="../game/core.js"></script>
+<script src="../game/events.js"></script>
+<script src="../game/track.js"></script>
+<script src="../render/palette.js"></script>
+<script src="../render/scene.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>管理后台</title>
+<style>
+:root{--bg:#0b0f14;--line:#232e39;--fg:#e8eef5;--dim:#8294a3;--gold:#ffd76a;--teal:#6fe0bd}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(1000px 600px at 30% -10%,#16212b,#0b0f14 60%);color:var(--fg);
+  font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;padding:26px 28px 60px;min-height:100vh}
+h1{font-size:20px;margin:0 0 4px}
+.sub{font-size:12px;color:var(--dim)}
+.status{display:flex;gap:20px;flex-wrap:wrap;margin:18px 0 22px;font-size:12px;color:var(--dim)}
+.status b{color:var(--fg);font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;max-width:1100px}
+a.card{display:block;text-decoration:none;color:inherit;
+  background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015));
+  border:1px solid var(--line);border-radius:16px;padding:18px 18px 16px;transition:all .16s}
+a.card:hover{border-color:rgba(255,215,106,.4);transform:translateY(-2px)}
+a.card .ico{font-size:20px;margin-bottom:8px;display:block;opacity:.9}
+a.card .t{font-size:15px;font-weight:700;margin-bottom:5px}
+a.card .d{font-size:11.5px;color:var(--dim);line-height:1.6}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px;max-width:1100px}
+button{font:inherit;font-size:12.5px;padding:10px 16px;border-radius:10px;cursor:pointer;
+  border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--fg)}
+button:hover{background:rgba(255,255,255,.09)}
+button.primary{background:linear-gradient(100deg,#ffe08a,#ffb347);color:#241a05;border:0;font-weight:700}
+.hint{font-size:11.5px;color:var(--dim);margin-top:26px;line-height:1.9;max-width:760px}
+code{background:rgba(255,255,255,.06);padding:1px 6px;border-radius:5px;font-size:11.5px}
+#toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);padding:10px 20px;border-radius:999px;
+  background:rgba(20,26,33,.96);border:1px solid rgba(255,215,106,.4);color:var(--gold);font-size:13px;font-weight:600;
+  opacity:0;transition:opacity .2s;pointer-events:none}
+#toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<h1>管理后台</h1>
+<div class="sub">游戏内测的所有后台入口都在这里</div>
+
+<div class="status" id="status">读取状态…</div>
+
+<div class="grid">
+  <a class="card" href="/dashboard" target="_blank">
+    <span class="ico">📊</span>
+    <div class="t">数据看板</div>
+    <div class="d">局数、完成率、六维档位热力图、成就解锁、事件卡选择</div>
+  </a>
+  <a class="card" href="/grades" target="_blank">
+    <span class="ico">🎓</span>
+    <div class="t">按年级看</div>
+    <div class="d">大一到大四各自改了什么、改得多深</div>
+  </a>
+  <a class="card" href="/runs" target="_blank">
+    <span class="ico">📋</span>
+    <div class="t">对局管理</div>
+    <div class="d">逐局查看详情、排除、删除、加备注</div>
+  </a>
+  <a class="card" href="/backups" target="_blank">
+    <span class="ico">💾</span>
+    <div class="t">备份管理</div>
+    <div class="d">每一份快照的命名、恢复、下载、删除</div>
+  </a>
+  <a class="card" href="/edit" target="_blank">
+    <span class="ico">✏️</span>
+    <div class="t">文案编辑</div>
+    <div class="d">42 段档位文案 + 12 张事件卡，改完刷新即生效</div>
+  </a>
+  <a class="card" href="/settings" target="_blank">
+    <span class="ico">⚙️</span>
+    <div class="t">数值设置</div>
+    <div class="d">开局点数、回合数、两种税，带价目表预览</div>
+  </a>
+  <a class="card" href="/url" target="_blank">
+    <span class="ico">🌐</span>
+    <div class="t">公网地址</div>
+    <div class="d">当前隧道链接是否在线，一键复制发给别人</div>
+  </a>
+</div>
+
+<div class="actions">
+  <button class="primary" id="btnSnap">立即备份一份</button>
+  <button id="btnCsv">导出 CSV</button>
+  <button onclick="location.reload()">刷新状态</button>
+</div>
+
+<p class="hint">
+  数据文件：<code>data/events.jsonl</code>　·　备份：<code>backups/</code>　·　文案改动：<code>data/content-edit.json</code><br>
+  想把改动发出去：<code>node tools/build-single.js</code>，产物在 <code>dist/</code>。
+</p>
+
+<div id="toast"></div>
+
+<script>
+function $(id){ return document.getElementById(id); }
+function toast(m){ var t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(function(){t.classList.remove('show');},2200); }
+
+function loadStatus(){
+  Promise.all([
+    fetch('/api/backups', {cache:'no-store'}).then(function(r){return r.json();}).catch(function(){return null;}),
+    fetch('/url', {cache:'no-store'}).then(function(r){return r.text();}).catch(function(){return '';})
+  ]).then(function(res){
+    var b = res[0], tunnelOnline = /在 线|在线/.test(res[1] || '');
+    var c = (b && b.current) || {};
+    $('status').innerHTML =
+      '<span>对局 <b>' + (c.runs || 0) + '</b></span>' +
+      '<span>完成 <b>' + (c.finished || 0) + '</b></span>' +
+      '<span>事件 <b>' + (c.events || 0) + '</b></span>' +
+      '<span>数据 <b>' + Math.max(1, Math.round((c.bytes || 0) / 1024)) + ' KB</b></span>' +
+      '<span>备份 <b>' + ((b && b.items) ? b.items.length : 0) + '</b> 份</span>' +
+      '<span>隧道 <b>' + (tunnelOnline ? '在线' : '未开启') + '</b></span>';
+  });
+}
+
+$('btnSnap').onclick = function(){
+  fetch('/api/backups', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'snapshot',note:''})})
+    .then(function(r){return r.json();}).then(function(r){ toast(r.msg || '已备份'); loadStatus(); })
+    .catch(function(e){ toast('失败：' + e.message); });
+};
+$('btnCsv').onclick = function(){ location.href = '/api/export.csv'; };
+
+loadStatus();
+</script>
+</body>
+</html>

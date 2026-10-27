@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>对局管理</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121820;--line:#232e39;--fg:#e8eef5;--dim:#8294a3;--gold:#ffd76a;--teal:#6fe0bd;--red:#ff8d7e}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(1000px 600px at 30% -10%,#16212b,#0b0f14 60%);color:var(--fg);
+  font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;padding:22px 26px 60px}
+header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+h1{font-size:19px;margin:0}
+.spacer{flex:1}
+button{font:inherit;font-size:12.5px;padding:7px 13px;border-radius:9px;cursor:pointer;
+  border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--fg)}
+button:hover{background:rgba(255,255,255,.09)}
+button.on{background:var(--gold);color:#241a05;border-color:var(--gold);font-weight:700}
+button.danger{color:var(--red);border-color:rgba(255,141,126,.35)}
+button.danger:hover{background:rgba(255,141,126,.12)}
+input.search{font:inherit;font-size:12.5px;padding:7px 12px;border-radius:9px;width:200px;
+  background:rgba(0,0,0,.25);border:1px solid #26313b;color:var(--fg)}
+input.search:focus{outline:0;border-color:rgba(255,215,106,.5)}
+.card{background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.012));
+  border:1px solid var(--line);border-radius:16px;padding:14px 16px 8px}
+.kpis{display:flex;gap:22px;flex-wrap:wrap;margin-bottom:14px}
+.kpis div{display:flex;flex-direction:column;gap:2px}
+.kpis b{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
+.kpis span{font-size:10.5px;color:var(--dim)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;font-weight:500;color:var(--dim);font-size:10.5px;padding:8px;letter-spacing:.05em;white-space:nowrap;
+  border-bottom:1px solid var(--line)}
+td{padding:9px 8px;border-top:1px solid rgba(255,255,255,.05);vertical-align:middle}
+td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.run.excluded{opacity:.45}
+tr.run:hover td{background:rgba(255,255,255,.025)}
+tr.detail td{background:rgba(0,0,0,.28);padding:14px 16px}
+.grade{display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:6px;
+  font-size:11px;font-weight:800;color:#1d1607;background:var(--gold)}
+.grade.C{background:#8aa0b3}.grade.D{background:#6a7784}.grade.B{background:#a8d8a0}.grade.A{background:#ffd76a}
+.tier{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.tier span{display:flex;gap:2px}
+.tier i{width:8px;height:4px;border-radius:1px;background:#28323d;display:block}
+.tier i.on{background:var(--gold)}
+.note{width:100%;min-width:100px;background:rgba(0,0,0,.22);border:1px solid #26313b;border-radius:7px;
+  color:#cfdae4;font:inherit;font-size:11.5px;padding:5px 8px}
+.note:focus{outline:0;border-color:rgba(255,215,106,.5)}
+.note::placeholder{color:#57636e}
+.acts{display:flex;gap:5px;white-space:nowrap}
+.acts button{padding:5px 9px;font-size:11.5px}
+.tag{font-size:10px;padding:2px 7px;border-radius:5px;border:1px solid var(--line);color:var(--dim);margin-left:6px}
+.tag.off{color:#8c9aa6}
+.tag.ex{color:var(--red);border-color:rgba(255,141,126,.35)}
+.tag.live{color:var(--teal);border-color:rgba(111,224,189,.35)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}
+.chip{font-size:11px;padding:3px 9px;border-radius:6px;background:rgba(255,255,255,.05);
+  border:1px solid #26313b;color:#a9b8c6}
+.chip b{color:var(--gold);margin-left:3px}
+.dlabel{font-size:10.5px;color:var(--dim);margin:10px 0 4px;letter-spacing:.05em}
+.flagbar{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 14px;align-items:center}
+.flagbar .fl{font-size:11.5px;padding:5px 11px;border-radius:999px;cursor:pointer;
+  background:rgba(255,255,255,.04);border:1px solid #26313b;color:#a9b8c6}
+.flagbar .fl:hover{background:rgba(255,255,255,.09)}
+.flagbar .fl.on{background:rgba(255,141,126,.16);border-color:rgba(255,141,126,.45);color:#ffb3a8;font-weight:600}
+.flagbar .fl b{margin-left:5px;color:var(--gold)}
+.flagbar .sep{width:1px;height:18px;background:#26313b;margin:0 4px}
+.tag.warn{background:rgba(255,141,126,.16);border-color:rgba(255,141,126,.4);color:#ffb3a8;margin-left:4px;white-space:nowrap}
+.empty{color:var(--dim);font-size:12.5px;padding:26px 0;text-align:center;line-height:1.9}
+#toast{position:fixed;left:50%;top:16px;transform:translate(-50%,-10px);padding:9px 18px;border-radius:999px;
+  background:rgba(20,26,33,.95);border:1px solid rgba(255,215,106,.4);color:var(--gold);
+  font-size:13px;font-weight:600;opacity:0;transition:all .22s;pointer-events:none;z-index:99}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>对局管理</h1>
+  <span class="spacer"></span>
+  <input class="search" id="q" placeholder="搜 ID / 称号 / 备注">
+  <button id="fAll" class="on">全部</button>
+  <button id="fDone">已完成</button>
+  <button id="fLeft">中途离开</button>
+  <button id="fEx">已排除</button>
+  <button id="fAnom">只看异常</button>
+  <button id="btnExAll" class="danger" style="border-color:rgba(255,141,126,.35);color:#ff8d7e">排除全部异常</button>
+  <button id="btnReload">刷新</button>
+  <button onclick="location.href='/dashboard'">← 看板</button>
+</header>
+
+<div class="card">
+  <div class="kpis" id="kpis"></div>
+  <div class="flagbar" id="flagBar"></div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:44px">#</th>
+        <th style="width:120px">时间</th>
+        <th style="width:64px">年级</th>
+        <th style="width:56px">成就</th>
+        <th>称号</th>
+        <th style="width:150px">六维</th>
+        <th style="width:60px">时长</th>
+        <th style="width:190px">状态 / 异常</th>
+        <th style="width:150px">备注</th>
+        <th style="width:210px">操作</th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <div id="emptyTip" class="empty" style="display:none">还没有对局数据。玩一局再来。</div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+var DATA = { runs: [], meta: null, flags: [] };
+var filter = 'all', q = '';
+
+function $(id) { return document.getElementById(id); }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function toast(m) { var t = $('toast'); t.textContent = m; t.classList.add('show'); clearTimeout(t._t); t._t = setTimeout(function () { t.classList.remove('show'); }, 2200); }
+function fmt(ts) { var d = new Date(ts), p = function (n) { return String(n).padStart(2, '0'); };
+  return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()); }
+function dur(ms) { if (!ms) return '—'; var s = Math.round(ms / 1000); return s < 60 ? s + 's' : Math.floor(s / 60) + 'm' + (s % 60) + 's'; }
+
+function yearObj(id) {
+  var list = (DATA.meta && DATA.meta.years) || [];
+  for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+  return null;
+}
+function yearName(id) { var g = yearObj(id); return g ? g.name : '未选'; }
+function yearTag(r) {
+  if (!r.year) return '<span class="tag off">未选</span>';
+  return '<span class="tag live">' + esc(yearName(r.year)) + '</span>';
+}
+
+function dimPips(run) {
+  return DATA.meta.dims.map(function (d) {
+    var v = (run.tiers || {})[d.id] || 0, bars = '';
+    for (var i = 1; i <= 5; i++) bars += '<i class="' + (i <= v ? 'on' : '') + '"></i>';
+    return '<span title="' + d.name + ' T' + v + '">' + bars + '</span>';
+  }).join('');
+}
+
+function flagTags(r) {
+  if (!r.flags || !r.flags.length) return '';
+  var names = {};
+  (DATA.flags || []).forEach(function (f) { names[f.id] = f.label; });
+  return r.flags.map(function (f) {
+    return '<span class="tag warn" title="' + esc((names[f] || f)) + '">' + esc(names[f] || f) + '</span>';
+  }).join('');
+}
+
+function statusTag(r) {
+  if (r.excluded) return '<span class="tag ex">已排除</span>';
+  if (!r.settled) return '<span class="tag off">未结算</span>';
+  if (!r.finished) return '<span class="tag off">离开</span>';
+  return '<span class="tag live">完成</span>';
+}
+
+function matches(r) {
+  if (filter === 'normal') { if (r.flags && r.flags.length) return false; if (r.excluded) return false; }
+  else if (filter === 'anom') { if (!(r.flags && r.flags.length)) return false; }
+  else if (filter.indexOf('flag:') === 0) {
+    var fid = filter.slice(5);
+    if (!(r.flags && r.flags.indexOf(fid) >= 0)) return false;
+  }
+  else if (filter === 'done' && !(r.finished)) return false;
+  if (filter === 'left' && (r.finished || !r.settled)) return false;
+  if (filter === 'ex' && !r.excluded) return false;
+  if (filter === 'all' && r.excluded) return false;
+  if (q) {
+    var hay = (r.rid + ' ' + r.uid + ' ' + yearName(r.year) + ' ' + r.title + ' ' + r.note).toLowerCase();
+    if (hay.indexOf(q.toLowerCase()) < 0) return false;
+  }
+  return true;
+}
+
+function detailHTML(r) {
+  var m = DATA.meta, parts = [];
+  parts.push('<div class="dlabel">六维最终档位</div><div class="chips">');
+  m.dims.forEach(function (d) {
+    var t = (r.tiers || {})[d.id] || 0;
+    var title = (m.tierTitles[d.id] || [])[t - 1] || '';
+    parts.push('<span class="chip">' + d.name + ' T' + t + ' ' + esc(title) + '</span>');
+  });
+  parts.push('</div>');
+
+  var caps = [];
+  m.dims.forEach(function (d) {
+    var cid = (r.caps || {})[d.id];
+    if (!cid) return;
+    var name = cid;
+    (m.caps[d.id] || []).forEach(function (c) { if (c.id === cid) name = c.name; });
+    caps.push('<span class="chip">' + d.name + ' · ' + esc(name) + '</span>');
+  });
+  if (caps.length) parts.push('<div class="dlabel">封神专精</div><div class="chips">' + caps.join('') + '</div>');
+
+  if (r.cards && r.cards.length) {
+    parts.push('<div class="dlabel">开局事件卡的选择</div><div class="chips">');
+    r.cards.forEach(function (c) {
+      parts.push('<span class="chip">' + esc(c.title || c.id) + ' → ' + esc(c.label) + '</span>');
+    });
+    parts.push('</div>');
+  }
+
+  parts.push('<div class="dlabel">数据</div><div class="chips">' +
+    '<span class="chip">事件 ' + r.events + ' 条</span>' +
+    '<span class="chip">操作 ' + (r.ops != null ? r.ops : '—') + ' 次</span>' +
+    '<span class="chip">净投入 ' + (r.pointsSpent != null ? r.pointsSpent : '—') + ' 点</span>' +
+    '<span class="chip">剩余 ' + (r.pointsLeft != null ? r.pointsLeft : '—') + ' 点</span>' +
+    '<span class="chip">rid ' + esc(String(r.rid).slice(0, 12)) + '</span></div>');
+
+  return parts.join('');
+}
+
+function render() {
+  var all = DATA.runs, list = all.filter(matches);
+  var ex = all.filter(function (r) { return r.excluded; }).length;
+  var done = all.filter(function (r) { return r.finished; }).length;
+  var steps = all.filter(function (r) { return r.finished && !r.excluded; }).map(function (r) {
+    var n = 0; DATA.meta.dims.forEach(function (d) { n += Math.max(0, ((r.tiers || {})[d.id] || 0) - (d.init || 0)); }); return n;
+  });
+  var avg = steps.length ? Math.round(steps.reduce(function (a, b) { return a + b; }, 0) / steps.length) : 0;
+
+  $('kpis').innerHTML =
+    '<div><b>' + all.length + '</b><span>对局总数</span></div>' +
+    '<div><b>' + done + '</b><span>已完成</span></div>' +
+    '<div><b>' + ex + '</b><span>已排除</span></div>' +
+    '<div><b>' + avg + '</b><span>平均推进档数</span></div>' +
+    '<div><b>' + list.length + '</b><span>当前筛选</span></div>';
+
+  // 异常筛选条
+  var flags = DATA.flags || [];
+  var counts = {};
+  flags.forEach(function (f) { counts[f.id] = 0; });
+  var anomTotal = 0;
+  all.forEach(function (r) {
+    if (r.flags && r.flags.length) anomTotal++;
+    (r.flags || []).forEach(function (f) { counts[f] = (counts[f] || 0) + 1; });
+  });
+  var bar = $('flagBar');
+  if (bar) {
+    var html = '<span style="font-size:11px;color:#8294a3;margin-right:2px">异常筛查</span>';
+    html += '<button class="fl" data-f="all">全部</button>';
+    html += '<button class="fl' + (filter === 'anom' ? ' on' : '') + '" data-f="anom">异常 <b>' + anomTotal + '</b></button>';
+    html += '<button class="fl" data-f="normal">正常 <b>' + (all.length - anomTotal) + '</b></button>';
+    html += '<span class="sep"></span>';
+    flags.forEach(function (f) {
+      html += '<button class="fl' + (filter === 'flag:' + f.id ? ' on' : '') + '" data-f="flag:' + f.id + '" title="' + esc(f.desc) + '">' +
+        esc(f.label) + ' <b>' + (counts[f.id] || 0) + '</b></button>';
+    });
+    bar.innerHTML = html;
+    bar.querySelectorAll('button.fl').forEach(function (b) {
+      b.onclick = function () { filter = b.dataset.f; render(); };
+    });
+  }
+
+  var rows = $('rows');
+  rows.innerHTML = '';
+  if (!list.length) { $('emptyTip').style.display = 'block'; return; }
+  $('emptyTip').style.display = 'none';
+
+  list.forEach(function (r, i) {
+    var tr = document.createElement('tr');
+    tr.className = 'run' + (r.excluded ? ' excluded' : '');
+    tr.innerHTML =
+      '<td class="num" style="color:#8294a3">' + (i + 1) + '</td>' +
+      '<td style="color:#a9b8c6;white-space:nowrap">' + fmt(r.ts) + '</td>' +
+      '<td>' + yearTag(r) + '</td>' +
+      '<td class="num">' + ((r.achievements || []).length || '—') + '</td>' +
+      '<td>' + esc(r.title || '—') + '</td>' +
+      '<td><div class="tier">' + dimPips(r) + '</div></td>' +
+      '<td class="num" style="color:#8294a3">' + dur(r.durationMs) + '</td>' +
+      '<td style="white-space:nowrap">' + statusTag(r) + flagTags(r) + '</td>' +
+      '<td><input class="note" data-rid="' + r.rid + '" value="' + esc(r.note) + '" placeholder="备注"></td>' +
+      '<td><div class="acts">' +
+        '<button data-a="detail" data-rid="' + r.rid + '">详情</button>' +
+        '<button data-a="' + (r.excluded ? 'include' : 'exclude') + '" data-rid="' + r.rid + '">' +
+          (r.excluded ? '恢复' : '排除') + '</button>' +
+        '<button class="danger" data-a="delete" data-rid="' + r.rid + '">删除</button>' +
+      '</div></td>';
+
+    var dtr = document.createElement('tr');
+    dtr.className = 'detail';
+    dtr.style.display = 'none';
+    dtr.innerHTML = '<td colspan="11">' + detailHTML(r) + '</td>';
+
+    tr.querySelectorAll('button').forEach(function (b) {
+      b.onclick = function () {
+        var a = b.dataset.a, rid = b.dataset.rid;
+        if (a === 'detail') {
+          dtr.style.display = dtr.style.display === 'none' ? 'table-row' : 'none';
+        } else if (a === 'delete') {
+          if (!confirm('删除这一局？\n\n这一局的所有事件都会被移除，删除前会自动备份一份。')) return;
+          api({ action: 'delete', rid: rid });
+        } else if (a === 'exclude') {
+          api({ action: 'exclude', rid: rid });
+        } else if (a === 'include') {
+          api({ action: 'include', rid: rid });
+        }
+      };
+    });
+
+    var inp = tr.querySelector('.note');
+    inp.onchange = function () { api({ action: 'note', rid: rid, note: inp.value }); };
+
+    rows.appendChild(tr);
+    rows.appendChild(dtr);
+  });
+}
+
+function api(body) {
+  return fetch('/api/runs', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+  }).then(function (r) { return r.json(); }).then(function (r) {
+    if (r && r.runs) { DATA.runs = r.runs; DATA.meta = r.meta; if (r.flags) DATA.flags = r.flags; render(); }
+    toast(r && r.msg ? r.msg : '完成');
+  }).catch(function (e) { toast('失败：' + e.message); });
+}
+
+function load() {
+  fetch('/api/runs').then(function (r) { return r.json(); }).then(function (r) {
+    DATA.runs = r.runs; DATA.meta = r.meta; if (r.flags) DATA.flags = r.flags; render(); applyPending();
+  }).catch(function (e) { toast('读取失败：' + e.message); });
+}
+
+function setFilter(f, btn) {
+  filter = f;
+  ['fAll', 'fDone', 'fLeft', 'fEx', 'fAnom'].forEach(function (id) { $(id).classList.toggle('on', $(id) === btn); });
+  render();
+}
+$('fAll').onclick = function () { setFilter('all', this); };
+$('fDone').onclick = function () { setFilter('done', this); };
+$('fLeft').onclick = function () { setFilter('left', this); };
+$('fEx').onclick = function () { setFilter('ex', this); };
+$('fAnom').onclick = function () { setFilter('anom', this); };
+
+// 批量排除所有被标异常的局（二次确认）
+$('btnExAll').onclick = function () {
+  var bad = DATA.runs.filter(function (r) { return r.flags && r.flags.length && !r.excluded; });
+  if (!bad.length) { toast('没有待排除的异常局'); return; }
+  if (!confirm('把 ' + bad.length + ' 局标记为异常并排除出统计？（可以在列表里逐个恢复）')) return;
+  var done = 0;
+  (function next() {
+    if (done >= bad.length) { toast('已排除 ' + done + ' 局'); load(); return; }
+    var r = bad[done++];
+    fetch('/api/runs', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'exclude', rid: r.rid, on: true }) })
+      .then(function (x) { return x.json(); }).then(function () { next(); })
+      .catch(function () { next(); });
+  })();
+};
+
+$('btnReload').onclick = load;
+$('q').oninput = function () { q = this.value; render(); };
+
+// 支持 /runs?uid=xxx 或 /runs?year=y3（从「按年级看」跳过来）
+var pendingYear = null;
+(function () {
+  var m = /[?&]uid=([^&]+)/.exec(location.search);
+  if (m) { q = decodeURIComponent(m[1]); $('q').value = q; }
+  var y = /[?&]year=([^&]+)/.exec(location.search);
+  if (y) pendingYear = decodeURIComponent(y[1]);
+})();
+
+function applyPending() {
+  if (!pendingYear) return;
+  q = yearName(pendingYear);
+  $('q').value = q;
+  pendingYear = null;
+  render();
+}
+
+load();
+</script>
+</body>
+</html>

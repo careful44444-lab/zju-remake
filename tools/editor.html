@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>文案编辑</title>
+<style>
+:root{--bg:#0b0f14;--line:#232e39;--fg:#e8eef5;--dim:#8294a3;--gold:#ffd76a;--teal:#6fe0bd}
+*{box-sizing:border-box}
+body{margin:0;background:#0b0f14;color:var(--fg);font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif}
+header{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  padding:14px 22px;background:rgba(11,15,20,.96);border-bottom:1px solid var(--line);backdrop-filter:blur(8px)}
+h1{font-size:16px;margin:0}
+.sub{font-size:11.5px;color:var(--dim)}
+.spacer{flex:1}
+button{font:inherit;font-size:12.5px;padding:8px 14px;border-radius:9px;cursor:pointer;
+  border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--fg)}
+button:hover{background:rgba(255,255,255,.09)}
+button.primary{background:linear-gradient(100deg,#ffe08a,#ffb347);color:#241a05;border:0;font-weight:700}
+button.danger{color:#ff8d7e;border-color:rgba(255,141,126,.35)}
+.wrap{display:flex;gap:20px;padding:20px 22px 80px;align-items:flex-start}
+nav{position:sticky;top:70px;width:150px;flex:0 0 150px;display:flex;flex-direction:column;gap:4px}
+nav button{text-align:left;padding:8px 12px;font-size:13px}
+nav button.on{background:rgba(255,215,106,.14);border-color:rgba(255,215,106,.45);color:var(--gold);font-weight:700}
+main{flex:1;min-width:0}
+.tier{border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:12px;
+  background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.012))}
+.tier h3{margin:0 0 10px;font-size:13px;color:#b9c7d3;font-weight:600;display:flex;align-items:center;gap:8px}
+.badge{font-size:10px;padding:2px 8px;border-radius:5px;background:rgba(255,215,106,.14);color:var(--gold)}
+label{display:block;font-size:11px;color:var(--dim);margin:10px 0 4px}
+input[type=text],textarea{width:100%;font:inherit;font-size:13px;padding:9px 11px;border-radius:9px;
+  background:rgba(0,0,0,.3);border:1px solid #26313b;color:var(--fg)}
+textarea{resize:vertical;min-height:64px;line-height:1.6}
+input:focus,textarea:focus{outline:0;border-color:rgba(255,215,106,.5)}
+.preview{margin-top:8px;border:1px dashed #2b3540;border-radius:12px;padding:12px 14px;background:rgba(0,0,0,.2)}
+.preview .t{font-size:16px;font-weight:800;margin-bottom:6px}
+.preview .d{font-size:12.5px;color:#a9b8c6;line-height:1.7}
+.preview .tags{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.preview .tags span{font-size:11px;padding:3px 9px;border-radius:6px;background:rgba(255,255,255,.05);border:1px solid #26313b;color:#9fb0bf}
+#toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);padding:10px 20px;border-radius:999px;
+  background:rgba(20,26,33,.96);border:1px solid rgba(255,215,106,.4);color:var(--gold);font-size:13px;font-weight:600;
+  opacity:0;transition:opacity .2s;pointer-events:none}
+#toast.show{opacity:1}
+.hint{font-size:11.5px;color:var(--dim);line-height:1.8;margin:0 0 16px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>文案编辑</h1>
+  <span class="sub" id="stat">修改会存到 data/content-edit.json，游戏刷新即生效</span>
+  <span class="spacer"></span>
+  <button id="btnSave" class="primary">保存</button>
+  <button id="btnReset">全部还原</button>
+  <button onclick="window.open('/h5/','_blank')">打开游戏</button>
+</header>
+
+<div class="wrap">
+  <nav id="nav"></nav>
+  <main id="main">
+    <p class="hint">左边选维度，右边逐条改。改完点「保存」，回到游戏刷新就能看到。</p>
+  </main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+var CONTENT = null, EVENTS = null, META = null, ACH = [], TITLES = [];
+var cur = 'food';
+var draft = {};   // { dimId: { tiers:[{title,desc,tags}], caps:[{name,desc}] } }
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function toast(m){ var t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(function(){t.classList.remove('show');},2200); }
+
+// 从服务端拿原始文案（serve.js 会把 content.js 读出来）
+function load(){
+  return fetch('/content-edit').then(function(r){return r.json();}).then(function(d){
+    CONTENT = d.content; EVENTS = d.events; META = d; ACH = d.achievements || []; TITLES = d.titles || [];
+    (META.dims||[]).forEach(function(dm){
+      var c = CONTENT[dm.id];
+      draft[dm.id] = {
+        tiers: c.tiers.map(function(t){ return {title:t.title, desc:t.desc, tags:(t.tags||[]).join(' / ')}; }),
+        caps:  c.caps.map(function(t){ return {name:t.name, desc:t.desc}; })
+      };
+    });
+    if (location.hash === '#events') cur = 'events';
+    if (location.hash === '#rules') cur = 'rules';
+    buildNav(); render();
+  });
+}
+
+function buildNav(){
+  var nav = $('nav');
+  nav.innerHTML = '';
+  (META.dims||[]).forEach(function(dm){
+    var b = document.createElement('button');
+    b.textContent = dm.name + ' · ' + dm.sub;
+    b.className = dm.id === cur ? 'on' : '';
+    b.onclick = function(){ cur = dm.id; history.replaceState(null,'','#edit'); buildNav(); render(); };
+    nav.appendChild(b);
+  });
+  var a2 = document.createElement('button');
+  a2.textContent = '称号 / 成就';
+  a2.className = cur === 'rules' ? 'on' : '';
+  a2.onclick = function(){ cur = 'rules'; history.replaceState(null,'','#rules'); buildNav(); render(); };
+  nav.appendChild(a2);
+
+  var e = document.createElement('button');
+  e.textContent = '事件卡';
+  e.className = cur === 'events' ? 'on' : '';
+  e.onclick = function(){ cur = 'events'; history.replaceState(null,'','#events'); buildNav(); render(); };
+  nav.appendChild(e);
+}
+
+function render(){
+  var main = $('main');
+  if (cur === 'events') return renderEvents(main);
+  if (cur === 'rules') return renderRules(main);
+
+  var dm = (META.dims||[]).filter(function(x){ return x.id === cur; })[0];
+  var d = draft[cur], c = CONTENT[cur];
+  var html = '<p class="hint">「' + esc(dm.name) + ' · ' + esc(dm.sub) + '」——五档 + 两个封神专精</p>';
+
+  d.tiers.forEach(function(t, i){
+    var tierName = (META.tiers||[])[i] ? META.tiers[i].name : ('T' + (i+1));
+    html += '<div class="tier">' +
+      '<h3><span class="badge">T' + (i+1) + ' ' + esc(tierName) + '</span>' +
+      '<span style="color:var(--dim);font-weight:400;font-size:11px">第 ' + (i+1) + ' 档</span></h3>' +
+      '<label>标题</label><input type="text" data-dim="' + cur + '" data-kind="tier" data-i="' + i + '" data-f="title" value="' + esc(t.title) + '">' +
+      '<label>描述</label><textarea data-dim="' + cur + '" data-kind="tier" data-i="' + i + '" data-f="desc">' + esc(t.desc) + '</textarea>' +
+      '<label>数值标签（用空格或 / 分隔，显示在方块下方）</label>' +
+      '<input type="text" data-dim="' + cur + '" data-kind="tier" data-i="' + i + '" data-f="tags" value="' + esc(t.tags) + '">' +
+      '<div class="preview" id="pv-' + cur + '-' + i + '">' + previewHTML(t) + '</div>' +
+      '</div>';
+  });
+
+  d.caps.forEach(function(cp, i){
+    html += '<div class="tier">' +
+      '<h3><span class="badge">封神专精 ' + (i===0?'A':'B') + '</span></h3>' +
+      '<label>名称</label><input type="text" data-dim="' + cur + '" data-kind="cap" data-i="' + i + '" data-f="name" value="' + esc(cp.name) + '">' +
+      '<label>描述</label><textarea data-dim="' + cur + '" data-kind="cap" data-i="' + i + '" data-f="desc">' + esc(cp.desc) + '</textarea>' +
+      '</div>';
+  });
+
+  main.innerHTML = html;
+  main.querySelectorAll('input,textarea').forEach(function(el){
+    el.oninput = function(){
+      var dim = el.dataset.dim, kind = el.dataset.kind, i = +el.dataset.i, f = el.dataset.f;
+      if (kind === 'tier') {
+        draft[dim].tiers[i][f] = el.value;
+        if (f !== 'tags') {
+          var pv = $('pv-' + dim + '-' + i);
+          if (pv) pv.innerHTML = previewHTML(draft[dim].tiers[i]);
+        }
+      } else {
+        draft[dim].caps[i][f] = el.value;
+      }
+    };
+  });
+}
+
+function previewHTML(t){
+  return '<div class="t">' + esc(t.title || '（标题）') + '</div>' +
+    '<div class="d">' + esc(t.desc || '（描述）') + '</div>' +
+    '<div class="tags">' + String(t.tags||'').split(/[\/、,，]/).map(function(x){ return x.trim(); })
+      .filter(Boolean).map(function(x){ return '<span>' + esc(x) + '</span>'; }).join('') + '</div>';
+}
+
+function clauseText(c){
+  if (!c || !c.t) return '（无条件）';
+  var ids = (!c.of || c.of === '*') ? (META.dims||[]).map(function(d){return d.id;}) : c.of;
+  var names = ids.map(function(id){
+    var d = (META.dims||[]).filter(function(x){return x.id===id;})[0];
+    return d ? d.name : id;
+  }).join('、');
+  if (c.t === 'top') return names + ' 是最高的那一项';
+  var rng = [];
+  if (c.min != null) rng.push('≥ T' + c.min);
+  if (c.max != null) rng.push('≤ T' + c.max);
+  var body = names + ' ' + rng.join(' 且 ');
+  if (c.t === 'count') return '至少 ' + (c.n||1) + ' 个满足：' + body;
+  return body;
+}
+
+function clauseHTML(kind, i, ci, c){
+  c = c || { t:'every', of:'*', min:4 };
+  var ids = (!c.of || c.of === '*') ? (META.dims||[]).map(function(d){return d.id;}) : c.of;
+  var typeOpts = [
+    ['every','全部满足'], ['count','至少 N 个满足'], ['top','这个维度最高']
+  ].map(function(x){ return '<option value="' + x[0] + '"' + (c.t===x[0]?' selected':'') + '>' + x[1] + '</option>'; }).join('');
+  var minOpts = ['<option value="">—</option>'].concat([1,2,3,4,5].map(function(n){
+    return '<option value="' + n + '"' + (c.min===n?' selected':'') + '>T' + n + '</option>';
+  })).join('');
+  var maxOpts = ['<option value="">—</option>'].concat([1,2,3,4,5].map(function(n){
+    return '<option value="' + n + '"' + (c.max===n?' selected':'') + '>T' + n + '</option>';
+  })).join('');
+  var boxes = (META.dims||[]).map(function(d){
+    return '<label style="display:inline-flex;align-items:center;gap:4px;margin-right:10px;font-size:12px;color:#a9b8c6">' +
+      '<input type="checkbox" data-k="' + kind + '" data-i="' + i + '" data-ci="' + ci + '" data-f="dim" value="' + d.id + '"' +
+      (ids.indexOf(d.id) >= 0 ? ' checked' : '') + '>' + d.name + '</label>';
+  }).join('');
+  var needN = c.t === 'count' || c.t === 'top';
+  return '<div style="border:1px solid #26313b;border-radius:10px;padding:10px 12px;margin-bottom:8px;background:rgba(0,0,0,.18)">' +
+    '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">' +
+      '<select data-k="' + kind + '" data-i="' + i + '" data-ci="' + ci + '" data-f="t" style="width:130px">' + typeOpts + '</select>' +
+      (needN ? '<span style="font-size:11.5px;color:#8294a3">至少</span><input type="number" min="1" max="6" value="' + (c.n||1) + '" data-k="' + kind + '" data-i="' + i + '" data-ci="' + ci + '" data-f="n" style="width:60px">' : '') +
+      '<span style="font-size:11.5px;color:#8294a3">最低</span><select data-k="' + kind + '" data-i="' + i + '" data-ci="' + ci + '" data-f="min" style="width:74px">' + minOpts + '</select>' +
+      '<span style="font-size:11.5px;color:#8294a3">最高</span><select data-k="' + kind + '" data-i="' + i + '" data-ci="' + ci + '" data-f="max" style="width:74px">' + maxOpts + '</select>' +
+      '<button data-del-clause="' + kind + '|' + i + '|' + ci + '" style="margin-left:auto;font-size:11px;padding:4px 9px">删掉这条</button>' +
+    '</div>' +
+    '<div style="margin-top:8px">' + boxes + '</div>' +
+    '<div style="margin-top:6px;font-size:11px;color:#6fe0bd">' + clauseText(c) + '</div>' +
+  '</div>';
+}
+
+function renderRules(main){
+  var html = '<p class="hint">条件之间是「并且」。称号从上往下匹配，<b>第一条成立的</b>就是结果——顺序很重要，用 ↑↓ 调。最后一条留空条件即兜底。</p>';
+
+  html += '<div class="tier"><h3><span class="badge">成就</span><span style="color:var(--dim);font-weight:400;font-size:11px">达成即亮，不带分值</span></h3>';
+  ACH.forEach(function(a, i){
+    html += '<div style="border-top:1px solid #232e39;margin-top:10px;padding-top:10px">' +
+      '<div style="display:flex;gap:10px;align-items:center">' +
+        '<input type="text" data-k="ach" data-i="' + i + '" data-f="name" value="' + esc(a.name) + '" placeholder="名称" style="flex:1">' +
+        '<button data-del-ach="' + i + '" style="font-size:11px;padding:4px 9px">删除</button>' +
+      '</div>' +
+      '<label>说明（结算页小字）</label>' +
+      '<input type="text" data-k="ach" data-i="' + i + '" data-f="desc" value="' + esc(a.desc||'') + '">' +
+      '<label>条件</label>' + (a.cond||[]).map(function(c, ci){ return clauseHTML('ach', i, ci, c); }).join('') +
+      '<button data-add-clause="ach|' + i + '" style="font-size:11px;padding:5px 10px">＋ 加一条条件</button>' +
+    '</div>';
+  });
+  html += '<button data-add-ach="1" style="margin-top:12px;font-size:12px;padding:7px 13px">＋ 新增成就</button></div>';
+
+  html += '<div class="tier"><h3><span class="badge">称号</span><span style="color:var(--dim);font-weight:400;font-size:11px">从上往下，第一个成立的生效</span></h3>';
+  TITLES.forEach(function(a, i){
+    html += '<div style="border-top:1px solid #232e39;margin-top:10px;padding-top:10px">' +
+      '<div style="display:flex;gap:8px;align-items:center">' +
+        '<span style="font-size:11px;color:#8294a3;width:18px">' + (i+1) + '</span>' +
+        '<input type="text" data-k="title" data-i="' + i + '" data-f="name" value="' + esc(a.name) + '" placeholder="称号" style="flex:1">' +
+        '<button data-move="' + i + '|-1" style="font-size:11px;padding:4px 8px">↑</button>' +
+        '<button data-move="' + i + '|1" style="font-size:11px;padding:4px 8px">↓</button>' +
+        '<button data-del-title="' + i + '" style="font-size:11px;padding:4px 9px">删除</button>' +
+      '</div>' +
+      '<label>文案</label>' +
+      '<input type="text" data-k="title" data-i="' + i + '" data-f="line" value="' + esc(a.line||'') + '">' +
+      '<label>条件' + ((a.cond||[]).length ? '' : '（空 = 兜底，永远成立）') + '</label>' +
+      (a.cond||[]).map(function(c, ci){ return clauseHTML('title', i, ci, c); }).join('') +
+      '<button data-add-clause="title|' + i + '" style="font-size:11px;padding:5px 10px">＋ 加一条条件</button>' +
+    '</div>';
+  });
+  html += '<button data-add-title="1" style="margin-top:12px;font-size:12px;padding:7px 13px">＋ 新增称号</button></div>';
+
+  main.innerHTML = html;
+  bindRules(main);
+}
+
+function listOf(kind){ return kind === 'ach' ? ACH : TITLES; }
+
+function bindRules(main){
+  main.querySelectorAll('input[data-k],select[data-k]').forEach(function(el){
+    var h = (el.tagName === 'SELECT' || el.type === 'checkbox') ? 'onchange' : 'oninput';
+    el[h] = function(){
+      var kind = el.dataset.k, i = +el.dataset.i, f = el.dataset.f;
+      var item = listOf(kind)[i];
+      if (!item) return;
+      if (el.dataset.ci == null) { item[f] = el.value; return; }
+      var c = item.cond[+el.dataset.ci];
+      if (!c) return;
+      if (f === 'dim') {
+        var all = (META.dims||[]).map(function(d){return d.id;});
+        var sel = all.filter(function(id){
+          return main.querySelector('input[data-k="'+kind+'"][data-i="'+i+'"][data-ci="'+el.dataset.ci+'"][value="'+id+'"]').checked;
+        });
+        c.of = (sel.length === all.length) ? '*' : sel;
+        render();
+        return;
+      }
+      if (f === 'min' || f === 'max') { c[f] = el.value ? +el.value : null; render(); return; }
+      if (f === 'n') { c.n = +el.value || 1; return; }
+      if (f === 't') { c.t = el.value; render(); return; }
+    };
+  });
+  main.querySelectorAll('[data-del-clause]').forEach(function(b){
+    b.onclick = function(){
+      var a = b.dataset.delClause.split('|'), kind = a[0], i = +a[1], ci = +a[2];
+      listOf(kind)[i].cond.splice(ci, 1); render();
+    };
+  });
+  main.querySelectorAll('[data-add-clause]').forEach(function(b){
+    b.onclick = function(){
+      var a = b.dataset.addClause.split('|'), kind = a[0], i = +a[1];
+      var it = listOf(kind)[i];
+      it.cond = it.cond || [];
+      it.cond.push({ t:'every', of:'*', min:4 }); render();
+    };
+  });
+  main.querySelectorAll('[data-del-ach]').forEach(function(b){
+    b.onclick = function(){ if (!confirm('删掉这个成就？')) return; ACH.splice(+b.dataset.delAch, 1); render(); };
+  });
+  main.querySelectorAll('[data-del-title]').forEach(function(b){
+    b.onclick = function(){ if (!confirm('删掉这个称号？')) return; TITLES.splice(+b.dataset.delTitle, 1); render(); };
+  });
+  main.querySelectorAll('[data-add-ach]').forEach(function(b){
+    b.onclick = function(){
+      ACH.push({ id: 'ach' + Date.now(), name: '新成就', desc: '', cond:[{ t:'every', of:'*', min:4 }] }); render();
+    };
+  });
+  main.querySelectorAll('[data-add-title]').forEach(function(b){
+    b.onclick = function(){
+      TITLES.splice(Math.max(0, TITLES.length - 1), 0, { id: 'title' + Date.now(), name: '新称号', line: '', cond:[{ t:'every', of:'*', min:4 }] }); render();
+    };
+  });
+  main.querySelectorAll('[data-move]').forEach(function(b){
+    b.onclick = function(){
+      var a = b.dataset.move.split('|'), i = +a[0], d = +a[1], j = i + d;
+      if (j < 0 || j >= TITLES.length) return;
+      var tmp = TITLES[i]; TITLES[i] = TITLES[j]; TITLES[j] = tmp; render();
+    };
+  });
+}
+
+function renderEvents(main){
+  var html = '<p class="hint">每回合结算时会从这里抽一张。选项文字会出现在统计报表里；结果文案不用写「预算 +2 点」，系统会按效果自动补。</p>';
+  EVENTS.forEach(function(ev, i){
+    html += '<div class="tier">' +
+      '<h3><span class="badge">' + esc(ev.id) + '</span></h3>' +
+      '<label>标题</label><input type="text" data-ev="' + i + '" data-f="title" value="' + esc(ev.title) + '">' +
+      '<label>正文</label><textarea data-ev="' + i + '" data-f="text">' + esc(ev.text) + '</textarea>';
+    (ev.options || []).forEach(function(o, k){
+      if (typeof o === 'string') { ev.options[k] = { label: o, result: '' }; o = ev.options[k]; }
+      o.cost = o.cost || 0; o.effect = o.effect || {}; o.effect.tiers = o.effect.tiers || {};
+      var tierIds = Object.keys(o.effect.tiers);
+      var curDim = tierIds[0] || '';
+      var curDelta = curDim ? o.effect.tiers[curDim] : 0;
+      var dimOpts = ['<option value="">不改档位</option>'].concat((META.dims||[]).map(function(d){
+        return '<option value="' + d.id + '"' + (d.id === curDim ? ' selected' : '') + '>' + d.name + '</option>';
+      })).join('');
+      var deltaOpts = [1, -1, 2, -2].map(function(n){
+        return '<option value="' + n + '"' + (n === curDelta ? ' selected' : '') + '>' + (n > 0 ? '+' : '') + n + '</option>';
+      }).join('');
+      var condDim = (o.cond && o.cond.dim) || '';
+      var condLt = (o.cond && o.cond.lt != null) ? o.cond.lt : 3;
+      var condOpts = ['<option value="">无条件</option>'].concat((META.dims||[]).map(function(d){
+        return '<option value="' + d.id + '"' + (d.id === condDim ? ' selected' : '') + '>' + d.name + '</option>';
+      })).join('');
+      html += '<div style="border-top:1px solid #232e39;margin-top:12px;padding-top:10px">' +
+        '<label>选项 ' + (k+1) + ' 文字</label>' +
+        '<input type="text" data-ev="' + i + '" data-opt="' + k + '" data-f="label" value="' + esc(o.label) + '">' +
+        '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:10px">' +
+          '<div><label style="margin-top:0">花费点数</label><input type="number" min="0" max="20" style="width:86px" data-ev="' + i + '" data-opt="' + k + '" data-f="cost" value="' + (o.cost || 0) + '"></div>' +
+          '<div><label style="margin-top:0">点数增减</label><input type="number" min="-20" max="20" style="width:86px" data-ev="' + i + '" data-opt="' + k + '" data-f="points" value="' + (o.effect.points || 0) + '"></div>' +
+          '<div><label style="margin-top:0">档位</label><select data-ev="' + i + '" data-opt="' + k + '" data-f="dim" style="width:110px">' + dimOpts + '</select></div>' +
+          '<div><label style="margin-top:0">增减</label><select data-ev="' + i + '" data-opt="' + k + '" data-f="delta" style="width:76px">' + deltaOpts + '</select></div>' +
+          '<div><label style="margin-top:0">最高到</label><input type="number" min="1" max="5" style="width:76px" data-ev="' + i + '" data-opt="' + k + '" data-f="cap" value="' + (o.cap || 5) + '"></div>' +
+        '</div>' +
+        '<div style="margin-top:10px"><label style="margin-top:0">赠送道具（选它时发放）</label>' +
+          '<select data-ev="' + i + '" data-opt="' + k + '" data-f="item" style="width:160px">' +
+            '<option value="">不送</option>' +
+            ((META.items || []).map(function(it){
+              return '<option value="' + it.id + '"' + (o.item === it.id ? ' selected' : '') + '>' + it.name + '</option>';
+            }).join('')) +
+          '</select></div>' +
+        '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:10px">' +
+          '<div><label style="margin-top:0">条件（可选）</label><select data-ev="' + i + '" data-opt="' + k + '" data-f="condDim" style="width:110px">' + condOpts + '</select></div>' +
+          '<div><label style="margin-top:0">低于 T</label><input type="number" min="1" max="5" style="width:76px" data-ev="' + i + '" data-opt="' + k + '" data-f="condLt" value="' + condLt + '"></div>' +
+        '</div>' +
+        '<label>结果文案</label><textarea data-ev="' + i + '" data-opt="' + k + '" data-f="result">' + esc(o.result) + '</textarea>' +
+        (function(){
+          var rnd = o.random || null;
+          var dimOpts2 = ['<option value="">不改档位</option>'].concat((META.dims||[]).map(function(d){
+            var cur2 = rnd && rnd.effectB && Object.keys(rnd.effectB.tiers||{})[0];
+            return '<option value="' + d.id + '"' + (d.id === cur2 ? ' selected' : '') + '>' + d.name + '</option>';
+          })).join('');
+          var curD = rnd && rnd.effectB ? (Object.keys(rnd.effectB.tiers||{})[0] || '') : '';
+          var curV = (rnd && rnd.effectB && curD) ? rnd.effectB.tiers[curD] : -1;
+          var deltaOpts2 = [1,-1,2,-2].map(function(n){
+            return '<option value="' + n + '"' + (n === curV ? ' selected' : '') + '>' + (n>0?'+':'') + n + '</option>';
+          }).join('');
+          var h = '<div style="margin-top:12px;border-top:1px dashed #2b3540;padding-top:10px">';
+          h += '<label style="display:flex;align-items:center;gap:8px;margin:0 0 8px">' +
+            '<input type="checkbox" data-ev="' + i + '" data-opt="' + k + '" data-f="randOn"' + (rnd ? ' checked' : '') + '>' +
+            '<span style="font-size:12px;color:#cfdae4">启用「第二种结果」（随机）</span></label>';
+          if (rnd) {
+            h += '<div style="display:flex;gap:14px;flex-wrap:wrap">' +
+              '<div><label style="margin-top:0">走 A 的概率</label><input type="number" min="0" max="1" step="0.1" style="width:86px" data-ev="' + i + '" data-opt="' + k + '" data-f="randP" value="' + (rnd.p != null ? rnd.p : 0.5) + '"></div>' +
+              '<div><label style="margin-top:0">点数增减 B</label><input type="number" min="-20" max="20" style="width:86px" data-ev="' + i + '" data-opt="' + k + '" data-f="randPoints" value="' + ((rnd.effectB && rnd.effectB.points) || 0) + '"></div>' +
+              '<div><label style="margin-top:0">档位 B</label><select data-ev="' + i + '" data-opt="' + k + '" data-f="randDim" style="width:110px">' + dimOpts2 + '</select></div>' +
+              '<div><label style="margin-top:0">增减 B</label><select data-ev="' + i + '" data-opt="' + k + '" data-f="randDelta" style="width:76px">' + deltaOpts2 + '</select></div>' +
+              '<div><label style="margin-top:0">最高到 B</label><input type="number" min="1" max="5" style="width:76px" data-ev="' + i + '" data-opt="' + k + '" data-f="randCap" value="' + ((rnd.effectB && rnd.effectB.cap) || 5) + '"></div>' +
+            '</div>' +
+            '<label>结果 B 文案</label><textarea data-ev="' + i + '" data-opt="' + k + '" data-f="randText">' + esc(rnd.resultB || '') + '</textarea>' +
+            '<div style="font-size:11px;color:#8294a3;margin:-4px 0 4px">B 的概率 = 1 − A = ' + (1 - (rnd.p != null ? rnd.p : 0.5)).toFixed(1) + '。启用后「条件」不再生效。</div>';
+          }
+          h += '</div>';
+          return h;
+        })() +
+        '<label>条件不满足时的文案（有条件的才需要）</label><textarea data-ev="' + i + '" data-opt="' + k + '" data-f="altResult">' + esc(o.altResult || '') + '</textarea>' +
+      '</div>';
+    });
+    html += '</div>';
+  });
+  main.innerHTML = html;
+  main.querySelectorAll('input,textarea,select').forEach(function(el){
+    var h = el.tagName === 'SELECT' ? 'onchange' : 'oninput';
+    el[h] = function(){
+      var i = +el.dataset.ev, o = EVENTS[i];
+      if (el.dataset.opt == null) { o[el.dataset.f] = el.value; return; }
+      var opt = o.options[+el.dataset.opt];
+      var f = el.dataset.f;
+      if (f === 'label' || f === 'result' || f === 'altResult') { opt[f] = el.value; return; }
+      if (f === 'randOn') {
+        if (el.checked) {
+          opt.random = { p: 0.5, resultB: '', effectB: { points: 0, tiers: {} } };
+        } else { opt.random = null; }
+        render(); return;
+      }
+      if (f.indexOf('rand') === 0) {
+        if (!opt.random) opt.random = { p: 0.5, resultB: '', effectB: { points: 0, tiers: {} } };
+        if (!opt.random.effectB) opt.random.effectB = { points: 0, tiers: {} };
+        if (f === 'randP') { opt.random.p = Math.max(0, Math.min(1, +el.value || 0)); return; }
+        if (f === 'randText') { opt.random.resultB = el.value; return; }
+        if (f === 'randPoints') { opt.random.effectB.points = +el.value || 0; return; }
+        if (f === 'randCap') { opt.random.effectB.cap = Math.min(5, Math.max(1, +el.value || 5)); return; }
+        if (f === 'randDim') {
+          var dv2 = Object.keys(opt.random.effectB.tiers || {})[0];
+          var dvv = dv2 ? opt.random.effectB.tiers[dv2] : -1;
+          opt.random.effectB.tiers = {};
+          if (el.value) opt.random.effectB.tiers[el.value] = dvv;
+          render(); return;
+        }
+        if (f === 'randDelta') {
+          var dd = Object.keys(opt.random.effectB.tiers || {})[0];
+          if (!dd) return;
+          opt.random.effectB.tiers[dd] = +el.value || -1;
+          return;
+        }
+        return;
+      }
+      if (f === 'cost') { opt.cost = Math.max(0, +el.value || 0); return; }
+      if (f === 'item') { opt.item = el.value || null; return; }
+      if (f === 'points') { opt.effect.points = +el.value || 0; return; }
+      if (f === 'cap') { opt.cap = Math.min(5, Math.max(1, +el.value || 5)); return; }
+      if (f === 'dim') {
+        var delta = Object.keys(opt.effect.tiers)[0];
+        var dv = delta ? opt.effect.tiers[delta] : -1;
+        opt.effect.tiers = {};
+        if (el.value) opt.effect.tiers[el.value] = dv;
+        return;
+      }
+      if (f === 'delta') {
+        var did = Object.keys(opt.effect.tiers)[0];
+        if (!did) return;
+        opt.effect.tiers[did] = +el.value || -1;
+        return;
+      }
+      if (f === 'condDim') {
+        if (!el.value) { opt.cond = null; return; }
+        opt.cond = { dim: el.value, lt: (opt.cond && opt.cond.lt) || 3 };
+        return;
+      }
+      if (f === 'condLt') {
+        if (!opt.cond) return;
+        opt.cond.lt = Math.min(5, Math.max(1, +el.value || 3));
+        return;
+      }
+    };
+  });
+}
+
+function buildPayload(){
+  var out = {};
+  Object.keys(draft).forEach(function(k){
+    out[k] = {
+      tiers: draft[k].tiers.map(function(t){
+        return { title: t.title, desc: t.desc, tags: t.tags.split(/[\/、,，]/).map(function(x){return x.trim();}).filter(Boolean) };
+      }),
+      caps: draft[k].caps.map(function(c){ return { name: c.name, desc: c.desc }; })
+    };
+  });
+  out.__achievements = ACH;
+  out.__titles = TITLES;
+  out.__events = EVENTS.map(function(ev){
+    return { id: ev.id, title: ev.title, text: ev.text,
+      options: ev.options.map(function(o){
+        if (typeof o === 'string') return { label: o, result: '' };
+        return {
+          label: o.label, cost: o.cost || 0, result: o.result || '',
+          altResult: o.altResult || '',
+          cond: o.cond || null,
+          effect: (o.effect && (o.effect.points || Object.keys(o.effect.tiers || {}).length))
+            ? o.effect : null,
+          cap: o.cap || 5,
+          item: o.item || null,
+          random: o.random ? {
+            p: Math.max(0, Math.min(1, o.random.p != null ? o.random.p : 0.5)),
+            resultB: o.random.resultB || '',
+            effectB: {
+              points: (o.random.effectB && o.random.effectB.points) || 0,
+              tiers: (o.random.effectB && o.random.effectB.tiers) || {},
+              cap: (o.random.effectB && o.random.effectB.cap) || 5
+            }
+          } : null
+        };
+      }) };
+  });
+  return out;
+}
+
+$('btnSave').onclick = function(){
+  fetch('/api/content', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ data: buildPayload() })
+  }).then(function(r){ return r.json(); }).then(function(r){
+    toast(r.ok ? '已保存，回游戏刷新即可看到' : ('保存失败：' + (r.msg||'')));
+    $('stat').textContent = r.ok ? '已保存 · 游戏刷新即生效' : $('stat').textContent;
+  }).catch(function(e){ toast('保存失败：' + e.message); });
+};
+
+$('btnReset').onclick = function(){
+  if (!confirm('还原成文件里的原始文案？这会清掉所有修改。')) return;
+  fetch('/api/content', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ reset: true }) })
+    .then(function(r){ return r.json(); }).then(function(){ toast('已还原'); setTimeout(function(){ location.reload(); }, 600); });
+};
+
+load().catch(function(e){ $('main').innerHTML = '<p class="hint">读取失败：' + esc(e.message) + '</p>'; });
+</script>
+</body>
+</html>
