@@ -45,6 +45,39 @@ function writeTextSafe(file, text) {
   }
 }
 
+function sendLogin(res, err, code, next) {
+  var html = [
+    '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">',
+    '<meta name="viewport" content="width=device-width,initial-scale=1">',
+    '<title>后台登录</title><style>',
+    '*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;',
+    'background:#f1f5f9;font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;padding:24px}',
+    '.box{width:100%;max-width:360px;background:#fff;border:1px solid #e2e8f0;border-radius:18px;',
+    'padding:28px 24px;box-shadow:0 18px 50px rgba(15,23,42,.08)}',
+    'h1{margin:0 0 6px;font-size:19px;color:#0f172a}',
+    'p.h{margin:0 0 20px;font-size:12px;color:#64748b;line-height:1.7}',
+    'input{width:100%;font:inherit;font-size:14px;padding:11px 13px;border:1px solid #e2e8f0;',
+    'border-radius:11px;outline:0}',
+    'input:focus{border-color:#d97706;box-shadow:0 0 0 3px rgba(245,158,11,.12)}',
+    'button{width:100%;margin-top:14px;padding:11px;border:0;border-radius:11px;background:#0f172a;',
+    'color:#fff;font:inherit;font-weight:700;cursor:pointer}',
+    'button:hover{background:#1e293b}',
+    '.err{margin:12px 0 0;padding:9px 12px;border-radius:10px;background:#fef2f2;color:#b91c1c;font-size:12.5px}',
+    '.back{display:block;margin-top:16px;text-align:center;font-size:12px;color:#94a3b8;text-decoration:none}',
+    '</style></head><body><form class="box" method="POST" action="/login">',
+    '<h1>紫金港改造计划 · 后台</h1>',
+    '<p class="h">这里是数据看板和管理页，需要密码。</p>',
+    '<input type="hidden" name="next" value="', esc(next || "/admin"), '">',
+    '<input type="password" name="password" placeholder="输入后台密码" autofocus autocomplete="current-password">',
+    err ? ('<p class="err">' + esc(err) + '</p>') : "",
+    '<button type="submit">进入</button>',
+    '<a class="back" href="/h5/">← 回游戏</a>',
+    '</form></body></html>'
+  ].join("\n");
+  res.writeHead(code, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+  res.end(html);
+}
+
 function json(res, code, obj) {
   res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
   res.end(JSON.stringify(obj));
@@ -113,7 +146,23 @@ function effectiveContent() {
   };
 }
 
-function urlPage(rec, alive, saved) {
+function pwSection(savedMsg) {
+  var has = AUTH.hasPassword();
+  var h = '<hr style="border:0;border-top:1px solid #e2e8f0;margin:18px 0">';
+  h += '<div style="font-size:13px;font-weight:700;margin-bottom:6px">后台密码 ';
+  h += has ? '<span style="color:#059669">已设置</span>' : '<span style="color:#e11d48">未设置（公网进不去后台）</span>';
+  h += '</div>';
+  h += '<p class="hint" style="margin:0 0 10px">组员打开公网地址后，看数据 / 管后台要输这个密码；玩家玩游戏不需要。</p>';
+  h += '<form method="POST" action="/save-password" style="display:flex;gap:8px;flex-wrap:wrap">';
+  h += '<input type="password" name="password" placeholder="新密码（至少 4 位）" style="flex:1;min-width:150px;padding:9px 11px;border:1px solid #e2e8f0;border-radius:10px;font:inherit">';
+  h += '<button class="btn" type="submit" style="padding:9px 14px">设置 / 修改</button>';
+  if (has) h += '<button class="btn" type="submit" name="act" value="clear" style="padding:9px 14px;color:#e11d48" onclick="return confirm(\'关闭密码后，任何人都能看到后台数据。确定？\')">关闭密码</button>';
+  h += '</form>';
+  if (savedMsg) h += '<p class="hint" style="color:#059669;margin-top:10px">' + esc(savedMsg) + '</p>';
+  return h;
+}
+
+function urlPage(rec, alive, saved, savedMsg) {
   var play = rec ? rec.url + '/play' : '';
   var body = !rec
     ? '<div class="big dead">还没有启动过隧道</div>' +
@@ -129,6 +178,7 @@ function urlPage(rec, alive, saved) {
         '<div class="url dim">' + esc(play) + '</div>' +
         '<p class="hint">上次的隧道进程已经退出，这个地址打不开了。' +
         '重新双击 <b>内测启动.bat</b>，会生成一个新的地址。</p>');
+  body += pwSection(savedMsg);
 
   return '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width,initial-scale=1"><title>公网地址</title>' +
@@ -173,16 +223,99 @@ function urlPage(rec, alive, saved) {
 '</div></body></html>';
 }
 
+var AUTH = require('./auth.js');
+
+// 只有本机（127.0.0.1 / ::1）来的请求算「自己人」
+var LOOPBACK = { '127.0.0.1': 1, '::1': 1, '::ffff:127.0.0.1': 1 };
+function isLocalReq(req) {
+  var ip = (req.socket && req.socket.remoteAddress) || '';
+  return !!LOOPBACK[ip];
+}
+
+// 公网也能访问的路径（游戏本体 + 数据上报 + 文案/数值读取）
+var PUBLIC_EXACT = { '/': 1, '/login': 1, '/logout': 1, '/collect': 1, '/content-edit': 1, '/config-edit': 1, '/favicon.ico': 1 };
+var PUBLIC_PREFIX = ['/h5/', '/game/', '/render/'];
+// 隧道过来的请求，socket 也是 127.0.0.1，所以必须结合 forwarded 头判断
+function isRemoteReq(req) {
+  var proxied = !!(req.headers['x-forwarded-for'] || req.headers['cf-connecting-ip']);
+  return proxied || !isLocalReq(req);
+}
+
+function isPublicPath(p) {
+  if (PUBLIC_EXACT[p]) return true;
+  for (var i = 0; i < PUBLIC_PREFIX.length; i++) if (p.indexOf(PUBLIC_PREFIX[i]) === 0) return true;
+  return false;
+}
+
 http.createServer(function (req, res) {
   var p = decodeURIComponent((req.url || '/').split('?')[0]);
   var qs = (req.url || '').split('?')[1] || '';
 
-  // 看板 / 统计默认只对本地开放（公网隧道只能玩游戏，看不到别人的数据）
-  var proxied = !!(req.headers['x-forwarded-for'] || req.headers['cf-connecting-ip']);
-  if ((p === '/dashboard' || p === '/stats') && proxied && !PUBLIC_DASH) {
-    res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
-    return res.end('403 看板只在本机开放。要在公网看，启动时加 --public-dashboard');
+  // ---------- 登录 / 登出 ----------
+  if (p === '/login') {
+    if (req.method === 'POST') {
+      var ip = (req.socket && req.socket.remoteAddress) || '?';
+      var lock = AUTH.lockedFor(ip);
+      if (lock) return sendLogin(res, '试错太多次，请 ' + lock + ' 秒后再试', 429, '/login');
+      var body = '';
+      req.on('data', function (c) { body += c; if (body.length > 8192) req.destroy(); });
+      req.on('end', function () {
+        var pw = '', next = '/admin';
+        var ct = String(req.headers['content-type'] || '');
+        if (ct.indexOf('application/json') >= 0) {
+          try { var o = JSON.parse(body || '{}'); pw = o.password || ''; next = o.next || next; } catch (e) { }
+        } else {
+          var f = new URLSearchParams(body);
+          pw = f.get('password') || '';
+          next = f.get('next') || next;
+        }
+        if (!AUTH.hasPassword()) return sendLogin(res, '还没有设置后台密码，请先在本机打开 /url 设置', 403, next);
+        if (!AUTH.checkPassword(pw)) {
+          AUTH.noteFail(ip);
+          return sendLogin(res, '密码不对', 401, next);
+        }
+        AUTH.noteOk(ip);
+        if (next.indexOf('//') === 0 || next.indexOf('http') === 0) next = '/admin';
+        res.writeHead(302, { 'Set-Cookie': AUTH.cookieFor(req), Location: next.indexOf('/') === 0 ? next : '/admin' });
+        return res.end();
+      });
+      return;
+    }
+    var nx = /(^|&)next=([^&]*)/.exec(qs);
+    var nextUrl = nx ? decodeURIComponent(nx[2]) : '/admin';
+    return sendLogin(res, /(^|&)err=1(&|$)/.test(qs) ? '密码不对' : '', 200, nextUrl);
   }
+
+  if (p === '/logout') {
+    res.writeHead(302, { 'Set-Cookie': AUTH.clearCookie(), Location: '/login' });
+    return res.end();
+  }
+
+  // 设置/清除后台密码（只给本机）
+  if (p === '/save-password') {
+    if (isRemoteReq(req)) { res.writeHead(403); return res.end('403'); }
+    if (req.method !== 'POST') { res.writeHead(405); return res.end(); }
+    var pb = '';
+    req.on('data', function (c) { pb += c; if (pb.length > 8192) req.destroy(); });
+    req.on('end', function () {
+      var f2 = new URLSearchParams(pb);
+      var pw2 = String(f2.get('password') || '');
+      var act = f2.get('act') || 'set';
+      var r = act === 'clear' ? AUTH.clearPassword() : AUTH.setPassword(pw2);
+      res.writeHead(302, { Location: '/url?saved=1&msg=' + encodeURIComponent(r.ok ? (act === 'clear' ? '已关闭密码（后台仅本机可看）' : '密码已设置') : (r.msg || '失败')) });
+      res.end();
+    });
+    return;
+  }
+
+  // ---------- 门禁：非本机 + 非公开路径 + 未登录 → 去登录页 ----------
+  if (!isPublicPath(p) && isRemoteReq(req) && !AUTH.isAuthed(req)) {
+    if (p.indexOf('/api/') === 0) { res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' }); return res.end(JSON.stringify({ ok: false, msg: '需要登录' })); }
+    res.writeHead(302, { Location: '/login?next=' + encodeURIComponent(req.url || '/') });
+    return res.end();
+  }
+
+  var proxied = !!(req.headers['x-forwarded-for'] || req.headers['cf-connecting-ip']);
 
   // 查当前公网地址（只给本机看）
   if (p === '/url') {
@@ -192,12 +325,12 @@ http.createServer(function (req, res) {
     var alive = false;
     if (rec) { try { process.kill(rec.pid, 0); alive = true; } catch (e) { } }
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
-    return res.end(urlPage(rec, alive, /(^|&)saved=1(&|$)/.test(qs)));
+    var m = /[?&]msg=([^&]*)/.exec(qs);
+    return res.end(urlPage(rec, alive, /(^|&)saved=1(&|$)/.test(qs), m ? decodeURIComponent(m[1]) : ''));
   }
 
   // 备份管理（只给本机看）
   if (p === '/backups') {
-    if (proxied) { res.writeHead(403); return res.end('403'); }
     return fs.readFile(path.join(__dirname, 'backups.html'), function (err, buf) {
       res.writeHead(err ? 500 : 200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
       res.end(err ? 'backups.html missing' : buf);
@@ -205,7 +338,6 @@ http.createServer(function (req, res) {
   }
 
   if (p === '/api/backups') {
-    if (proxied) { res.writeHead(403); return res.end('403'); }
     if (req.method === 'GET') {
       return json(res, 200, { ok: true, items: backup.items(), current: backup.currentStats() });
     }
@@ -247,7 +379,6 @@ http.createServer(function (req, res) {
   }
 
   if (p.indexOf('/download/') === 0) {
-    if (proxied) { res.writeHead(403); return res.end('403'); }
     var name2 = decodeURIComponent(p.slice('/download/'.length));
     if (!backup.exists(name2)) { res.writeHead(404); return res.end('404'); }
     res.writeHead(200, {
@@ -259,7 +390,6 @@ http.createServer(function (req, res) {
 
   // 单局管理页
   if (p === '/runs') {
-    if (proxied) { res.writeHead(403); return res.end('403'); }
     return fs.readFile(path.join(__dirname, 'runs.html'), function (err, buf) {
       res.writeHead(err ? 500 : 200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
       res.end(err ? 'runs.html missing' : buf);
@@ -268,7 +398,6 @@ http.createServer(function (req, res) {
 
   // 按年级看
   if (p === '/grades') {
-    if (proxied) { res.writeHead(403); return res.end('403'); }
     return fs.readFile(path.join(__dirname, 'grades.html'), function (err, buf) {
       res.writeHead(err ? 500 : 200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
       res.end(err ? 'grades.html missing' : buf);
@@ -282,7 +411,6 @@ http.createServer(function (req, res) {
   }
 
   if (p === '/api/runs') {
-    if (proxied) { res.writeHead(403); return res.end('403'); }
     var runsMod = require('./runs.js');
     if (req.method === 'GET') {
       return json(res, 200, {
@@ -342,7 +470,6 @@ http.createServer(function (req, res) {
 
   // 问卷题库编辑页
   if (p === "/survey") {
-    if (proxied) { res.writeHead(403); return res.end("403"); }
     return fs.readFile(path.join(__dirname, "survey.html"), function (err, buf) {
       res.writeHead(err ? 500 : 200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
       res.end(err ? "survey.html missing" : buf);
@@ -351,7 +478,6 @@ http.createServer(function (req, res) {
 
   // 数值设置
   if (p === "/settings") {
-    if (proxied) { res.writeHead(403); return res.end("403"); }
     return fs.readFile(path.join(__dirname, "settings.html"), function (err, buf) {
       res.writeHead(err ? 500 : 200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
       res.end(err ? "settings.html missing" : buf);
@@ -360,7 +486,6 @@ http.createServer(function (req, res) {
 
   // 问卷题库：读 / 存
   if (p === "/api/survey") {
-    if (proxied) { res.writeHead(403); return res.end("403"); }
     var SURVEY_FILE = path.join(root, "data", "survey.json");
     if (req.method === "GET") {
       var sv = null;
@@ -402,7 +527,6 @@ http.createServer(function (req, res) {
   }
 
   if (p === "/config-edit") {
-    if (proxied) { res.writeHead(403); return res.end("403"); }
     var Cf = require("../game/config.js");
     var cur = loadConfigOverride() || {};
     return json(res, 200, {
@@ -434,7 +558,6 @@ http.createServer(function (req, res) {
   }
 
   if (p === "/api/config") {
-    if (proxied) { res.writeHead(403); return res.end("403"); }
     if (req.method !== "POST") { res.writeHead(405); return res.end(); }
     var cb2 = "";
     req.on("data", function (c) { cb2 += c; if (cb2.length > 65536) req.destroy(); });
@@ -515,7 +638,6 @@ http.createServer(function (req, res) {
 
   // 档位信物对照表（30 个图标，改完刷新即可看到）
   if (p === "/relics") {
-    if (proxied) { res.writeHead(403); return res.end("403"); }
     return fs.readFile(path.join(__dirname, "relics-test.html"), function (err, buf) {
       res.writeHead(err ? 500 : 200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
       res.end(err ? "relics-test.html missing" : buf);
@@ -524,7 +646,6 @@ http.createServer(function (req, res) {
 
   // 管理后台（所有入口的中控页）
   if (p === "/admin") {
-    if (proxied) { res.writeHead(403); return res.end("403"); }
     return fs.readFile(path.join(__dirname, "admin.html"), function (err, buf) {
       res.writeHead(err ? 500 : 200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
       res.end(err ? "admin.html missing" : buf);
@@ -533,7 +654,6 @@ http.createServer(function (req, res) {
 
   // 一键导出 CSV
   if (p === "/api/export.csv") {
-    if (proxied) { res.writeHead(403); return res.end("403"); }
     var csvFile = backup.csv();
     if (!csvFile) { res.writeHead(404, {"Content-Type":"text/plain; charset=utf-8"}); return res.end("还没有数据"); }
     res.writeHead(200, {
@@ -545,7 +665,6 @@ http.createServer(function (req, res) {
 
   // 文案编辑器
   if (p === '/edit') {
-    if (proxied) { res.writeHead(403); return res.end('403'); }
     return fs.readFile(path.join(__dirname, 'editor.html'), function (err, buf) {
       res.writeHead(err ? 500 : 200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
       res.end(err ? 'editor.html missing' : buf);
@@ -553,7 +672,6 @@ http.createServer(function (req, res) {
   }
 
   if (p === '/content-edit') {
-    if (proxied) { res.writeHead(403); return res.end('403'); }
     try {
       var eff = effectiveContent();
       eff.dims = require('../game/config.js').DIMS.map(function (d) {
@@ -566,7 +684,6 @@ http.createServer(function (req, res) {
   }
 
   if (p === '/api/content') {
-    if (proxied) { res.writeHead(403); return res.end('403'); }
     if (req.method !== 'POST') { res.writeHead(405); return res.end(); }
     var cb = '';
     req.on('data', function (c) { cb += c; if (cb.length > 2 * 1024 * 1024) req.destroy(); });
@@ -588,7 +705,6 @@ http.createServer(function (req, res) {
 
   // 表单提交保存（不依赖 JS；成功后 303 跳回 /url?saved=1）
   if (p === '/save-tunnel' && req.method === 'POST') {
-    if (proxied) { res.writeHead(403); return res.end('403'); }
     var fb = '';
     req.on('data', function (c) { fb += c; if (fb.length > 65536) req.destroy(); });
     req.on('end', function () {
@@ -622,7 +738,6 @@ http.createServer(function (req, res) {
 
   // 保存固定隧道配置（后台「公网地址」页用）
   if (p === "/api/tunnel") {
-    if (proxied) { res.writeHead(403); return res.end("403"); }
     if (req.method !== "POST") { res.writeHead(405); return res.end(); }
     var tb = "";
     req.on("data", function (c) { tb += c; if (tb.length > 65536) req.destroy(); });
