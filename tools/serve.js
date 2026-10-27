@@ -119,29 +119,29 @@ function urlPage(rec, alive, saved) {
   return '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width,initial-scale=1"><title>公网地址</title>' +
     '<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;' +
-    'background:radial-gradient(900px 600px at 50% -10%,#18222c,#0b0f14 60%);color:#e9eff6;' +
+    'background:radial-gradient(900px 600px at 50% -10%,#eef2f7,#f1f5f9 60%);color:#0f172a;' +
     'font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;padding:24px}' +
-    '.card{max-width:620px;width:100%;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015));' +
-    'border:1px solid #232e39;border-radius:20px;padding:26px 24px}' +
-    'h1{font-size:15px;margin:0 0 18px;color:#8fa3b4;font-weight:500;letter-spacing:.08em}' +
+    '.card{max-width:620px;width:100%;background:linear-gradient(180deg,rgba(15,23,42,.04),rgba(255,255,255,.015));' +
+    'border:1px solid #e2e8f0;border-radius:20px;padding:26px 24px}' +
+    'h1{font-size:15px;margin:0 0 18px;color:#64748b;font-weight:500;letter-spacing:.08em}' +
     '.big{font-size:30px;font-weight:800;margin-bottom:14px}' +
-    '.ok{color:#6fe0bd}.dead{color:#ff8d7e}' +
-    '.url{font-size:15px;line-height:1.6;word-break:break-all;background:rgba(0,0,0,.35);' +
-    'border:1px solid #26313b;border-radius:12px;padding:14px;color:#ffe08a;margin-bottom:16px}' +
-    '.url.dim{color:#7b8896}' +
+    '.ok{color:#059669}.dead{color:#e11d48}' +
+    '.url{font-size:15px;line-height:1.6;word-break:break-all;background:rgba(15,23,42,.06);' +
+    'border:1px solid #e2e8f0;border-radius:12px;padding:14px;color:#d97706;margin-bottom:16px}' +
+    '.url.dim{color:#94a3b8}' +
     '.row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}' +
     'button,.btn{font:inherit;font-size:14px;padding:11px 18px;border-radius:11px;cursor:pointer;' +
-    'text-decoration:none;border:1px solid #2b3540;background:rgba(255,255,255,.04);color:#e9eff6}' +
-    'button{background:linear-gradient(100deg,#ffe08a,#ffb347);color:#241a05;border:0;font-weight:700}' +
-    '.hint{font-size:12.5px;color:#8294a3;line-height:1.8;margin:0}' +
-    'b{color:#cfe0ea}' +
-'.cfg{margin-top:22px;border-top:1px solid #232e39;padding-top:16px;display:block}' +
-    '.cfgtitle{font-size:13px;color:#8fa3b4;margin-bottom:2px}' +
-    '.okmsg{font-size:12.5px;color:#6fe0bd;background:rgba(111,224,189,.1);border:1px solid rgba(111,224,189,.35);border-radius:10px;padding:10px 12px;margin:10px 0 0}' +
-'.cfg summary{font-size:13px;color:#8fa3b4;cursor:pointer;outline:none}' +
-'.cfg label{display:block;font-size:11px;color:#8294a3;margin:12px 0 5px}' +
-'.cfg input,.cfg textarea{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:10px 12px;border-radius:10px;background:rgba(0,0,0,.35);border:1px solid #26313b;color:#e9eff6;resize:vertical}' +
-'.cfg input:focus,.cfg textarea:focus{outline:0;border-color:rgba(255,215,106,.5)}' +
+    'text-decoration:none;border:1px solid #cbd5e1;background:rgba(15,23,42,.04);color:#0f172a}' +
+    'button{background:linear-gradient(100deg,#d97706,#ea580c);color:#241a05;border:0;font-weight:700}' +
+    '.hint{font-size:12.5px;color:#64748b;line-height:1.8;margin:0}' +
+    'b{color:#334155}' +
+'.cfg{margin-top:22px;border-top:1px solid #e2e8f0;padding-top:16px;display:block}' +
+    '.cfgtitle{font-size:13px;color:#64748b;margin-bottom:2px}' +
+    '.okmsg{font-size:12.5px;color:#059669;background:rgba(5,150,105,.1);border:1px solid rgba(5,150,105,.35);border-radius:10px;padding:10px 12px;margin:10px 0 0}' +
+'.cfg summary{font-size:13px;color:#64748b;cursor:pointer;outline:none}' +
+'.cfg label{display:block;font-size:11px;color:#64748b;margin:12px 0 5px}' +
+'.cfg input,.cfg textarea{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:10px 12px;border-radius:10px;background:rgba(15,23,42,.06);border:1px solid #e2e8f0;color:#0f172a;resize:vertical}' +
+'.cfg input:focus,.cfg textarea:focus{outline:0;border-color:rgba(217,119,6,.5)}' +
 '</style></head><body><div class="card">' +
     '<h1>当前公网地址</h1>' + body +
     '<script>function cp(b){var t=document.querySelector(".url").textContent.trim();' +

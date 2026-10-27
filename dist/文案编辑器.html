@@ -5,40 +5,40 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>文案编辑（离线版）</title>
 <style>
-:root{--bg:#0b0f14;--line:#232e39;--fg:#e8eef5;--dim:#8294a3;--gold:#ffd76a;--teal:#6fe0bd}
+:root{--bg:#f1f5f9;--line:#e2e8f0;--fg:#0f172a;--dim:#64748b;--gold:#d97706;--teal:#059669}
 *{box-sizing:border-box}
-body{margin:0;background:#0b0f14;color:var(--fg);font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif}
+body{margin:0;background:#f1f5f9;color:var(--fg);font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif}
 header{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
-  padding:14px 22px;background:rgba(11,15,20,.96);border-bottom:1px solid var(--line);backdrop-filter:blur(8px)}
+  padding:14px 22px;background:#ffffff;border-bottom:1px solid var(--line);backdrop-filter:blur(8px)}
 h1{font-size:16px;margin:0}
 .sub{font-size:11.5px;color:var(--dim)}
 .spacer{flex:1}
 button{font:inherit;font-size:12.5px;padding:8px 14px;border-radius:9px;cursor:pointer;
-  border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--fg)}
-button:hover{background:rgba(255,255,255,.09)}
-button.primary{background:linear-gradient(100deg,#ffe08a,#ffb347);color:#241a05;border:0;font-weight:700}
-button.danger{color:#ff8d7e;border-color:rgba(255,141,126,.35)}
+  border:1px solid var(--line);background:rgba(15,23,42,.04);color:var(--fg)}
+button:hover{background:rgba(15,23,42,.08)}
+button.primary{background:linear-gradient(100deg,#d97706,#ea580c);color:#241a05;border:0;font-weight:700}
+button.danger{color:#e11d48;border-color:rgba(225,29,72,.35)}
 .wrap{display:flex;gap:20px;padding:20px 22px 80px;align-items:flex-start}
 nav{position:sticky;top:70px;width:150px;flex:0 0 150px;display:flex;flex-direction:column;gap:4px}
 nav button{text-align:left;padding:8px 12px;font-size:13px}
-nav button.on{background:rgba(255,215,106,.14);border-color:rgba(255,215,106,.45);color:var(--gold);font-weight:700}
+nav button.on{background:rgba(217,119,6,.14);border-color:rgba(217,119,6,.45);color:var(--gold);font-weight:700}
 main{flex:1;min-width:0}
 .tier{border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:12px;
-  background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.012))}
-.tier h3{margin:0 0 10px;font-size:13px;color:#b9c7d3;font-weight:600;display:flex;align-items:center;gap:8px}
-.badge{font-size:10px;padding:2px 8px;border-radius:5px;background:rgba(255,215,106,.14);color:var(--gold)}
+  background:linear-gradient(180deg,rgba(15,23,42,.04),rgba(15,23,42,.02))}
+.tier h3{margin:0 0 10px;font-size:13px;color:#475569;font-weight:600;display:flex;align-items:center;gap:8px}
+.badge{font-size:10px;padding:2px 8px;border-radius:5px;background:rgba(217,119,6,.14);color:var(--gold)}
 label{display:block;font-size:11px;color:var(--dim);margin:10px 0 4px}
 input[type=text],textarea{width:100%;font:inherit;font-size:13px;padding:9px 11px;border-radius:9px;
-  background:rgba(0,0,0,.3);border:1px solid #26313b;color:var(--fg)}
+  background:rgba(15,23,42,.05);border:1px solid #e2e8f0;color:var(--fg)}
 textarea{resize:vertical;min-height:64px;line-height:1.6}
-input:focus,textarea:focus{outline:0;border-color:rgba(255,215,106,.5)}
-.preview{margin-top:8px;border:1px dashed #2b3540;border-radius:12px;padding:12px 14px;background:rgba(0,0,0,.2)}
+input:focus,textarea:focus{outline:0;border-color:rgba(217,119,6,.5)}
+.preview{margin-top:8px;border:1px dashed #cbd5e1;border-radius:12px;padding:12px 14px;background:rgba(15,23,42,.04)}
 .preview .t{font-size:16px;font-weight:800;margin-bottom:6px}
-.preview .d{font-size:12.5px;color:#a9b8c6;line-height:1.7}
+.preview .d{font-size:12.5px;color:#475569;line-height:1.7}
 .preview .tags{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
-.preview .tags span{font-size:11px;padding:3px 9px;border-radius:6px;background:rgba(255,255,255,.05);border:1px solid #26313b;color:#9fb0bf}
+.preview .tags span{font-size:11px;padding:3px 9px;border-radius:6px;background:rgba(15,23,42,.04);border:1px solid #e2e8f0;color:#475569}
 #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);padding:10px 20px;border-radius:999px;
-  background:rgba(20,26,33,.96);border:1px solid rgba(255,215,106,.4);color:var(--gold);font-size:13px;font-weight:600;
+  background:#ffffff;border:1px solid rgba(217,119,6,.4);color:var(--gold);font-size:13px;font-weight:600;
   opacity:0;transition:opacity .2s;pointer-events:none}
 #toast.show{opacity:1}
 .hint{font-size:11.5px;color:var(--dim);line-height:1.8;margin:0 0 16px}
@@ -298,21 +298,21 @@ function clauseHTML(kind, i, ci, c){
     return '<option value="' + n + '"' + (c.max===n?' selected':'') + '>T' + n + '</option>';
   })).join('');
   var boxes = (META.dims||[]).map(function(d){
-    return '<label style="display:inline-flex;align-items:center;gap:4px;margin-right:10px;font-size:12px;color:#a9b8c6">' +
+    return '<label style="display:inline-flex;align-items:center;gap:4px;margin-right:10px;font-size:12px;color:#475569">' +
       '<input type="checkbox" data-k="' + kind + '" data-i="' + i + '" data-ci="' + ci + '" data-f="dim" value="' + d.id + '"' +
       (ids.indexOf(d.id) >= 0 ? ' checked' : '') + '>' + d.name + '</label>';
   }).join('');
   var needN = c.t === 'count' || c.t === 'top';
-  return '<div style="border:1px solid #26313b;border-radius:10px;padding:10px 12px;margin-bottom:8px;background:rgba(0,0,0,.18)">' +
+  return '<div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin-bottom:8px;background:rgba(15,23,42,.03)">' +
     '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">' +
       '<select data-k="' + kind + '" data-i="' + i + '" data-ci="' + ci + '" data-f="t" style="width:130px">' + typeOpts + '</select>' +
-      (needN ? '<span style="font-size:11.5px;color:#8294a3">至少</span><input type="number" min="1" max="6" value="' + (c.n||1) + '" data-k="' + kind + '" data-i="' + i + '" data-ci="' + ci + '" data-f="n" style="width:60px">' : '') +
-      '<span style="font-size:11.5px;color:#8294a3">最低</span><select data-k="' + kind + '" data-i="' + i + '" data-ci="' + ci + '" data-f="min" style="width:74px">' + minOpts + '</select>' +
-      '<span style="font-size:11.5px;color:#8294a3">最高</span><select data-k="' + kind + '" data-i="' + i + '" data-ci="' + ci + '" data-f="max" style="width:74px">' + maxOpts + '</select>' +
+      (needN ? '<span style="font-size:11.5px;color:#64748b">至少</span><input type="number" min="1" max="6" value="' + (c.n||1) + '" data-k="' + kind + '" data-i="' + i + '" data-ci="' + ci + '" data-f="n" style="width:60px">' : '') +
+      '<span style="font-size:11.5px;color:#64748b">最低</span><select data-k="' + kind + '" data-i="' + i + '" data-ci="' + ci + '" data-f="min" style="width:74px">' + minOpts + '</select>' +
+      '<span style="font-size:11.5px;color:#64748b">最高</span><select data-k="' + kind + '" data-i="' + i + '" data-ci="' + ci + '" data-f="max" style="width:74px">' + maxOpts + '</select>' +
       '<button data-del-clause="' + kind + '|' + i + '|' + ci + '" style="margin-left:auto;font-size:11px;padding:4px 9px">删掉这条</button>' +
     '</div>' +
     '<div style="margin-top:8px">' + boxes + '</div>' +
-    '<div style="margin-top:6px;font-size:11px;color:#6fe0bd">' + clauseText(c) + '</div>' +
+    '<div style="margin-top:6px;font-size:11px;color:#059669">' + clauseText(c) + '</div>' +
   '</div>';
 }
 
@@ -321,7 +321,7 @@ function renderRules(main){
 
   html += '<div class="tier"><h3><span class="badge">成就</span><span style="color:var(--dim);font-weight:400;font-size:11px">达成即亮，不带分值</span></h3>';
   ACH.forEach(function(a, i){
-    html += '<div style="border-top:1px solid #232e39;margin-top:10px;padding-top:10px">' +
+    html += '<div style="border-top:1px solid #e2e8f0;margin-top:10px;padding-top:10px">' +
       '<div style="display:flex;gap:10px;align-items:center">' +
         '<input type="text" data-k="ach" data-i="' + i + '" data-f="name" value="' + esc(a.name) + '" placeholder="名称" style="flex:1">' +
         '<button data-del-ach="' + i + '" style="font-size:11px;padding:4px 9px">删除</button>' +
@@ -336,9 +336,9 @@ function renderRules(main){
 
   html += '<div class="tier"><h3><span class="badge">称号</span><span style="color:var(--dim);font-weight:400;font-size:11px">从上往下，第一个成立的生效</span></h3>';
   TITLES.forEach(function(a, i){
-    html += '<div style="border-top:1px solid #232e39;margin-top:10px;padding-top:10px">' +
+    html += '<div style="border-top:1px solid #e2e8f0;margin-top:10px;padding-top:10px">' +
       '<div style="display:flex;gap:8px;align-items:center">' +
-        '<span style="font-size:11px;color:#8294a3;width:18px">' + (i+1) + '</span>' +
+        '<span style="font-size:11px;color:#64748b;width:18px">' + (i+1) + '</span>' +
         '<input type="text" data-k="title" data-i="' + i + '" data-f="name" value="' + esc(a.name) + '" placeholder="称号" style="flex:1">' +
         '<button data-move="' + i + '|-1" style="font-size:11px;padding:4px 8px">↑</button>' +
         '<button data-move="' + i + '|1" style="font-size:11px;padding:4px 8px">↓</button>' +
@@ -446,7 +446,7 @@ function renderEvents(main){
       var condOpts = ['<option value="">无条件</option>'].concat((META.dims||[]).map(function(d){
         return '<option value="' + d.id + '"' + (d.id === condDim ? ' selected' : '') + '>' + d.name + '</option>';
       })).join('');
-      html += '<div style="border-top:1px solid #232e39;margin-top:12px;padding-top:10px">' +
+      html += '<div style="border-top:1px solid #e2e8f0;margin-top:12px;padding-top:10px">' +
         '<label>选项 ' + (k+1) + ' 文字</label>' +
         '<input type="text" data-ev="' + i + '" data-opt="' + k + '" data-f="label" value="' + esc(o.label) + '">' +
         '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:10px">' +
@@ -479,10 +479,10 @@ function renderEvents(main){
           var deltaOpts2 = [1,-1,2,-2].map(function(n){
             return '<option value="' + n + '"' + (n === curV ? ' selected' : '') + '>' + (n>0?'+':'') + n + '</option>';
           }).join('');
-          var h = '<div style="margin-top:12px;border-top:1px dashed #2b3540;padding-top:10px">';
+          var h = '<div style="margin-top:12px;border-top:1px dashed #cbd5e1;padding-top:10px">';
           h += '<label style="display:flex;align-items:center;gap:8px;margin:0 0 8px">' +
             '<input type="checkbox" data-ev="' + i + '" data-opt="' + k + '" data-f="randOn"' + (rnd ? ' checked' : '') + '>' +
-            '<span style="font-size:12px;color:#cfdae4">启用「第二种结果」（随机）</span></label>';
+            '<span style="font-size:12px;color:#334155">启用「第二种结果」（随机）</span></label>';
           if (rnd) {
             h += '<div style="display:flex;gap:14px;flex-wrap:wrap">' +
               '<div><label style="margin-top:0">走 A 的概率</label><input type="number" min="0" max="1" step="0.1" style="width:86px" data-ev="' + i + '" data-opt="' + k + '" data-f="randP" value="' + (rnd.p != null ? rnd.p : 0.5) + '"></div>' +
@@ -492,7 +492,7 @@ function renderEvents(main){
               '<div><label style="margin-top:0">最高到 B</label><input type="number" min="1" max="5" style="width:76px" data-ev="' + i + '" data-opt="' + k + '" data-f="randCap" value="' + ((rnd.effectB && rnd.effectB.cap) || 5) + '"></div>' +
             '</div>' +
             '<label>结果 B 文案</label><textarea data-ev="' + i + '" data-opt="' + k + '" data-f="randText">' + esc(rnd.resultB || '') + '</textarea>' +
-            '<div style="font-size:11px;color:#8294a3;margin:-4px 0 4px">B 的概率 = 1 − A = ' + (1 - (rnd.p != null ? rnd.p : 0.5)).toFixed(1) + '。启用后「条件」不再生效。</div>';
+            '<div style="font-size:11px;color:#64748b;margin:-4px 0 4px">B 的概率 = 1 − A = ' + (1 - (rnd.p != null ? rnd.p : 0.5)).toFixed(1) + '。启用后「条件」不再生效。</div>';
           }
           h += '</div>';
           return h;

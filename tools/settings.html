@@ -5,39 +5,39 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>数值设置</title>
 <style>
-:root{--bg:#0b0f14;--line:#232e39;--fg:#e8eef5;--dim:#8294a3;--gold:#ffd76a;--teal:#6fe0bd;--red:#ff8d7e}
+:root{--bg:#f1f5f9;--line:#e2e8f0;--fg:#0f172a;--dim:#64748b;--gold:#d97706;--teal:#059669;--red:#e11d48}
 *{box-sizing:border-box}
-body{margin:0;background:radial-gradient(900px 600px at 30% -10%,#16212b,#0b0f14 60%);color:var(--fg);
+body{margin:0;background:radial-gradient(900px 600px at 30% -10%,#eef2f7,#f1f5f9 60%);color:var(--fg);
   font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;padding:24px 26px 60px}
 header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px}
 h1{font-size:19px;margin:0}
 .sub{font-size:11.5px;color:var(--dim)}
 .spacer{flex:1}
 button{font:inherit;font-size:12.5px;padding:8px 14px;border-radius:9px;cursor:pointer;
-  border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--fg)}
-button:hover{background:rgba(255,255,255,.09)}
-button.primary{background:linear-gradient(100deg,#ffe08a,#ffb347);color:#241a05;border:0;font-weight:700}
-button.danger{color:var(--red);border-color:rgba(255,141,126,.35)}
+  border:1px solid var(--line);background:rgba(15,23,42,.04);color:var(--fg)}
+button:hover{background:rgba(15,23,42,.08)}
+button.primary{background:linear-gradient(100deg,#d97706,#ea580c);color:#241a05;border:0;font-weight:700}
+button.danger{color:var(--red);border-color:rgba(225,29,72,.35)}
 .grid{display:grid;grid-template-columns:minmax(320px,420px) 1fr;gap:16px;align-items:start;max-width:1100px}
-.card{background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.012));
+.card{background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(15,23,42,.02));
   border:1px solid var(--line);border-radius:16px;padding:18px 18px 14px}
-.card h2{font-size:12.5px;margin:0 0 14px;color:#b9c7d3;font-weight:600;letter-spacing:.05em}
+.card h2{font-size:12.5px;margin:0 0 14px;color:#475569;font-weight:600;letter-spacing:.05em}
 .row{display:flex;align-items:center;gap:12px;margin-bottom:14px}
 .row label{flex:1;font-size:13px}
 .row label small{display:block;font-size:10.5px;color:var(--dim);margin-top:2px;font-weight:400}
 .row input{width:92px;font:inherit;font-size:14px;padding:8px 10px;border-radius:9px;text-align:right;
-  background:rgba(0,0,0,.3);border:1px solid #26313b;color:var(--fg);font-variant-numeric:tabular-nums}
-.row input:focus{outline:0;border-color:rgba(255,215,106,.5)}
+  background:rgba(15,23,42,.05);border:1px solid #e2e8f0;color:var(--fg);font-variant-numeric:tabular-nums}
+.row input:focus{outline:0;border-color:rgba(217,119,6,.5)}
 .big{font-size:30px;font-weight:800;color:var(--gold);font-variant-numeric:tabular-nums}
 table{width:100%;border-collapse:collapse;font-size:12.5px}
 th{text-align:left;font-weight:500;color:var(--dim);font-size:10.5px;padding:0 6px 8px}
-td{padding:7px 6px;border-top:1px solid rgba(255,255,255,.05);font-variant-numeric:tabular-nums}
+td{padding:7px 6px;border-top:1px solid rgba(15,23,42,.04);font-variant-numeric:tabular-nums}
 td.num{text-align:right}
 .ok{color:var(--teal)}.bad{color:var(--red)}
 .note{font-size:11.5px;color:var(--dim);line-height:1.8;margin-top:12px}
-.note b{color:#cfe0ea}
+.note b{color:#334155}
 #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);padding:10px 20px;border-radius:999px;
-  background:rgba(20,26,33,.96);border:1px solid rgba(255,215,106,.4);color:var(--gold);font-size:13px;font-weight:600;
+  background:#ffffff;border:1px solid rgba(217,119,6,.4);color:var(--gold);font-size:13px;font-weight:600;
   opacity:0;transition:opacity .2s;pointer-events:none}
 #toast.show{opacity:1}
 </style>
@@ -116,10 +116,10 @@ function renderItemsSettings(){
   var box = $("itemList");
   if (!box) return;
   box.innerHTML = items.map(function(it, i){
-    return '<div style="border-top:1px solid #232e39;padding-top:10px;margin-bottom:10px">' +
+    return '<div style="border-top:1px solid #e2e8f0;padding-top:10px;margin-bottom:10px">' +
       '<div style="display:flex;gap:10px;align-items:center">' +
         '<input type="text" data-item="' + i + '" data-f="name" value="' + it.name + '" style="flex:1">' +
-        (it.type === "multiply" ? '<span style="font-size:11.5px;color:#8294a3">倍数</span><input type="number" min="1" max="5" step="0.1" data-item="' + i + '" data-f="factor" value="' + (it.factor||1.5) + '" style="width:78px">' : '') +
+        (it.type === "multiply" ? '<span style="font-size:11.5px;color:#64748b">倍数</span><input type="number" min="1" max="5" step="0.1" data-item="' + i + '" data-f="factor" value="' + (it.factor||1.5) + '" style="width:78px">' : '') +
       '</div>' +
       '<label>说明</label><input type="text" data-item="' + i + '" data-f="desc" value="' + (it.desc||'') + '">' +
     '</div>';
@@ -159,7 +159,7 @@ function renderInits(){
     }).join("");
     return "<div class=\"row\" style=\"margin-bottom:9px\">" +
       "<label>" + d.name + " <small>" + (DATA.tiersText || "") + "</small></label>" +
-      "<select data-dim=\"" + d.id + "\" style=\"width:92px;font:inherit;font-size:14px;padding:8px 10px;border-radius:9px;background:rgba(0,0,0,.3);border:1px solid #26313b;color:var(--fg)\">" + opts + "</select></div>";
+      "<select data-dim=\"" + d.id + "\" style=\"width:92px;font:inherit;font-size:14px;padding:8px 10px;border-radius:9px;background:rgba(15,23,42,.05);border:1px solid #e2e8f0;color:var(--fg)\">" + opts + "</select></div>";
   }).join("");
   box.querySelectorAll("select").forEach(function(sel){
     sel.onchange = function(){ inits[sel.dataset.dim] = +sel.value; render(); };
@@ -190,9 +190,9 @@ function render(){
       cells.push(c);
     }
     allT4 += sum;
-    rows.push('<tr><td>' + d.name + '</td><td class="num" style="color:#8294a3">T' + base + '</td>' +
+    rows.push('<tr><td>' + d.name + '</td><td class="num" style="color:#64748b">T' + base + '</td>' +
       cells.map(function(x){ return '<td class="num">' + x + '</td>'; }).join('') +
-      '<td class="num" style="color:' + (sum ? '#cfe0ea' : '#5d6a77') + '">' + (sum || '—') + '</td></tr>');
+      '<td class="num" style="color:' + (sum ? '#334155' : '#94a3b8') + '">' + (sum || '—') + '</td></tr>');
   });
   $('ladder').innerHTML = rows.join('');
 

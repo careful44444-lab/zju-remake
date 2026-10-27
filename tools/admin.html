@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>管理后台</title>
 <style>
-:root{--bg:#0b0f14;--line:#232e39;--fg:#e8eef5;--dim:#8294a3;--gold:#ffd76a;--teal:#6fe0bd}
+:root{--bg:#f1f5f9;--line:#e2e8f0;--fg:#0f172a;--dim:#64748b;--gold:#d97706;--teal:#059669}
 *{box-sizing:border-box}
-body{margin:0;background:radial-gradient(1000px 600px at 30% -10%,#16212b,#0b0f14 60%);color:var(--fg);
+body{margin:0;background:radial-gradient(1000px 600px at 30% -10%,#eef2f7,#f1f5f9 60%);color:var(--fg);
   font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;padding:26px 28px 60px;min-height:100vh}
 h1{font-size:20px;margin:0 0 4px}
 .sub{font-size:12px;color:var(--dim)}
@@ -15,21 +15,21 @@ h1{font-size:20px;margin:0 0 4px}
 .status b{color:var(--fg);font-size:13px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;max-width:1100px}
 a.card{display:block;text-decoration:none;color:inherit;
-  background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015));
+  background:linear-gradient(180deg,rgba(15,23,42,.04),rgba(255,255,255,.015));
   border:1px solid var(--line);border-radius:16px;padding:18px 18px 16px;transition:all .16s}
-a.card:hover{border-color:rgba(255,215,106,.4);transform:translateY(-2px)}
+a.card:hover{border-color:rgba(217,119,6,.4);transform:translateY(-2px)}
 a.card .ico{font-size:20px;margin-bottom:8px;display:block;opacity:.9}
 a.card .t{font-size:15px;font-weight:700;margin-bottom:5px}
 a.card .d{font-size:11.5px;color:var(--dim);line-height:1.6}
 .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px;max-width:1100px}
 button{font:inherit;font-size:12.5px;padding:10px 16px;border-radius:10px;cursor:pointer;
-  border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--fg)}
-button:hover{background:rgba(255,255,255,.09)}
-button.primary{background:linear-gradient(100deg,#ffe08a,#ffb347);color:#241a05;border:0;font-weight:700}
+  border:1px solid var(--line);background:rgba(15,23,42,.04);color:var(--fg)}
+button:hover{background:rgba(15,23,42,.08)}
+button.primary{background:linear-gradient(100deg,#d97706,#ea580c);color:#241a05;border:0;font-weight:700}
 .hint{font-size:11.5px;color:var(--dim);margin-top:26px;line-height:1.9;max-width:760px}
-code{background:rgba(255,255,255,.06);padding:1px 6px;border-radius:5px;font-size:11.5px}
+code{background:rgba(15,23,42,.05);padding:1px 6px;border-radius:5px;font-size:11.5px}
 #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);padding:10px 20px;border-radius:999px;
-  background:rgba(20,26,33,.96);border:1px solid rgba(255,215,106,.4);color:var(--gold);font-size:13px;font-weight:600;
+  background:#ffffff;border:1px solid rgba(217,119,6,.4);color:var(--gold);font-size:13px;font-weight:600;
   opacity:0;transition:opacity .2s;pointer-events:none}
 #toast.show{opacity:1}
 </style>
