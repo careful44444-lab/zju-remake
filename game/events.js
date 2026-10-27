@@ -24,6 +24,10 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function (Core) {
 
   var DIMS = (Core && Core.DIMS) || [];
+  // Node 下 events.js 单独 require 时拿不到 DIMS，从 config 兜底
+  if (!DIMS.length && typeof require === 'function') {
+    try { DIMS = require('../game/config.js').DIMS; } catch (e) { }
+  }
 
   function bump(s, id, delta, max) {
     var cap = max || 5;
