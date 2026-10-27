@@ -159,6 +159,29 @@ button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit
 .item-chip .cnt{font-size:11px;opacity:.8}
 .item-chip[disabled]{opacity:.4;cursor:default}
 
+/* ---------------- 新手引导 ---------------- */
+#tutor{align-items:stretch;justify-content:flex-start;padding:0}
+.tut-wrap{display:flex;flex-direction:column;flex:1;width:100%;max-width:520px;margin:0 auto;padding:26px 22px 20px}
+.tutor-slide{display:none;flex:1;flex-direction:column;justify-content:center;text-align:center}
+.tutor-slide.on{display:flex}
+@keyframes fadeUp{from{transform:translateY(6px)}to{transform:none}}
+.tut-kicker{font-size:11.5px;letter-spacing:.14em;color:#7f8e9c;margin-bottom:14px}
+.tut-svg{width:100%;max-width:320px;margin:0 auto 22px;display:block}
+.tutor-slide h2{font-size:21px;font-weight:800;margin:0 0 12px;color:#f2f7fb}
+.tutor-slide p{font-size:13.5px;line-height:1.85;color:#9fb0bf;margin:0 0 16px}
+.tutor-slide p b{color:#ffd76a;font-weight:600}
+.tut-badge{display:inline-block;align-self:center;font-size:11.5px;padding:6px 13px;border-radius:999px;
+  background:rgba(255,215,106,.1);border:1px solid rgba(255,215,106,.3);color:#ffd76a}
+.tut-foot{flex:0 0 auto;display:flex;align-items:center;gap:12px;padding-top:18px;border-top:1px solid #1c242d}
+.tut-dots{flex:1;display:flex;gap:6px;justify-content:center}
+.tut-dots i{width:7px;height:7px;border-radius:50%;background:#2c3742;transition:all .2s}
+.tut-dots i.on{width:20px;border-radius:4px;background:#ffd76a}
+.tut-nav{display:flex;gap:8px}
+.tut-nav button{font-size:13px;padding:9px 15px}
+.tut-foot .primary,.tut-foot .ghost{width:auto;flex:0 0 auto;display:inline-block;padding:10px 16px;
+  font-size:13.5px;border-radius:12px;box-shadow:none;letter-spacing:0}
+.ghost.sm{font-size:12px;padding:8px 12px}
+
 /* ---------------- 底部条 ---------------- */
 #strip{
   flex:0 0 auto;display:flex;gap:8px;padding:10px 12px 14px;

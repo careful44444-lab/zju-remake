@@ -18,9 +18,9 @@
     return d;
   }
   function show(id) {
-    ['intro', 'game', 'result'].forEach(function (s) {
-      $(s).classList.toggle('active', s === id);
-    });
+    // 通用：所有 .screen 里只有 id 匹配的显示（新增屏幕不用再改这里）
+    var all = document.querySelectorAll(".screen");
+    for (var i = 0; i < all.length; i++) all[i].classList.toggle("active", all[i].id === id);
   }
 
   /* ----------------------------- 音效 ----------------------------- */
@@ -701,6 +701,36 @@
   }
 
   /* 开局：先选年级，再进游戏 */
+  /* ----------------------------- 新手引导 ----------------------------- */
+  var tutStep = 0, tutReturn = "intro";
+
+  function tutSlides() { return document.querySelectorAll("#tutor .tutor-slide"); }
+
+  function renderTutor() {
+    var slides = tutSlides();
+    for (var i = 0; i < slides.length; i++) slides[i].classList.toggle("on", i === tutStep);
+    var dots = $("tutDots");
+    if (dots) {
+      dots.innerHTML = "";
+      for (var k = 0; k < slides.length; k++) dots.appendChild(el("i", k === tutStep ? "on" : ""));
+    }
+    $("tutPrev").style.visibility = tutStep === 0 ? "hidden" : "visible";
+    $("tutNext").textContent = (tutStep >= slides.length - 1) ? "开始改造" : "下一步";
+  }
+
+  function openTutor(from) {
+    tutReturn = from || "intro";
+    tutStep = 0;
+    renderTutor();
+    show("tutor");
+  }
+
+  function finishTutor() {
+    if (tutReturn === "game") { show("game"); return; }
+    show("intro");
+    openGradePicker();
+  }
+
   function openGradePicker() {
     var box = $('gradeOpts');
     box.innerHTML = '';
@@ -760,7 +790,16 @@
       openSheet(id);
     });
 
-    $('btnStart').addEventListener('click', openGradePicker);
+    $('btnStart').addEventListener('click', function () { openTutor('intro'); });
+    $('tutNext').addEventListener('click', function () {
+      if (tutStep >= tutSlides().length - 1) { finishTutor(); return; }
+      tutStep += 1; renderTutor();
+    });
+    $('tutPrev').addEventListener('click', function () {
+      if (tutStep > 0) { tutStep -= 1; renderTutor(); }
+    });
+    $('tutSkip').addEventListener('click', finishTutor);
+    $('btnHelp').addEventListener('click', function () { openTutor('game'); });
 
     $('btnResume').addEventListener('click', function () {
       var s = readSave();
@@ -818,7 +857,10 @@
 
     // 开发预览：?demo=map / ?demo=sheet 直接进入一局并做两步改造
     var dm = /demo=(\w+)/.exec(location.search);
-    if (dm && dm[1] === 'grade') {
+    if (dm && dm[1] === 'tutor') {
+      var tutStepParam = parseInt((/tut=(\d)/.exec(location.search) || [])[1] || '1', 10) - 1;
+      setTimeout(function () { openTutor('intro'); tutStep = Math.max(0, tutStepParam); renderTutor(); }, 120);
+    } else if (dm && dm[1] === 'grade') {
       setTimeout(openGradePicker, 400);
     } else if (dm) {
       beginRun('new', 'y3');

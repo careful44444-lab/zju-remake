@@ -167,6 +167,29 @@ button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit
 .item-chip .cnt{font-size:11px;opacity:.8}
 .item-chip[disabled]{opacity:.4;cursor:default}
 
+/* ---------------- 新手引导 ---------------- */
+#tutor{align-items:stretch;justify-content:flex-start;padding:0}
+.tut-wrap{display:flex;flex-direction:column;flex:1;width:100%;max-width:520px;margin:0 auto;padding:26px 22px 20px}
+.tutor-slide{display:none;flex:1;flex-direction:column;justify-content:center;text-align:center}
+.tutor-slide.on{display:flex}
+@keyframes fadeUp{from{transform:translateY(6px)}to{transform:none}}
+.tut-kicker{font-size:11.5px;letter-spacing:.14em;color:#7f8e9c;margin-bottom:14px}
+.tut-svg{width:100%;max-width:320px;margin:0 auto 22px;display:block}
+.tutor-slide h2{font-size:21px;font-weight:800;margin:0 0 12px;color:#f2f7fb}
+.tutor-slide p{font-size:13.5px;line-height:1.85;color:#9fb0bf;margin:0 0 16px}
+.tutor-slide p b{color:#ffd76a;font-weight:600}
+.tut-badge{display:inline-block;align-self:center;font-size:11.5px;padding:6px 13px;border-radius:999px;
+  background:rgba(255,215,106,.1);border:1px solid rgba(255,215,106,.3);color:#ffd76a}
+.tut-foot{flex:0 0 auto;display:flex;align-items:center;gap:12px;padding-top:18px;border-top:1px solid #1c242d}
+.tut-dots{flex:1;display:flex;gap:6px;justify-content:center}
+.tut-dots i{width:7px;height:7px;border-radius:50%;background:#2c3742;transition:all .2s}
+.tut-dots i.on{width:20px;border-radius:4px;background:#ffd76a}
+.tut-nav{display:flex;gap:8px}
+.tut-nav button{font-size:13px;padding:9px 15px}
+.tut-foot .primary,.tut-foot .ghost{width:auto;flex:0 0 auto;display:inline-block;padding:10px 16px;
+  font-size:13.5px;border-radius:12px;box-shadow:none;letter-spacing:0}
+.ghost.sm{font-size:12px;padding:8px 12px}
+
 /* ---------------- 底部条 ---------------- */
 #strip{
   flex:0 0 auto;display:flex;gap:8px;padding:10px 12px 14px;
@@ -389,6 +412,101 @@ if (/debug=1/.test(location.search)) {
     </div>
   </section>
 
+  <!-- ============ 新手引导 ============ -->
+  <section id="tutor" class="screen">
+    <div class="tut-wrap">
+
+      <div class="tutor-slide">
+        <div class="tut-kicker">第 1 步 · 你要做什么</div>
+        <svg class="tut-svg" viewBox="0 0 320 186">
+          <circle cx="160" cy="93" r="30" fill="#16303f" stroke="#2c5570" stroke-width="1.5"/>
+          <text x="160" y="97" text-anchor="middle" fill="#7fa8c4" font-size="10">求是湖</text>
+          <g font-size="12" text-anchor="middle">
+            <rect x="130" y="6" width="60" height="26" rx="9" fill="#25402f" stroke="#4a7a5b"/>
+            <text x="160" y="24" fill="#d8e6ef">食</text>
+            <rect x="232" y="42" width="60" height="26" rx="9" fill="#3a3324" stroke="#77693f"/>
+            <text x="262" y="60" fill="#d8e6ef">住</text>
+            <rect x="232" y="118" width="60" height="26" rx="9" fill="#25402f" stroke="#4a7a5b"/>
+            <text x="262" y="136" fill="#d8e6ef">学</text>
+            <rect x="130" y="154" width="60" height="26" rx="9" fill="#3d2632" stroke="#7a4258"/>
+            <text x="160" y="172" fill="#d8e6ef">体</text>
+            <rect x="28" y="118" width="60" height="26" rx="9" fill="#23393b" stroke="#44787c"/>
+            <text x="58" y="136" fill="#d8e6ef">文</text>
+            <rect x="28" y="42" width="60" height="26" rx="9" fill="#3a3324" stroke="#77693f"/>
+            <text x="58" y="60" fill="#d8e6ef">行</text>
+          </g>
+        </svg>
+        <h2>把六个维度改一改</h2>
+        <p>吃、住、学、体、文、行——每项都有 <b>5 档</b>，从「掉队」到「封神」。<br>
+        你的点数<b>不够把所有项都推满</b>，所以总要放弃点什么。</p>
+        <div class="tut-badge">没有分数 · 只有取舍</div>
+      </div>
+
+      <div class="tutor-slide">
+        <div class="tut-kicker">第 2 步 · 怎么操作</div>
+        <svg class="tut-svg" viewBox="0 0 320 186">
+          <rect x="86" y="16" width="148" height="96" rx="14" fill="#141c24" stroke="#2a3744" stroke-width="1.5"/>
+          <text x="160" y="46" text-anchor="middle" fill="#ffe08a" font-size="17" font-weight="bold">住</text>
+          <text x="160" y="66" text-anchor="middle" fill="#93a6b5" font-size="11">T3 · 合格</text>
+          <g>
+            <rect x="112" y="78" width="22" height="7" rx="3" fill="#ffd76a"/>
+            <rect x="140" y="78" width="22" height="7" rx="3" fill="#ffd76a"/>
+            <rect x="168" y="78" width="22" height="7" rx="3" fill="#ffd76a"/>
+            <rect x="196" y="78" width="22" height="7" rx="3" fill="#2c3742"/>
+          </g>
+          <g>
+            <rect x="28" y="132" width="120" height="38" rx="11" fill="#3b2b1c" stroke="#8a6a34"/>
+            <text x="88" y="156" text-anchor="middle" fill="#ffd76a" font-size="13">升一档 · 花 8 点</text>
+            <rect x="172" y="132" width="120" height="38" rx="11" fill="#33232a" stroke="#7d3f4e"/>
+            <text x="232" y="156" text-anchor="middle" fill="#ffb3a8" font-size="13">降一档 · 退 8 点</text>
+          </g>
+        </svg>
+        <h2>点地块 → 升档 / 降档</h2>
+        <p>点地图上任一地块弹出详情。<b>升档花点数，降档退点数</b>，随时可以反悔。<br>
+        升到最高档（T5）要二选一个「封神专精」。</p>
+        <div class="tut-badge">升档花点 · 降档退点 · 全额返还</div>
+      </div>
+
+      <div class="tutor-slide">
+        <div class="tut-kicker">第 3 步 · 流程怎么走</div>
+        <svg class="tut-svg" viewBox="0 0 320 186">
+          <line x1="46" y1="52" x2="274" y2="52" stroke="#2a3744" stroke-width="2"/>
+          <g font-size="13" text-anchor="middle">
+            <circle cx="46" cy="52" r="17" fill="#1d3b52" stroke="#3f7c9e" stroke-width="1.5"/><text x="46" y="57" fill="#cfe0ea">1</text>
+            <circle cx="122" cy="52" r="17" fill="#1d3b52" stroke="#3f7c9e" stroke-width="1.5"/><text x="122" y="57" fill="#cfe0ea">2</text>
+            <circle cx="198" cy="52" r="17" fill="#1d3b52" stroke="#3f7c9e" stroke-width="1.5"/><text x="198" y="57" fill="#cfe0ea">3</text>
+            <circle cx="274" cy="52" r="17" fill="#3a3324" stroke="#b08a3a" stroke-width="1.5"/><text x="274" y="57" fill="#ffe08a">4</text>
+          </g>
+          <g fill="#6fe0bd" font-size="10" text-anchor="middle">
+            <rect x="92" y="82" width="30" height="18" rx="5" fill="#1c3a33" stroke="#3f7c6a"/>
+            <text x="107" y="95">事件</text>
+            <rect x="168" y="82" width="30" height="18" rx="5" fill="#1c3a33" stroke="#3f7c6a"/>
+            <text x="183" y="95">事件</text>
+            <rect x="244" y="82" width="30" height="18" rx="5" fill="#1c3a33" stroke="#3f7c6a"/>
+            <text x="259" y="95">事件</text>
+          </g>
+          <rect x="204" y="118" width="90" height="34" rx="10" fill="#3b2b1c" stroke="#8a6a34"/>
+          <text x="249" y="140" text-anchor="middle" fill="#ffd76a" font-size="12">提交 · 看称号</text>
+          <text x="46" y="132" fill="#7f8e9c" font-size="10">每回合发一笔点数</text>
+          <text x="46" y="148" fill="#7f8e9c" font-size="10">没花完的按比例结转</text>
+        </svg>
+        <h2>四个回合，三次事件</h2>
+        <p>每回合先发点数 → 改造 → 点「结束本回合」→ 抽一张事件卡。<br>
+        第 4 回合改完<b>直接提交</b>，结算出一个称号。</p>
+        <div class="tut-badge">4 回合 · 3 张事件卡 · 1 个称号</div>
+      </div>
+
+      <div class="tut-foot">
+        <button id="tutSkip" class="ghost sm">跳过</button>
+        <div id="tutDots" class="tut-dots"></div>
+        <div class="tut-nav">
+          <button id="tutPrev" class="ghost">上一步</button>
+          <button id="tutNext" class="primary">下一步</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ============ 主界面 ============ -->
   <section id="game" class="screen">
     <header id="hud">
@@ -401,6 +519,7 @@ if (/debug=1/.test(location.search)) {
         <span class="lbl">成就</span>
       </div>
       <div class="hud-btns">
+        <button id="btnHelp" class="icon" title="玩法说明">?</button>
         <button id="btnSound" class="icon" title="音效">♪</button>
         <button id="btnUndo" class="icon" title="撤销">↶</button>
         <button id="btnEnd" class="mini">提交</button>
@@ -2699,9 +2818,9 @@ NaN
     return d;
   }
   function show(id) {
-    ['intro', 'game', 'result'].forEach(function (s) {
-      $(s).classList.toggle('active', s === id);
-    });
+    // 通用：所有 .screen 里只有 id 匹配的显示（新增屏幕不用再改这里）
+    var all = document.querySelectorAll(".screen");
+    for (var i = 0; i < all.length; i++) all[i].classList.toggle("active", all[i].id === id);
   }
 
   /* ----------------------------- 音效 ----------------------------- */
@@ -3382,6 +3501,36 @@ NaN
   }
 
   /* 开局：先选年级，再进游戏 */
+  /* ----------------------------- 新手引导 ----------------------------- */
+  var tutStep = 0, tutReturn = "intro";
+
+  function tutSlides() { return document.querySelectorAll("#tutor .tutor-slide"); }
+
+  function renderTutor() {
+    var slides = tutSlides();
+    for (var i = 0; i < slides.length; i++) slides[i].classList.toggle("on", i === tutStep);
+    var dots = $("tutDots");
+    if (dots) {
+      dots.innerHTML = "";
+      for (var k = 0; k < slides.length; k++) dots.appendChild(el("i", k === tutStep ? "on" : ""));
+    }
+    $("tutPrev").style.visibility = tutStep === 0 ? "hidden" : "visible";
+    $("tutNext").textContent = (tutStep >= slides.length - 1) ? "开始改造" : "下一步";
+  }
+
+  function openTutor(from) {
+    tutReturn = from || "intro";
+    tutStep = 0;
+    renderTutor();
+    show("tutor");
+  }
+
+  function finishTutor() {
+    if (tutReturn === "game") { show("game"); return; }
+    show("intro");
+    openGradePicker();
+  }
+
   function openGradePicker() {
     var box = $('gradeOpts');
     box.innerHTML = '';
@@ -3441,7 +3590,16 @@ NaN
       openSheet(id);
     });
 
-    $('btnStart').addEventListener('click', openGradePicker);
+    $('btnStart').addEventListener('click', function () { openTutor('intro'); });
+    $('tutNext').addEventListener('click', function () {
+      if (tutStep >= tutSlides().length - 1) { finishTutor(); return; }
+      tutStep += 1; renderTutor();
+    });
+    $('tutPrev').addEventListener('click', function () {
+      if (tutStep > 0) { tutStep -= 1; renderTutor(); }
+    });
+    $('tutSkip').addEventListener('click', finishTutor);
+    $('btnHelp').addEventListener('click', function () { openTutor('game'); });
 
     $('btnResume').addEventListener('click', function () {
       var s = readSave();
@@ -3499,7 +3657,10 @@ NaN
 
     // 开发预览：?demo=map / ?demo=sheet 直接进入一局并做两步改造
     var dm = /demo=(\w+)/.exec(location.search);
-    if (dm && dm[1] === 'grade') {
+    if (dm && dm[1] === 'tutor') {
+      var tutStepParam = parseInt((/tut=(\d)/.exec(location.search) || [])[1] || '1', 10) - 1;
+      setTimeout(function () { openTutor('intro'); tutStep = Math.max(0, tutStepParam); renderTutor(); }, 120);
+    } else if (dm && dm[1] === 'grade') {
       setTimeout(openGradePicker, 400);
     } else if (dm) {
       beginRun('new', 'y3');
