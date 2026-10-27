@@ -32,6 +32,19 @@ function esc(s) {
   });
 }
 
+// 写文件：如果被设成只读（比如从微信收到的文件），先去掉只读再写
+function writeTextSafe(file, text) {
+  try {
+    fs.writeFileSync(file, text, "utf8");
+    return true;
+  } catch (e) {
+    if (e.code !== "EPERM" && e.code !== "EACCES") throw e;
+    try { fs.chmodSync(file, 0o666); } catch (e2) { }
+    fs.writeFileSync(file, text, "utf8");
+    return true;
+  }
+}
+
 function json(res, code, obj) {
   res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
   res.end(JSON.stringify(obj));
@@ -366,7 +379,7 @@ http.createServer(function (req, res) {
           var n2 = (typeof v === "number" && v >= 1 && v <= 5) ? Math.round(v) : d.init;
           initsOut[d.id] = n2;
         });
-        fs.writeFileSync(CONFIG_OVERRIDE, JSON.stringify({
+        writeTextSafe(CONFIG_OVERRIDE, JSON.stringify({
           points: Math.round(o.points), rounds: Math.round(o.rounds),
           breadthBase: o.breadthBase,
           carryRatio: (function () {
@@ -414,7 +427,7 @@ http.createServer(function (req, res) {
             return Object.keys(out).length ? out : null;
           })(),
           inits: initsOut
-        }, null, 2), "utf8");
+        }, null, 2));
         json(res, 200, { ok: true, msg: "已保存" });
       } catch (e) { json(res, 500, { ok: false, msg: String(e.message) }); }
     });
@@ -488,7 +501,7 @@ http.createServer(function (req, res) {
       }
       try {
         if (!fs.existsSync(path.join(root, 'data'))) fs.mkdirSync(path.join(root, 'data'));
-        fs.writeFileSync(CONTENT_OVERRIDE, JSON.stringify(o.data || {}, null, 2), 'utf8');
+        writeTextSafe(CONTENT_OVERRIDE, JSON.stringify(o.data || {}, null, 2));
         json(res, 200, { ok: true, msg: '已保存' });
       } catch (e) { json(res, 500, { ok: false, msg: String(e.message) }); }
     });
