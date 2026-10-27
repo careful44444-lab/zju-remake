@@ -320,6 +320,17 @@ function bindRules(main){
   });
 }
 
+var whenOpen = {};   // 记住哪些卡的条件块是展开的
+
+// 条件改动后只刷新标题栏那行字，不重新渲染（避免输入框失焦）
+function syncWhen(i){
+  var el = document.querySelector('[data-sum="' + i + '"]');
+  if (!el) return;
+  var w = EVENTS[i].when;
+  el.textContent = whenText(w);
+  el.style.color = w ? "#b45309" : "#94a3b8";
+}
+
 function whenText(w){
   if (!w) return "不限制（任何情况都可能出现）";
   var parts = [];
@@ -342,9 +353,9 @@ function whenText(w){
 function whenBlock(ev, i){
   var w = ev.when || null;
   var on = !!w;
-  var h = "<details" + (on ? "" : "") + " style=\"margin-top:14px;border-top:1px solid #e2e8f0;padding-top:10px\">" +
+  var h = "<details" + (whenOpen[i] ? " open" : "") + " style=\"margin-top:14px;border-top:1px solid #e2e8f0;padding-top:10px\">" +
     "<summary style=\"cursor:pointer;font-size:12.5px;color:#334155;font-weight:600\">" +
-      "触发条件　<span style=\"font-weight:400;color:" + (on ? "#b45309" : "#94a3b8") + "\">" + esc(whenText(w)) + "</span>" +
+      "触发条件　<span data-sum=\"" + i + "\" style=\"font-weight:400;color:" + (on ? "#b45309" : "#94a3b8") + "\">" + esc(whenText(w)) + "</span>" +
     "</summary>" +
     "<p style=\"font-size:11.5px;color:#64748b;margin:8px 0 10px;line-height:1.7\">" +
       "不满足条件时，这张卡不会在这一回合出现。" +
@@ -389,20 +400,20 @@ function bindWhen(main){
     var act = function(){
       if (!ev.when) ev.when = {};
       var W = ev.when;
-      if (w === "addDim") { W.dims = W.dims || []; W.dims.push({ id: (META.dims[0]||{}).id, max: 2 }); render(); return; }
-      if (w === "delDim") { W.dims.splice(+el.dataset.wi, 1); cleanWhen(ev); render(); return; }
-      if (w === "clear") { ev.when = null; render(); return; }
+      if (w === "addDim") { W.dims = W.dims || []; W.dims.push({ id: (META.dims[0]||{}).id, max: 2 }); whenOpen[i] = true; render(); return; }
+      if (w === "delDim") { W.dims.splice(+el.dataset.wi, 1); cleanWhen(ev); whenOpen[i] = true; render(); return; }
+      if (w === "clear") { ev.when = null; whenOpen[i] = true; render(); return; }
       if (w === "rmin" || w === "rmax") {
         W.rounds = W.rounds || {};
         var v = el.value === "" ? null : Math.max(1, +el.value);
         W.rounds[w === "rmin" ? "min" : "max"] = v;
-        cleanWhen(ev); return;
+        cleanWhen(ev); syncWhen(i); return;
       }
-      if (w === "pointsMin") { W.pointsMin = el.value === "" ? null : Math.max(0, +el.value); cleanWhen(ev); return; }
+      if (w === "pointsMin") { W.pointsMin = el.value === "" ? null : Math.max(0, +el.value); cleanWhen(ev); syncWhen(i); return; }
       var k = +el.dataset.wi; W.dims = W.dims || []; W.dims[k] = W.dims[k] || {};
-      if (w === "dim") { W.dims[k].id = el.value; return; }
-      if (w === "dmin") { W.dims[k].min = el.value === "" ? null : Math.min(5, Math.max(1, +el.value)); cleanWhen(ev); return; }
-      if (w === "dmax") { W.dims[k].max = el.value === "" ? null : Math.min(5, Math.max(1, +el.value)); cleanWhen(ev); return; }
+      if (w === "dim") { W.dims[k].id = el.value; syncWhen(i); return; }
+      if (w === "dmin") { W.dims[k].min = el.value === "" ? null : Math.min(5, Math.max(1, +el.value)); cleanWhen(ev); syncWhen(i); return; }
+      if (w === "dmax") { W.dims[k].max = el.value === "" ? null : Math.min(5, Math.max(1, +el.value)); cleanWhen(ev); syncWhen(i); return; }
     };
     el[el.tagName === "SELECT" ? "onchange" : "oninput"] = act;
     if (el.tagName === "BUTTON") el.onclick = act;

@@ -1,0 +1,81 @@
+{
+  "points": 66,
+  "rounds": 4,
+  "breadthBase": 2,
+  "carryRatio": 1,
+  "roundPoints": [
+    16,
+    16,
+    17,
+    17
+  ],
+  "itemsEnabled": true,
+  "relics": true,
+  "items": [
+    {
+      "id": "up",
+      "type": "freeUp",
+      "name": "升档卡",
+      "desc": "免费给任意一个维度升一档"
+    },
+    {
+      "id": "x15",
+      "type": "multiply",
+      "name": "1.5 倍卡",
+      "desc": "剩余点数 ×1.5，向上取整",
+      "factor": 1.5
+    }
+  ],
+  "stepCost": [
+    3,
+    5,
+    8,
+    14
+  ],
+  "stepCostDims": {
+    "food": [
+      5,
+      7,
+      10,
+      20
+    ],
+    "dorm": [
+      3,
+      5,
+      8,
+      14
+    ],
+    "study": [
+      5,
+      7,
+      10,
+      20
+    ],
+    "sport": [
+      4,
+      6,
+      9,
+      16
+    ],
+    "culture": [
+      4,
+      6,
+      9,
+      16
+    ],
+    "move": [
+      3,
+      5,
+      8,
+      14
+    ]
+  },
+  "inits": {
+    "food": 3,
+    "dorm": 1,
+    "study": 3,
+    "sport": 2,
+    "culture": 2,
+    "move": 1
+  }
+}
