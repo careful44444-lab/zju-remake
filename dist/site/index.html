@@ -3088,15 +3088,27 @@ NaN
       circle(ctx, -21, -19, 2.4); fill(ctx, c.dark, false);
       circle(ctx, 21, -19, 2.4); fill(ctx, c.dark, false);
     },
-    function (ctx, c) {                     // T2 社团招新（桌子 + 横幅）
-      rr(ctx, -26, -34, 52, 12, 3); fill(ctx, c.main, 2.5);      // 横幅
-      ctx.beginPath(); ctx.moveTo(-26, -34); ctx.lineTo(-30, -22); stroke(ctx, LINE, 2);
-      ctx.beginPath(); ctx.moveTo(26, -34); ctx.lineTo(30, -22); stroke(ctx, LINE, 2);
-      rr(ctx, -32, 6, 64, 10, 3); fill(ctx, c.soft, 3);          // 桌面
-      rr(ctx, -28, 16, 7, 16, 2); fill(ctx, c.dark, 2);
-      rr(ctx, 21, 16, 7, 16, 2); fill(ctx, c.dark, 2);
-      rr(ctx, -14, -6, 16, 12, 3); fill(ctx, '#ffffff', 2.5);    // 传单
-      rr(ctx, 6, -2, 12, 8, 2); fill(ctx, '#ffffff', 2);
+    function (ctx, c) {                     // T2 社团招新（摊位）
+      // 两根立杆
+      ctx.beginPath(); ctx.moveTo(-32, -30); ctx.lineTo(-32, 20); stroke(ctx, c.dark, 4);
+      ctx.beginPath(); ctx.moveTo(32, -30); ctx.lineTo(32, 20); stroke(ctx, c.dark, 4);
+      // 横幅
+      rr(ctx, -36, -38, 72, 15, 3); fill(ctx, c.main, 3);
+      ctx.beginPath(); ctx.moveTo(-26, -33); ctx.lineTo(-4, -33); stroke(ctx, 'rgba(255,255,255,.9)', 3.5);
+      ctx.beginPath(); ctx.moveTo(4, -33); ctx.lineTo(26, -33); stroke(ctx, 'rgba(255,255,255,.9)', 3.5);
+      // 小旗串
+      for (var i = -1; i <= 1; i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * 14 - 5, -22); ctx.lineTo(i * 14 + 5, -22); ctx.lineTo(i * 14, -15);
+        ctx.closePath(); fill(ctx, c.soft, 1.8);
+      }
+      // 桌子
+      rr(ctx, -28, 2, 56, 9, 3); fill(ctx, '#ffffff', 3);
+      ctx.beginPath(); ctx.moveTo(-22, 11); ctx.lineTo(-22, 22); stroke(ctx, c.dark, 3);
+      ctx.beginPath(); ctx.moveTo(22, 11); ctx.lineTo(22, 22); stroke(ctx, c.dark, 3);
+      // 桌上两摞传单
+      rr(ctx, -18, -5, 15, 8, 2); fill(ctx, c.soft, 2);
+      rr(ctx, 4, -6, 13, 9, 2); fill(ctx, c.soft, 2);
     },
     function (ctx, c) {                     // T3 运动会（奖牌）
       ctx.beginPath(); ctx.moveTo(-16, -32); ctx.lineTo(-2, -6); stroke(ctx, c.main, 6);
@@ -3118,18 +3130,34 @@ NaN
       rr(ctx, -16, 8, 32, 16, 4); fill(ctx, c.main, 2.5);        // 讲台
       ctx.beginPath(); ctx.arc(0, 2, 6, 0, 6.283); fill(ctx, c.dark, 2);  // 人
     },
-    function (ctx, c) {                     // T5 演唱会（舞台 + 光）
-      for (var i = -1; i <= 1; i++) {
+    function (ctx, c) {                     // T5 演唱会（舞台 + 灯 + 麦）
+      // 两束顶光
+      ctx.save(); ctx.globalAlpha = 0.6;
+      [-1, 1].forEach(function (s) {
         ctx.beginPath();
-        ctx.moveTo(i * 22, -30);
-        ctx.lineTo(i * 34 - 8, 8); ctx.lineTo(i * 34 + 8, 8);
+        ctx.moveTo(s * 8, -32);
+        ctx.lineTo(s * 30 - 9, 6);
+        ctx.lineTo(s * 30 + 11, 6);
         ctx.closePath();
-        ctx.fillStyle = 'rgba(168,85,247,.16)'; ctx.fill();
-      }
-      rr(ctx, -34, 8, 68, 12, 4); fill(ctx, c.main, 3);
-      ctx.beginPath(); ctx.moveTo(-14, 8); ctx.lineTo(-14, -12); stroke(ctx, c.dark, 4);
-      circle(ctx, -14, -16, 7); fill(ctx, c.dark, 2.5);
-      circle(ctx, 16, 0, 6); fill(ctx, c.soft, 2);
+        ctx.fillStyle = 'rgba(168,85,247,.22)'; ctx.fill();
+      });
+      ctx.restore();
+
+      // 话筒：深色头 + 立杆
+      ctx.beginPath(); ctx.moveTo(0, 12); ctx.lineTo(0, -6); stroke(ctx, c.dark, 4);
+      ctx.save(); ctx.translate(0, -14); ctx.rotate(-0.32);
+      rr(ctx, -7, -10, 14, 20, 7); fill(ctx, '#334155', 2.5);
+      rr(ctx, -7, -10, 14, 8, 5); fill(ctx, '#94a3b8', 1.6);
+      ctx.restore();
+
+      // 舞台
+      rr(ctx, -34, 12, 68, 13, 4); fill(ctx, c.main, 3);
+      rr(ctx, -34, 12, 68, 4, 2); fill(ctx, c.soft, false);
+
+      // 台口灯
+      for (var i = -1; i <= 1; i++) circle(ctx, i * 20, 22, 3);
+      ctx.fillStyle = '#fbbf24';
+      for (var j = -1; j <= 1; j++) { ctx.beginPath(); ctx.arc(j * 20, 22, 3, 0, 6.283); ctx.fill(); }
     }
   ];
 
