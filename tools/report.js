@@ -69,6 +69,9 @@ function aggregate(file) {
   var users = {}, runs = {};
   var upgrades = {}, downgrades = {}, ends = [], cards = {}, caps = {};
   DIMS.forEach(function (d) { upgrades[d.id] = 0; downgrades[d.id] = 0; caps[d.id] = {}; });
+  // 同一回合里同一个维度「升了又降」= 白折腾，不算进统计
+  // 先按 (局|回合|维度) 攒起来，最后只记净值
+  var netActs = {}, noRoundSeq = 0;
 
   ev.forEach(function (e) {
     if (e.uid) users[e.uid] = 1;
@@ -85,8 +88,13 @@ function aggregate(file) {
     }
     if (e.ev === 'action') {
       var p = e.props || {};
-      if (p.type === 'upgrade') upgrades[p.dim] = (upgrades[p.dim] || 0) + 1;
-      if (p.type === 'downgrade') downgrades[p.dim] = (downgrades[p.dim] || 0) + 1;
+      if (p.type === 'upgrade' || p.type === 'downgrade') {
+        // 老数据可能没有 round 字段：那就按「每次单独算」，不做抵消
+        var rk = (p.round != null) ? p.round : ('x' + (noRoundSeq++));
+        var key = (e.rid || '') + '|' + rk + '|' + p.dim;
+        var cell = netActs[key] || (netActs[key] = { up: 0, down: 0 });
+        if (p.type === 'upgrade') cell.up += 1; else cell.down += 1;
+      }
       if (p.type === 'upgrade' && p.cap) {
         caps[p.dim][p.cap] = (caps[p.dim][p.cap] || 0) + 1;
       }
@@ -101,6 +109,16 @@ function aggregate(file) {
       var label = p2.label || ('选项' + (p2.option != null ? p2.option : '?'));
       cards[cid].options[label] = (cards[cid].options[label] || 0) + 1;
     }
+  });
+
+  // 把攒下来的动作折算成净值：只算「净升/净降」，抵消掉的不计
+  Object.keys(netActs).forEach(function (k) {
+    var cell = netActs[k];
+    var dim = k.split("|")[2];
+    if (!upgrades.hasOwnProperty(dim)) return;
+    var net = cell.up - cell.down;
+    if (net > 0) upgrades[dim] += net;
+    else if (net < 0) downgrades[dim] += -net;
   });
 
   var runList = Object.keys(runs).map(function (k) { return runs[k]; });
