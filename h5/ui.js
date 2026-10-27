@@ -489,13 +489,18 @@
   function showGrant(amount, next) {
     grantNext = next || null;
     var has = (amount || 0) > 0;
+    var broke = !has && (state.points || 0) <= 0;
     $("grantKicker").textContent = "第 " + (state.round || 1) + " 回合开始";
     $("grantTitle").innerHTML = has
       ? "本学年拨款 <span class=\"gnum\">" + amount + "</span> 点"
       : "本学年暂无拨款";
-    $("grantText").textContent = has
+    var bt = $("grantText");
+    bt.className = broke ? "grant-tip" : "";
+    bt.textContent = has
       ? "钱已经到账，当前可用 " + state.points + " 点。"
-      : "这一学年没有新的拨款，只能靠账上剩下的 " + state.points + " 点了。";
+      : broke
+        ? "tips：可以通过降档来获得点数哦（你喜欢现在的紫金港吗）"
+        : "这一学年没有新的拨款，只能靠账上剩下的 " + state.points + " 点了。";
     $("grantModal").classList.remove("hidden");
     beep(amount > 0 ? 760 : 420, 0.12, "triangle", 0.04);
   }

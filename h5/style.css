@@ -1055,3 +1055,23 @@ button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit
 .grant-card h3 .gnum{color:#d97706;font-size:34px;font-variant-numeric:tabular-nums;margin:0 2px}
 .grant-card p{margin:0 0 20px;font-size:13px;color:#64748b;line-height:1.7}
 .grant-card .primary{width:100%}
+
+/* 一分钱都没有时的提示：暖色 + 呼吸光圈，让它跳出来 */
+.grant-tip{
+  color:#b45309 !important;
+  font-weight:700;
+  font-size:13.5px;
+  line-height:1.75;
+  background:#fffbeb;
+  border:1px solid #fcd34d;
+  border-radius:12px;
+  padding:10px 12px;
+  margin:0 0 18px;
+  box-shadow:0 0 0 0 rgba(245,158,11,.55);
+  animation:tipPulse 2.2s ease-out infinite;
+}
+@keyframes tipPulse{
+  0%{box-shadow:0 0 0 0 rgba(245,158,11,.45)}
+  70%{box-shadow:0 0 0 10px rgba(245,158,11,0)}
+  100%{box-shadow:0 0 0 0 rgba(245,158,11,0)}
+}
