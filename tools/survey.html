@@ -55,6 +55,7 @@
   <span class="sub">存在 data/survey.json · 保存后游戏刷新即生效 · 打包时会内联进单文件</span>
   <span class="spacer"></span>
   <button class="primary" id="btnSave">保存</button>
+  <button id="btnExport">导出 JSON</button>
   <button id="btnReload">重新读取</button>
   <button onclick="location.href='/admin'">← 后台</button>
 </header>
@@ -78,6 +79,7 @@
 
 <div class="foot">
   <button class="primary" id="btnSave2">保存</button>
+  <button id="btnExport2">导出 JSON</button>
 </div>
 <div id="toast"></div>
 
@@ -163,7 +165,36 @@ function save(){
     toast(r.ok ? '已保存，游戏刷新即生效' : ('保存失败：' + (r.msg || '')));
   }).catch(function(e){ toast('保存失败：' + e.message); });
 }
+function stamp(){
+  var d = new Date(), p = function(n){ return String(n).padStart(2, '0'); };
+  return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes());
+}
+
+function download(name, text){
+  try {
+    var blob = new Blob([text], { type: 'application/json;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+    return true;
+  } catch (e) { alert('下载失败：' + e.message); return false; }
+}
+
+function exportJson(){
+  DATA.intro = $('intro').value;
+  DATA.outro = $('outro').value;
+  DATA.questions.forEach(function(q, i){ if (!q.id) q.id = 'q' + (i + 1); });
+  if (download('问卷-' + stamp() + '.json', JSON.stringify(DATA, null, 2))) {
+    toast('已导出，把这个文件发给项目负责人');
+  }
+}
+
 $('btnSave').onclick = save;
+$('btnExport').onclick = exportJson;
+$('btnExport2').onclick = exportJson;
 $('btnSave2').onclick = save;
 
 $('btnReload').onclick = load;
