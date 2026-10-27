@@ -68,6 +68,10 @@
   //   本回合已开工 n 个维度，再开新的 → + round(B * log2(1+n))
   //   换回合会清零 —— 所以它有另一层含义：N 个回合 = 最多 N 个维度可以并行推进，
   //   想同时改更多的维度，就得挨罚。
+  // 每个维度单独一套价格（null = 全部维度共用 STEP_COST）
+  // 形如 { food: [3,5,8,14], dorm: [4,6,9,15], ... }，数组含义同上
+  var STEP_COST_DIMS = null;
+
   var BREADTH_BASE = 2;
   var MAX_ROUNDS = ROUND_POINTS.length;
 
@@ -128,6 +132,7 @@ NaN
     ROUND_POINTS: ROUND_POINTS,
     CARRY_RATIO: CARRY_RATIO,
     STEP_COST: STEP_COST,
+    STEP_COST_DIMS: STEP_COST_DIMS,
     RELIEF: RELIEF,
 
     BREADTH_BASE: BREADTH_BASE,

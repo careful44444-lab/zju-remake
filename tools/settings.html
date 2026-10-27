@@ -7,6 +7,7 @@
 <style>
 :root{--bg:#f1f5f9;--line:#e2e8f0;--fg:#0f172a;--dim:#64748b;--gold:#d97706;--teal:#059669;--red:#e11d48}
 *{box-sizing:border-box}
+.hidden{display:none !important}
 body{margin:0;background:radial-gradient(900px 600px at 30% -10%,#eef2f7,#f1f5f9 60%);color:var(--fg);
   font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;padding:24px 26px 60px}
 header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px}
@@ -81,10 +82,23 @@ td.num{text-align:right}
         <label>显示档位信物 <small>关掉 = 回到「只有建筑」的旧版视觉</small></label>
         <input type="checkbox" id="relicsOn" style="width:auto">
       </div>
-      <div class="row"><label>升到 T2 的价钱</label><input type="number" id="c2" min="0" max="60" step="1"></div>
-      <div class="row"><label>升到 T3 的价钱</label><input type="number" id="c3" min="0" max="60" step="1"></div>
-      <div class="row"><label>升到 T4 的价钱</label><input type="number" id="c4" min="0" max="60" step="1"></div>
-      <div class="row"><label>升到 T5 的价钱</label><input type="number" id="c5" min="0" max="60" step="1"></div>
+      <div class="row">
+        <label>每个维度单独定价 <small>不勾 = 六个维度共用一套；勾上 = 各维度自己一套</small></label>
+        <input type="checkbox" id="perDim" style="width:auto">
+      </div>
+      <div id="sharedCost">
+        <div class="row"><label>升到 T2 的价钱</label><input type="number" id="c2" min="0" max="60" step="1"></div>
+        <div class="row"><label>升到 T3 的价钱</label><input type="number" id="c3" min="0" max="60" step="1"></div>
+        <div class="row"><label>升到 T4 的价钱</label><input type="number" id="c4" min="0" max="60" step="1"></div>
+        <div class="row"><label>升到 T5 的价钱</label><input type="number" id="c5" min="0" max="60" step="1"></div>
+      </div>
+      <div id="stepGrid" class="hidden" style="margin-bottom:14px">
+        <table style="margin-top:4px">
+          <thead><tr><th>维度</th><th style="text-align:center">→T2</th><th style="text-align:center">→T3</th><th style="text-align:center">→T4</th><th style="text-align:center">→T5</th></tr></thead>
+          <tbody id="stepBody"></tbody>
+        </table>
+        <div class="note" style="margin-top:6px">每格 = 从上一档升到这一档要花的点数；降档按同样数字退还。</div>
+      </div>
       <div class="row">
         <label>广度税基准 <small>同回合新开第 n 个维度 +round(B·log₂(1+n))</small></label>
         <input type="number" id="breadthBase" min="0" max="6" step="0.5">
@@ -112,6 +126,7 @@ td.num{text-align:right}
 
 <script>
 var DATA = null, inits = {}, roundPts = [14,14,15,15], items = [], itemsOn = true;
+var stepDims = null;   // null = 所有维度共用一套价格
 
 function $(id){ return document.getElementById(id); }
 function toast(m){ var t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(function(){t.classList.remove('show');},2200); }
@@ -170,13 +185,44 @@ function renderInits(){
   });
 }
 
+// 取某一维度第 step 档（0..3 对应 T2..T5）的价钱
+function priceOf(dimId, idx){
+  if (stepDims && stepDims[dimId] && stepDims[dimId][idx] != null) return stepDims[dimId][idx];
+  return [ +$('c2').value || 0, +$('c3').value || 0, +$('c4').value || 0, +$('c5').value || 0 ][idx];
+}
+
+function renderStepGrid(){
+  var body = $('stepBody');
+  if (!DATA) return;
+  if (!stepDims) {
+    stepDims = {};
+    DATA.dims.forEach(function(d){ stepDims[d.id] = [0,1,2,3].map(function(i){ return +[ $('c2'),$('c3'),$('c4'),$('c5') ][i].value || 0; }); });
+  }
+  body.innerHTML = DATA.dims.map(function(d){
+    var arr = stepDims[d.id] || [3,5,8,14];
+    return '<tr><td style="font-weight:600">' + d.name + '</td>' +
+      [0,1,2,3].map(function(i){
+        return '<td style="text-align:center"><input type="number" min="0" max="60" step="1" style="width:62px;text-align:center;padding:5px 6px"' +
+          ' data-sd="' + d.id + '" data-si="' + i + '" value="' + (arr[i] != null ? arr[i] : 0) + '"></td>';
+      }).join('') + '</tr>';
+  }).join('');
+  body.querySelectorAll('input[data-sd]').forEach(function(el){
+    el.oninput = function(){
+      var id = el.dataset.sd, i = +el.dataset.si;
+      stepDims[id] = stepDims[id] || [0,0,0,0];
+      stepDims[id][i] = Math.max(0, Math.min(60, Math.round(+el.value || 0)));
+      render();
+    };
+  });
+}
+
 function render(){
   if (!DATA) return;
   renderInits();
   var points = roundPts.reduce(function(a,b){return a+b;}, 0);
   var rounds = +$('rounds').value || 1;
   var bb = +$('breadthBase').value || 0;
-  var step = [ +$('c2').value || 0, +$('c3').value || 0, +$('c4').value || 0, +$('c5').value || 0 ];
+
 
   renderRoundPts();
   renderItemsSettings();
@@ -189,7 +235,7 @@ function render(){
     var cells = [], sum = 0;
     for (var t = 2; t <= 5; t++) {
       if (t <= base) { cells.push('—'); continue; }
-      var c = step[t-2];
+      var c = priceOf(d.id, t-2);
       if (t <= 4) sum += c;
       cells.push(c);
     }
@@ -222,6 +268,11 @@ function fill(cur){
   $('rounds').value = roundPts.length;
   var sc = cur.stepCost || [3,5,8,14];
   $('c2').value = sc[0]; $('c3').value = sc[1]; $('c4').value = sc[2]; $('c5').value = sc[3];
+  stepDims = cur.stepCostDims ? JSON.parse(JSON.stringify(cur.stepCostDims)) : null;
+  $('perDim').checked = !!cur.stepCostDims;
+  $('sharedCost').classList.toggle('hidden', !!cur.stepCostDims);
+  $('stepGrid').classList.toggle('hidden', !cur.stepCostDims);
+  if (cur.stepCostDims) renderStepGrid();
   $('breadthBase').value = cur.breadthBase;
   render();
 }
@@ -238,6 +289,13 @@ function load(){
 });
 $("itemsOn").addEventListener("change", render);
 $("relicsOn").addEventListener("change", render);
+$("perDim").addEventListener("change", function(){
+  var on = this.checked;
+  $("sharedCost").classList.toggle("hidden", on);
+  $("stepGrid").classList.toggle("hidden", !on);
+  if (on) { stepDims = null; renderStepGrid(); } else { stepDims = null; }
+  render();
+});
 $("rounds").addEventListener("input", function(){
   var n = Math.max(1, Math.min(8, Math.round(+$("rounds").value || 4)));
   while (roundPts.length < n) roundPts.push(roundPts.length ? roundPts[roundPts.length-1] : 14);
@@ -256,6 +314,7 @@ $('btnSave').onclick = function(){
     carryRatio: +$('carry').value || 0,
     breadthBase: +$('breadthBase').value,
     stepCost: [ +$('c2').value || 0, +$('c3').value || 0, +$('c4').value || 0, +$('c5').value || 0 ],
+    stepCostDims: $('perDim').checked ? stepDims : null,
     inits: inits
   };
   fetch('/api/config', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})

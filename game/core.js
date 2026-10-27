@@ -66,10 +66,19 @@
   }
 
   // ---- 两种税 ----
-  // 升到第 to 档的价钱（to = 2..5）。原「基础价 + 深度税」已合并成 STEP_COST 一个数组。
-  function stepPrice(to) {
+  // 取某个维度的一套价格：单独配过就用单独的，否则用统一的 STEP_COST
+  function priceArr(dimId) {
+    var byDim = C.STEP_COST_DIMS;
+    var one = byDim && dimId ? byDim[dimId] : null;
+    if (one && one.length) return one;
+    return C.STEP_COST || [3, 5, 8, 14];
+  }
+  // 升到第 to 档的价钱（to = 2..5）。
+  // 支持 stepPrice(dimId, to) 和旧的 stepPrice(to) 两种写法。
+  function stepPrice(dimId, to) {
+    if (typeof dimId === 'number') { to = dimId; dimId = null; }
     if (to <= 1) return 0;
-    var arr = C.STEP_COST || [3, 5, 8, 14];
+    var arr = priceArr(dimId);
     var v = arr[to - 2];
     return typeof v === 'number' ? v : arr[arr.length - 1];
   }
@@ -94,7 +103,7 @@
   function cost(s, id) {
     var t = s.tiers[id];
     if (t >= 5) return 0;
-    return stepPrice(t + 1) + breadthFor(s, id);
+    return stepPrice(id, t + 1) + breadthFor(s, id);
   }
 
   // 降档退还这一步当初付的钱（广度税按本回合实际付过的退）
@@ -102,14 +111,14 @@
     var t = s.tiers[id];
     if (t <= 1) return 0;
     var paid = (s.breadthPaid && s.breadthPaid[id]) || 0;
-    return stepPrice(t) + paid;
+    return stepPrice(id, t) + paid;
   }
 
   // 当前状态里两种税各占多少（给界面显示用）
   function taxInfo(s, id) {
     var t = s.tiers[id];
     if (t >= 5) return { step: 0, breadth: 0, total: 0 };
-    var sp = stepPrice(t + 1), br = breadthFor(s, id);
+    var sp = stepPrice(id, t + 1), br = breadthFor(s, id);
     return { step: sp, breadth: br, total: sp + br };
   }
 
@@ -275,7 +284,7 @@
       // i < 4：独占一个回合，不罚；i >= 4：挤进同一个回合，第 5 个 +breadth(1)，第 6 个 +breadth(2)
       var br = i < (C.MAX_ROUNDS || 4) ? 0 : breadthTax(i - (C.MAX_ROUNDS || 4) + 1);
       for (var t = w.d.init + 1; t <= tiers[w.d.id]; t++) {
-        total += stepPrice(t) + br;
+        total += stepPrice(w.d.id, t) + br;
       }
     });
     return total;

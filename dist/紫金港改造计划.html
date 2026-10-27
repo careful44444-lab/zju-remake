@@ -1373,6 +1373,10 @@ if (/debug=1/.test(location.search)) {
   //   本回合已开工 n 个维度，再开新的 → + round(B * log2(1+n))
   //   换回合会清零 —— 所以它有另一层含义：N 个回合 = 最多 N 个维度可以并行推进，
   //   想同时改更多的维度，就得挨罚。
+  // 每个维度单独一套价格（null = 全部维度共用 STEP_COST）
+  // 形如 { food: [3,5,8,14], dorm: [4,6,9,15], ... }，数组含义同上
+  var STEP_COST_DIMS = null;
+
   var BREADTH_BASE = 2;
   var MAX_ROUNDS = ROUND_POINTS.length;
 
@@ -1433,6 +1437,7 @@ NaN
     ROUND_POINTS: ROUND_POINTS,
     CARRY_RATIO: CARRY_RATIO,
     STEP_COST: STEP_COST,
+    STEP_COST_DIMS: STEP_COST_DIMS,
     RELIEF: RELIEF,
 
     BREADTH_BASE: BREADTH_BASE,
@@ -1802,10 +1807,19 @@ NaN
   }
 
   // ---- 两种税 ----
-  // 升到第 to 档的价钱（to = 2..5）。原「基础价 + 深度税」已合并成 STEP_COST 一个数组。
-  function stepPrice(to) {
+  // 取某个维度的一套价格：单独配过就用单独的，否则用统一的 STEP_COST
+  function priceArr(dimId) {
+    var byDim = C.STEP_COST_DIMS;
+    var one = byDim && dimId ? byDim[dimId] : null;
+    if (one && one.length) return one;
+    return C.STEP_COST || [3, 5, 8, 14];
+  }
+  // 升到第 to 档的价钱（to = 2..5）。
+  // 支持 stepPrice(dimId, to) 和旧的 stepPrice(to) 两种写法。
+  function stepPrice(dimId, to) {
+    if (typeof dimId === 'number') { to = dimId; dimId = null; }
     if (to <= 1) return 0;
-    var arr = C.STEP_COST || [3, 5, 8, 14];
+    var arr = priceArr(dimId);
     var v = arr[to - 2];
     return typeof v === 'number' ? v : arr[arr.length - 1];
   }
@@ -1830,7 +1844,7 @@ NaN
   function cost(s, id) {
     var t = s.tiers[id];
     if (t >= 5) return 0;
-    return stepPrice(t + 1) + breadthFor(s, id);
+    return stepPrice(id, t + 1) + breadthFor(s, id);
   }
 
   // 降档退还这一步当初付的钱（广度税按本回合实际付过的退）
@@ -1838,14 +1852,14 @@ NaN
     var t = s.tiers[id];
     if (t <= 1) return 0;
     var paid = (s.breadthPaid && s.breadthPaid[id]) || 0;
-    return stepPrice(t) + paid;
+    return stepPrice(id, t) + paid;
   }
 
   // 当前状态里两种税各占多少（给界面显示用）
   function taxInfo(s, id) {
     var t = s.tiers[id];
     if (t >= 5) return { step: 0, breadth: 0, total: 0 };
-    var sp = stepPrice(t + 1), br = breadthFor(s, id);
+    var sp = stepPrice(id, t + 1), br = breadthFor(s, id);
     return { step: sp, breadth: br, total: sp + br };
   }
 
@@ -2011,7 +2025,7 @@ NaN
       // i < 4：独占一个回合，不罚；i >= 4：挤进同一个回合，第 5 个 +breadth(1)，第 6 个 +breadth(2)
       var br = i < (C.MAX_ROUNDS || 4) ? 0 : breadthTax(i - (C.MAX_ROUNDS || 4) + 1);
       for (var t = w.d.init + 1; t <= tiers[w.d.id]; t++) {
-        total += stepPrice(t) + br;
+        total += stepPrice(w.d.id, t) + br;
       }
     });
     return total;
@@ -4177,6 +4191,8 @@ NaN
     if (typeof o.carryRatio === "number") Z.CARRY_RATIO = Math.max(0, Math.min(1, o.carryRatio));
     if (typeof o.itemsEnabled === "boolean") Z.ITEMS_ENABLED = o.itemsEnabled;
     if (typeof o.relics === "boolean") Z.RELICS = o.relics;
+    if (o.stepCostDims && typeof o.stepCostDims === "object") Z.STEP_COST_DIMS = o.stepCostDims;
+    else if (o.stepCostDims === null) Z.STEP_COST_DIMS = null;
     if (Object.prototype.toString.call(o.items) === "[object Array]" && o.items.length) Z.ITEMS = o.items;
     if (Object.prototype.toString.call(o.stepCost) === "[object Array]" && o.stepCost.length === 4) {
       Z.STEP_COST = o.stepCost.map(function (v) { return Math.max(0, Math.round(v)); });

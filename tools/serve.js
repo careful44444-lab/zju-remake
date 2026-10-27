@@ -320,6 +320,7 @@ http.createServer(function (req, res) {
         points: cur.points != null ? cur.points : Cf.INIT_POINTS,
         rounds: cur.rounds != null ? cur.rounds : Cf.MAX_ROUNDS,
         stepCost: cur.stepCost || Cf.STEP_COST,
+        stepCostDims: cur.stepCostDims || null,
         roundPoints: cur.roundPoints || Cf.ROUND_POINTS,
         relics: cur.relics != null ? cur.relics : Cf.RELICS,
         itemsEnabled: cur.itemsEnabled != null ? cur.itemsEnabled : Cf.ITEMS_ENABLED,
@@ -399,6 +400,18 @@ http.createServer(function (req, res) {
           stepCost: (function () {
             var arr = (Object.prototype.toString.call(o.stepCost) === '[object Array]') ? o.stepCost : [3, 5, 8, 14];
             return arr.slice(0, 4).map(function (v) { return Math.max(0, Math.min(60, Math.round(+v || 0))); });
+          })(),
+          // 每个维度单独的价格：没传或者传 null 就表示「所有维度共用一套」
+          stepCostDims: (function () {
+            var src = o.stepCostDims;
+            if (!src || typeof src !== 'object') return null;
+            var out = {};
+            require('../game/config.js').DIMS.forEach(function (d) {
+              var a = src[d.id];
+              if (Object.prototype.toString.call(a) !== '[object Array]') return;
+              out[d.id] = a.slice(0, 4).map(function (v) { return Math.max(0, Math.min(60, Math.round(+v || 0))); });
+            });
+            return Object.keys(out).length ? out : null;
           })(),
           inits: initsOut
         }, null, 2), "utf8");
