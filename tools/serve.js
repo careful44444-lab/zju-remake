@@ -158,6 +158,12 @@ function pwSection(savedMsg) {
   h += '<button class="btn" type="submit" style="padding:9px 14px">设置 / 修改</button>';
   if (has) h += '<button class="btn" type="submit" name="act" value="clear" style="padding:9px 14px;color:#e11d48" onclick="return confirm(\'关闭密码后，任何人都能看到后台数据。确定？\')">关闭密码</button>';
   h += '</form>';
+  h += '<form method="POST" action="/save-password" style="margin-top:10px;font-size:12px;color:#475569">';
+  h += '<input type="hidden" name="act" value="force">';
+  h += '<label style="display:flex;align-items:center;gap:8px;cursor:pointer">';
+  h += '<input type="checkbox" name="on" value="1"' + (AUTH.forceLocal() ? ' checked' : '') + ' onchange="this.form.submit()">';
+  h += '<span>本机也要密码（默认关；开了以后连你自己打开后台都要输）</span>';
+  h += '</label></form>';
   if (savedMsg) h += '<p class="hint" style="color:#059669;margin-top:10px">' + esc(savedMsg) + '</p>';
   return h;
 }
@@ -233,7 +239,7 @@ function isLocalReq(req) {
 }
 
 // 公网也能访问的路径（游戏本体 + 数据上报 + 文案/数值读取）
-var PUBLIC_EXACT = { '/': 1, '/login': 1, '/logout': 1, '/collect': 1, '/content-edit': 1, '/config-edit': 1, '/favicon.ico': 1 };
+var PUBLIC_EXACT = { '/': 1, '/login': 1, '/logout': 1, '/collect': 1, '/content-edit': 1, '/config-edit': 1, '/favicon.ico': 1, '/play': 1 };
 var PUBLIC_PREFIX = ['/h5/', '/game/', '/render/'];
 // 隧道过来的请求，socket 也是 127.0.0.1，所以必须结合 forwarded 头判断
 function isRemoteReq(req) {
@@ -249,6 +255,11 @@ function isPublicPath(p) {
 
 http.createServer(function (req, res) {
   var p = decodeURIComponent((req.url || '/').split('?')[0]);
+  // 任何穿越尝试直接拒绝（/h5/../tools/xxx、/game/..\data\xxx 这类）
+  if (p.indexOf('..') >= 0 || p.indexOf('\\') >= 0) {
+    res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+    return res.end('400 bad path');
+  }
   var qs = (req.url || '').split('?')[1] || '';
 
   // ---------- 登录 / 登出 ----------
@@ -301,6 +312,11 @@ http.createServer(function (req, res) {
       var f2 = new URLSearchParams(pb);
       var pw2 = String(f2.get('password') || '');
       var act = f2.get('act') || 'set';
+      if (act === 'force') {
+        AUTH.setForceLocal(f2.get('on') === '1');
+        res.writeHead(302, { Location: '/url?saved=1&msg=' + encodeURIComponent('已更新') });
+        return res.end();
+      }
       var r = act === 'clear' ? AUTH.clearPassword() : AUTH.setPassword(pw2);
       res.writeHead(302, { Location: '/url?saved=1&msg=' + encodeURIComponent(r.ok ? (act === 'clear' ? '已关闭密码（后台仅本机可看）' : '密码已设置') : (r.msg || '失败')) });
       res.end();
@@ -309,7 +325,7 @@ http.createServer(function (req, res) {
   }
 
   // ---------- 门禁：非本机 + 非公开路径 + 未登录 → 去登录页 ----------
-  if (!isPublicPath(p) && isRemoteReq(req) && !AUTH.isAuthed(req)) {
+  if (!isPublicPath(p) && (isRemoteReq(req) || AUTH.forceLocal()) && !AUTH.isAuthed(req) && p !== '/save-password') {
     if (p.indexOf('/api/') === 0) { res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' }); return res.end(JSON.stringify({ ok: false, msg: '需要登录' })); }
     res.writeHead(302, { Location: '/login?next=' + encodeURIComponent(req.url || '/') });
     return res.end();
@@ -798,7 +814,11 @@ http.createServer(function (req, res) {
   }
 
   var f = path.normalize(path.join(root, p));
-  if (f.indexOf(root) !== 0) { res.writeHead(403); return res.end('forbidden'); }
+  var rel = path.relative(root, f);
+  // 必须真的落在允许的四个目录里，且不能跑出项目根目录
+  var okReal = rel && rel.indexOf('..') !== 0 && 
+    ['h5', 'game', 'render', 'dist'].some(function (d) { return rel === d || rel.indexOf(d + path.sep) === 0; });
+  if (!okReal) { res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' }); return res.end('403 forbidden'); }
   fs.readFile(f, function (err, buf) {
     if (err) { res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }); return res.end('404 ' + p); }
     res.writeHead(200, {

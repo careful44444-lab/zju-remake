@@ -38,6 +38,10 @@ function save() {
   } catch (e) { }
 }
 
+function forceLocal() { return !!load().forceLocal; }
+
+function setForceLocal(v) { load().forceLocal = !!v; save(); return { ok: true }; }
+
 function hasPassword() {
   var s = load();
   return !!(s.salt && s.hash);
@@ -133,6 +137,8 @@ function noteOk(ip) { delete fails[ip]; }
 
 module.exports = {
   hasPassword: hasPassword,
+  forceLocal: forceLocal,
+  setForceLocal: setForceLocal,
   setPassword: setPassword,
   clearPassword: clearPassword,
   checkPassword: checkPassword,
