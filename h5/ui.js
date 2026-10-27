@@ -261,10 +261,9 @@
       toast('回合用完了，点「提交方案」看结果');
     } else if (state.events < eventTotal()) {
       // 除最后一回合外，每次回合结束都插一张事件卡
-      pendingToast = '第 ' + r.round + ' 回合开始 · 本回合 +' + grant + ' 点';
-      setTimeout(function () { openEvent(); }, 280);
+      showGrant(grant, function () { setTimeout(function () { openEvent(); }, 140); });
     } else {
-      toast('第 ' + r.round + ' 回合开始 · 本回合 +' + grant + ' 点');
+      showGrant(grant);
     }
   }
 
@@ -485,6 +484,22 @@
   var curEvent = null;
   var pendingToast = '';
   var pendingItem = '';
+  /* 每回合开始先弹一次「拨款通知」，点「已阅」才继续（有事件就接着弹事件卡） */
+  var grantNext = null;
+  function showGrant(amount, next) {
+    grantNext = next || null;
+    var has = (amount || 0) > 0;
+    $("grantKicker").textContent = "第 " + (state.round || 1) + " 回合开始";
+    $("grantTitle").innerHTML = has
+      ? "本学年拨款 <span class=\"gnum\">" + amount + "</span> 点"
+      : "本学年暂无拨款";
+    $("grantText").textContent = has
+      ? "钱已经到账，当前可用 " + state.points + " 点。"
+      : "这一学年没有新的拨款，只能靠账上剩下的 " + state.points + " 点了。";
+    $("grantModal").classList.remove("hidden");
+    beep(amount > 0 ? 760 : 420, 0.12, "triangle", 0.04);
+  }
+
   function openEvent() {
     // 到这里才抽：只看此刻的局势，条件不满足的卡不会出现
     if (!queue[state.events]) {
@@ -785,6 +800,8 @@
     scene.resize();
     refresh();
     setTimeout(function () { $('hint').style.opacity = 1; }, 100);
+    // 第一回合也要先看拨款通知，点「已阅」再开始
+    setTimeout(function () { showGrant(Z.grantFor ? Z.grantFor(1) : 0); }, 220);
   }
 
   function boot() {
@@ -859,6 +876,13 @@
       closeSheet();
     });
     $('evNext').addEventListener('click', function () { triggerFlash(this, closeEvent, 340); });
+
+    $('grantOk').addEventListener('click', function () {
+      $('grantModal').classList.add('hidden');
+      var f = grantNext; grantNext = null;
+      beep(560, 0.06, 'sine', 0.03);
+      if (f) f();
+    });
 
     $('btnSound').addEventListener('click', function () {
       muted = !muted;
