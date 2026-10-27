@@ -28,6 +28,7 @@
       items: {},
       roundDims: [],
       breadthPaid: {},
+      roundBase: {},          // 本回合开始时这个维度是几档（用来判断「降回原点」）
       tiers: tiers,
       caps: caps,
       relief: relief,
@@ -49,7 +50,7 @@
   function snapshot(s) {
     // 注意：events 不进快照，避免「撤销 → 重做」重复触发同一张事件卡
     return JSON.stringify({
-      points: s.points, spent: s.spent, round: s.round, items: s.items, roundDims: s.roundDims, breadthPaid: s.breadthPaid,
+      points: s.points, spent: s.spent, round: s.round, items: s.items, roundDims: s.roundDims, breadthPaid: s.breadthPaid, roundBase: s.roundBase,
       tiers: s.tiers, caps: s.caps,
       relief: s.relief, bonus: s.bonus, ops: s.ops
     });
@@ -135,6 +136,8 @@
     if (!inRound(s, id)) {
       s.roundDims = roundDims(s).concat([id]);
       s.breadthPaid = s.breadthPaid || {};
+      s.roundBase = s.roundBase || {};
+      s.roundBase[id] = t;                       // 本回合从这个档位起跑
       s.breadthPaid[id] = breadthTax(roundDims(s).length - 1);
     }
     s.points -= c;
@@ -152,6 +155,7 @@
     s.round = (s.round || 1) + 1;
     s.roundDims = [];
     s.breadthPaid = {};
+    s.roundBase = {};
     // 剩余点数按比例结转，再加上新回合的额度
     if (!isLocked(s)) {
       var ratio = (typeof C.CARRY_RATIO === "number") ? C.CARRY_RATIO : 1;
@@ -172,6 +176,12 @@
     s.spent = (s.spent || 0) - r;
     s.tiers[id] = t - 1;
     if (t === 5) s.caps[id] = null;
+    // 降回本回合开始时的档位 = 这个维度在本回合「没动过」：移出已开工列表，广度税作废
+    if (s.roundBase && s.roundBase[id] != null && s.tiers[id] <= s.roundBase[id]) {
+      s.roundDims = roundDims(s).filter(function (x) { return x !== id; });
+      if (s.breadthPaid) delete s.breadthPaid[id];
+      delete s.roundBase[id];
+    }
     // 阵痛补偿（默认关闭，见 config）
     if (C.RELIEF > 0 && !s.relief[id] && s.tiers[id] < dim(id).init) {
       s.relief[id] = true;

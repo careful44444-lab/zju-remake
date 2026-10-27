@@ -751,35 +751,50 @@
     {
       "id": "course",
       "title": "选课系统崩了",
-      "text": "12:00:00 系统崩溃。12:00:03，教务处的电话被打爆。12:00:05，群里开始流传一张\"退学申请表\"表情包。",
+      "text": "12:00:00 第一轮选课。12:00:01 系统崩溃。12:00:03 教务处被问候。",
       "when": null,
       "options": [
         {
-          "label": "找教务哭着求扩容",
-          "cost": 3,
-          "result": "服务器扩容了，下个学期再也没崩过（这次）。",
+          "label": "让教务处扩容选课服务器",
+          "cost": 6,
+          "result": "服务器扩容了，连带着学在浙大也流畅了不少。",
           "altResult": "",
           "elseEffect": null,
           "cond": null,
-          "effect": null,
-          "cap": 5,
-          "item": "up",
-          "random": null
-        },
-        {
-          "label": "硬着头皮抢",
-          "cost": 0,
-          "result": "课没抢到，学分也没到手。",
-          "altResult": "你早就拿到预约了，全程围观别人崩溃。什么都没发生。",
-          "elseEffect": null,
-          "cond": {
-            "dim": "study",
-            "lt": 5
-          },
           "effect": {
             "tiers": {
-              "study": -1
+              "study": 1
             }
+          },
+          "cap": 5,
+          "item": null,
+          "random": {
+            "p": 0.6,
+            "resultB": "内存条涨价了你不知道吗？这下钱都打水漂了，555555",
+            "effectB": {
+              "points": 0,
+              "tiers": {},
+              "cap": 5
+            }
+          }
+        },
+        {
+          "label": "多少年了，先辈们都是这么过来的",
+          "cost": 0,
+          "result": "选课时间过了还没进去，等下一轮吧 :<",
+          "altResult": "你猜猜我中了什么课？流行演唱！",
+          "elseEffect": {
+            "points": 5,
+            "tiers": {},
+            "cap": 5
+          },
+          "cond": {
+            "dim": "culture",
+            "lt": 4
+          },
+          "effect": {
+            "tiers": {},
+            "points": -5
           },
           "cap": 5,
           "item": null,
@@ -789,36 +804,56 @@
     },
     {
       "id": "influencer",
-      "title": "网红来打卡",
-      "text": "一位百万粉博主在校园里拍了一条视频，标题是《国内最美大学没有之一》。",
-      "when": null,
+      "title": "名家讲座",
+      "text": "新一期求是大讲堂开课啦，这次请到26年的诺贝尔奖得主......",
+      "when": {
+        "dims": [
+          {
+            "id": "culture",
+            "max": 5,
+            "min": 4
+          }
+        ],
+        "rounds": {
+          "min": 1,
+          "max": 2
+        }
+      },
       "options": [
         {
-          "label": "安排接驳和拍摄许可",
-          "cost": 0,
-          "result": "视频爆了，报考咨询量涨了三成。",
-          "altResult": "",
-          "elseEffect": null,
-          "cond": null,
-          "effect": {
+          "label": "让每一个同学都能听见诺奖的声音",
+          "cost": 10,
+          "result": "同学们太热情了，紫金港的交通被挤爆了。",
+          "altResult": "从此紫金港的学术氛围更加浓厚。",
+          "elseEffect": {
+            "points": 0,
             "tiers": {
-              "culture": 1
+              "study": 1
             },
-            "cap": 4
+            "cap": 5
+          },
+          "cond": {
+            "dim": "move",
+            "lt": 2
+          },
+          "effect": {
+            "tiers": {},
+            "cap": 4,
+            "points": -5
           },
           "cap": 5,
-          "item": null,
+          "item": "up",
           "random": null
         },
         {
-          "label": "保持安静",
+          "label": "发推文 抽名额 老一套 新方法",
           "cost": 0,
-          "result": "没有游客，没有排队，图书馆还是图书馆。",
+          "result": "感觉是有学到了。",
           "altResult": "",
           "elseEffect": null,
           "cond": null,
           "effect": {
-            "points": 2,
+            "points": 5,
             "tiers": {}
           },
           "cap": 5,
@@ -829,33 +864,35 @@
     },
     {
       "id": "flood",
-      "title": "暴雨淹了紫金港",
-      "text": "一场大雨，路面成河。有人划着充气船去上课，视频在群里转了三圈。",
+      "title": "在下大暴雨",
+      "text": "求是湖的水位上升了，迪臣路被淹了",
       "when": null,
       "options": [
         {
           "label": "做排水改造",
-          "cost": 4,
-          "result": "海绵校园上线，下一场雨你甚至没带伞。",
+          "cost": 10,
+          "result": "紫金港的下水道，德国的工程师来了也自愧不如",
           "altResult": "",
           "elseEffect": null,
           "cond": null,
           "effect": null,
           "cap": 5,
-          "item": "x15",
+          "item": "up",
           "random": null
         },
         {
-          "label": "买双雨靴",
+          "label": "穿上雨衣，带上雨伞",
           "cost": 0,
-          "result": "雨靴销量全校第一。",
-          "altResult": "",
+          "result": "下雨了~雨陪我哭泣~看不清——冲进树丛里",
+          "altResult": "窗外的天气~就像是~你多变的表情~wow",
           "elseEffect": null,
-          "cond": null,
+          "cond": {
+            "dim": "move",
+            "lt": 3
+          },
           "effect": {
-            "tiers": {
-              "move": -1
-            }
+            "tiers": {},
+            "points": -5
           },
           "cap": 5,
           "item": null,
@@ -866,61 +903,98 @@
     {
       "id": "roomie",
       "title": "宿舍矛盾",
-      "text": "室友的闹钟响在 6:30，你的入睡时间是 2:30。第三个室友开始在群里发长文。",
-      "when": null,
+      "text": "一个睡得早，一个回得晚，一个白天吵，一个夜里闹。",
+      "when": {
+        "dims": [
+          {
+            "id": "dorm",
+            "max": 3
+          }
+        ]
+      },
       "options": [
         {
           "label": "申请调换",
-          "cost": 2,
-          "result": "换了宿舍，找到了作息相近的室友，你睡得更好了。",
+          "cost": 5,
+          "result": "换了宿舍，找到了作息相近的室友，睡得更香了。",
           "altResult": "",
           "elseEffect": null,
           "cond": null,
           "effect": null,
           "cap": 5,
           "item": null,
-          "random": null
+          "random": {
+            "p": 0.7,
+            "resultB": "申请到了单人间，芜湖起飞！",
+            "effectB": {
+              "points": 0,
+              "tiers": {
+                "dorm": 1
+              },
+              "cap": 5
+            }
+          }
         },
         {
-          "label": "继续磨合",
+          "label": "有事好协商",
           "cost": 0,
-          "result": "你们达成了一个脆弱的协议，为期两周。",
+          "result": "没谈拢。",
           "altResult": "",
           "elseEffect": null,
           "cond": null,
           "effect": {
             "tiers": {
               "dorm": -1
-            }
+            },
+            "points": -5
           },
           "cap": 5,
           "item": null,
-          "random": null
+          "random": {
+            "p": 0.5,
+            "resultB": "和室友达成了暂时的协议。",
+            "effectB": {
+              "points": 0,
+              "tiers": {},
+              "cap": 5
+            }
+          }
         }
       ]
     },
     {
       "id": "bike",
       "title": "共享单车围城",
-      "text": "校门口堆了两千辆共享单车，人行道已经看不见地面。三家运维公司在互相甩锅。",
-      "when": null,
+      "text": "路边堆了上千辆共享单车，路面被侵占了。初极狭，才通人。",
+      "when": {
+        "dims": [
+          {
+            "id": "move",
+            "max": 2
+          }
+        ]
+      },
       "options": [
         {
           "label": "统一整治",
-          "cost": 3,
-          "result": "划了停车区，清了两千辆，路终于能走了。",
+          "cost": 5,
+          "result": "划了共享单车专用停车区，路终于豁然开朗了",
           "altResult": "",
           "elseEffect": null,
           "cond": null,
-          "effect": null,
+          "effect": {
+            "tiers": {
+              "move": 1
+            }
+          },
           "cap": 5,
           "item": null,
           "random": null
         },
         {
-          "label": "让它们自生自灭",
+          "label": "let it go",
           "cost": 0,
-          "result": "你收了管理费，但路被堵了。",
+          "result": "这世上本来有路，停的车多了也就没了路",
           "altResult": "",
           "elseEffect": null,
           "cond": null,
@@ -938,14 +1012,21 @@
     },
     {
       "id": "finals",
-      "title": "期末周",
-      "text": "图书馆的位置在早上 7:00 就满了。有人在便利店门口拿着 iPad 复习，表情平静得像在度假。",
-      "when": null,
+      "title": "考试周",
+      "text": "图书馆的位置根本抢不到。有人在教室里复习，有的人在寝室里复习，有的人在梦里复习。",
+      "when": {
+        "dims": [
+          {
+            "id": "study",
+            "max": 3
+          }
+        ]
+      },
       "options": [
         {
-          "label": "开 24h 自习室",
-          "cost": 2,
-          "result": "通宵自习室开了，灯亮了一整周。",
+          "label": "多开放教室当自习室",
+          "cost": 7,
+          "result": "自习室氛围不错，感觉就像在自习室一样。",
           "altResult": "",
           "elseEffect": null,
           "cond": null,
@@ -957,12 +1038,20 @@
           },
           "cap": 5,
           "item": null,
-          "random": null
+          "random": {
+            "p": 0.7,
+            "resultB": "自习室氛围不错，感觉就像在寝室一样",
+            "effectB": {
+              "points": 0,
+              "tiers": {},
+              "cap": 5
+            }
+          }
         },
         {
-          "label": "早点睡",
+          "label": "早睡早起",
           "cost": 0,
-          "result": "你睡得不错，但 GPA 不太行。",
+          "result": "你睡得不错，但考得不行。",
           "altResult": "",
           "elseEffect": null,
           "cond": null,
@@ -972,39 +1061,63 @@
           },
           "cap": 5,
           "item": null,
-          "random": null
+          "random": {
+            "p": 0.5,
+            "resultB": "你醒得很早，考得也很高。",
+            "effectB": {
+              "points": 6,
+              "tiers": {},
+              "cap": 5
+            }
+          }
         }
       ]
     },
     {
       "id": "chef",
-      "title": "大师傅要跳槽",
-      "text": "食堂最受欢迎的那个窗口，师傅被隔壁学校挖走了，工资翻了 1.5 倍。",
+      "title": "食堂后勤组织活动",
+      "text": "听说参加活动有二课分哦",
       "when": {
         "dims": [
           {
             "id": "food",
+            "min": 3
+          },
+          {
+            "id": "culture",
+            "max": null,
             "min": 3
           }
         ]
       },
       "options": [
         {
-          "label": "涨薪留人",
-          "cost": 4,
-          "result": "师傅留下来了，还带了个徒弟。队伍又长了十米。",
+          "label": "我去我去",
+          "cost": 0,
+          "result": "吃到了好吃的，点数增加了！",
           "altResult": "",
           "elseEffect": null,
           "cond": null,
-          "effect": null,
+          "effect": {
+            "tiers": {},
+            "points": 4
+          },
           "cap": 5,
           "item": null,
-          "random": null
+          "random": {
+            "p": 0.5,
+            "resultB": "原来是来试毒的，哕",
+            "effectB": {
+              "points": -4,
+              "tiers": {},
+              "cap": 5
+            }
+          }
         },
         {
-          "label": "祝他前程似锦",
+          "label": "我不去",
           "cost": 0,
-          "result": "窗口换了个新人，糖醋里脊再也没有过那个味道。",
+          "result": "那就不去吧",
           "altResult": "",
           "elseEffect": null,
           "cond": null,
@@ -1026,12 +1139,17 @@
       "when": {
         "rounds": {
           "min": 2
-        }
+        },
+        "dims": [
+          {
+            "min": 2
+          }
+        ]
       },
       "options": [
         {
           "label": "认真拍一条",
-          "cost": 3,
+          "cost": 6,
           "result": "片子火了，评论区在问\"这是哪个国家的学校\"。",
           "altResult": "",
           "elseEffect": null,
