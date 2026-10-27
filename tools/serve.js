@@ -65,6 +65,7 @@ function effectiveContent() {
           if (!t) return;
           if (oe.title != null) t.title = oe.title;
           if (oe.text != null) t.text = oe.text;
+          if (oe.when !== undefined) t.when = oe.when;
           (oe.options || []).forEach(function (o2, i2) {
             if (!t.options[i2]) return;
             if (typeof o2 === 'string') { t.options[i2].label = o2; return; }
@@ -406,6 +407,7 @@ http.createServer(function (req, res) {
     });
     return;
   }
+
 
   // 档位信物对照表（30 个图标，改完刷新即可看到）
   if (p === "/relics") {

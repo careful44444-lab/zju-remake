@@ -320,8 +320,109 @@ function bindRules(main){
   });
 }
 
+function whenText(w){
+  if (!w) return "不限制（任何情况都可能出现）";
+  var parts = [];
+  if (w.rounds && (w.rounds.min != null || w.rounds.max != null)) {
+    var a = w.rounds.min != null ? w.rounds.min : 1;
+    var b = w.rounds.max != null ? w.rounds.max : "末";
+    parts.push("第 " + a + "–" + b + " 回合");
+  }
+  (w.dims || []).forEach(function(c){
+    var d = (META.dims || []).filter(function(x){ return x.id === c.id; })[0];
+    var nm = d ? d.name : c.id;
+    if (c.min != null && c.max != null) parts.push(nm + " 在 T" + c.min + "–T" + c.max);
+    else if (c.min != null) parts.push(nm + " ≥ T" + c.min);
+    else if (c.max != null) parts.push(nm + " ≤ T" + c.max);
+  });
+  if (w.pointsMin != null) parts.push("剩余点数 ≥ " + w.pointsMin);
+  return parts.length ? parts.join(" · ") : "不限制";
+}
+
+function whenBlock(ev, i){
+  var w = ev.when || null;
+  var on = !!w;
+  var h = "<details" + (on ? "" : "") + " style=\"margin-top:14px;border-top:1px solid #e2e8f0;padding-top:10px\">" +
+    "<summary style=\"cursor:pointer;font-size:12.5px;color:#334155;font-weight:600\">" +
+      "触发条件　<span style=\"font-weight:400;color:" + (on ? "#b45309" : "#94a3b8") + "\">" + esc(whenText(w)) + "</span>" +
+    "</summary>" +
+    "<p style=\"font-size:11.5px;color:#64748b;margin:8px 0 10px;line-height:1.7\">" +
+      "不满足条件时，这张卡不会在这一回合出现。" +
+      "维度条件全部满足才触发；回合和点数留空表示不限。" +
+    "</p>";
+
+  // 回合范围
+  var rmin = w && w.rounds && w.rounds.min != null ? w.rounds.min : "";
+  var rmax = w && w.rounds && w.rounds.max != null ? w.rounds.max : "";
+  h += "<div style=\"display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end\">" +
+    "<div><label style=\"margin-top:0\">从第几回合</label><input type=\"number\" min=\"1\" max=\"9\" style=\"width:90px\" data-ev=\"" + i + "\" data-w=\"rmin\" value=\"" + rmin + "\" placeholder=\"不限\"></div>" +
+    "<div><label style=\"margin-top:0\">到第几回合</label><input type=\"number\" min=\"1\" max=\"9\" style=\"width:90px\" data-ev=\"" + i + "\" data-w=\"rmax\" value=\"" + rmax + "\" placeholder=\"不限\"></div>" +
+    "<div><label style=\"margin-top:0\">剩余点数至少</label><input type=\"number\" min=\"0\" max=\"99\" style=\"width:110px\" data-ev=\"" + i + "\" data-w=\"pointsMin\" value=\"" + (w && w.pointsMin != null ? w.pointsMin : "") + "\" placeholder=\"不限\"></div>" +
+  "</div>";
+
+  // 维度条件
+  h += "<label style=\"margin-top:14px\">维度条件（全部满足才触发）</label>";
+  var dims = (w && w.dims) || [];
+  if (!dims.length) h += "<p style=\"font-size:11.5px;color:#94a3b8;margin:2px 0 8px\">还没加维度条件</p>";
+  dims.forEach(function(c, k){
+    var opts = (META.dims || []).map(function(d){
+      return "<option value=\"" + d.id + "\"" + (d.id === c.id ? " selected" : "") + ">" + d.name + "</option>";
+    }).join("");
+    h += "<div style=\"display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px\">" +
+      "<div><label style=\"margin-top:0\">维度</label><select style=\"width:110px\" data-ev=\"" + i + "\" data-w=\"dim\" data-wi=\"" + k + "\">" + opts + "</select></div>" +
+      "<div><label style=\"margin-top:0\">最低档</label><input type=\"number\" min=\"1\" max=\"5\" style=\"width:80px\" data-ev=\"" + i + "\" data-w=\"dmin\" data-wi=\"" + k + "\" value=\"" + (c.min != null ? c.min : "") + "\" placeholder=\"不限\"></div>" +
+      "<div><label style=\"margin-top:0\">最高档</label><input type=\"number\" min=\"1\" max=\"5\" style=\"width:80px\" data-ev=\"" + i + "\" data-w=\"dmax\" data-wi=\"" + k + "\" value=\"" + (c.max != null ? c.max : "") + "\" placeholder=\"不限\"></div>" +
+      "<button type=\"button\" class=\"ghost\" style=\"padding:7px 12px;font-size:12px\" data-ev=\"" + i + "\" data-w=\"delDim\" data-wi=\"" + k + "\">删掉</button>" +
+    "</div>";
+  });
+  h += "<div style=\"display:flex;gap:10px;margin-top:4px\">" +
+    "<button type=\"button\" class=\"ghost\" style=\"padding:7px 14px;font-size:12px\" data-ev=\"" + i + "\" data-w=\"addDim\">+ 加一条维度条件</button>" +
+    (on ? "<button type=\"button\" class=\"ghost\" style=\"padding:7px 14px;font-size:12px;color:#be123c;border-color:#fecdd3\" data-ev=\"" + i + "\" data-w=\"clear\">清空条件</button>" : "") +
+  "</div>";
+  h += "</details>";
+  return h;
+}
+
+function bindWhen(main){
+  main.querySelectorAll("[data-w]").forEach(function(el){
+    var i = +el.dataset.ev, ev = EVENTS[i], w = el.dataset.w;
+    var act = function(){
+      if (!ev.when) ev.when = {};
+      var W = ev.when;
+      if (w === "addDim") { W.dims = W.dims || []; W.dims.push({ id: (META.dims[0]||{}).id, max: 2 }); render(); return; }
+      if (w === "delDim") { W.dims.splice(+el.dataset.wi, 1); cleanWhen(ev); render(); return; }
+      if (w === "clear") { ev.when = null; render(); return; }
+      if (w === "rmin" || w === "rmax") {
+        W.rounds = W.rounds || {};
+        var v = el.value === "" ? null : Math.max(1, +el.value);
+        W.rounds[w === "rmin" ? "min" : "max"] = v;
+        cleanWhen(ev); return;
+      }
+      if (w === "pointsMin") { W.pointsMin = el.value === "" ? null : Math.max(0, +el.value); cleanWhen(ev); return; }
+      var k = +el.dataset.wi; W.dims = W.dims || []; W.dims[k] = W.dims[k] || {};
+      if (w === "dim") { W.dims[k].id = el.value; return; }
+      if (w === "dmin") { W.dims[k].min = el.value === "" ? null : Math.min(5, Math.max(1, +el.value)); cleanWhen(ev); return; }
+      if (w === "dmax") { W.dims[k].max = el.value === "" ? null : Math.min(5, Math.max(1, +el.value)); cleanWhen(ev); return; }
+    };
+    el[el.tagName === "SELECT" ? "onchange" : "oninput"] = act;
+    if (el.tagName === "BUTTON") el.onclick = act;
+  });
+}
+
+// 全空的 when 直接扔掉，避免存一堆空对象
+function cleanWhen(ev){
+  var w = ev.when; if (!w) return;
+  if (w.rounds && w.rounds.min == null && w.rounds.max == null) delete w.rounds;
+  if (w.pointsMin == null) delete w.pointsMin;
+  if (w.dims) {
+    w.dims = w.dims.filter(function(c){ return c && (c.min != null || c.max != null); });
+    if (!w.dims.length) delete w.dims;
+  }
+  if (!w.rounds && w.pointsMin == null && !w.dims) ev.when = null;
+}
+
 function renderEvents(main){
-  var html = '<p class="hint">每回合结算时会从这里抽一张。选项文字会出现在统计报表里；结果文案不用写「预算 +2 点」，系统会按效果自动补。</p>';
+  var html = '<p class="hint">每回合结算时会从这里抽一张（已出现过的不会再出现）。每张卡可以设置「触发条件」，不满足就不抽它。选项文字会出现在统计报表里；结果文案不用写「预算 +2 点」，系统会按效果自动补。</p>';
   EVENTS.forEach(function(ev, i){
     html += '<div class="tier">' +
       '<h3><span class="badge">' + esc(ev.id) + '</span></h3>' +
@@ -398,9 +499,11 @@ function renderEvents(main){
         '<label>条件不满足时的文案（有条件的才需要）</label><textarea data-ev="' + i + '" data-opt="' + k + '" data-f="altResult">' + esc(o.altResult || '') + '</textarea>' +
       '</div>';
     });
+    html += whenBlock(ev, i);
     html += '</div>';
   });
   main.innerHTML = html;
+  bindWhen(main);
   main.querySelectorAll('input,textarea,select').forEach(function(el){
     var h = el.tagName === 'SELECT' ? 'onchange' : 'oninput';
     el[h] = function(){
@@ -481,7 +584,7 @@ function buildPayload(){
   out.__achievements = ACH;
   out.__titles = TITLES;
   out.__events = EVENTS.map(function(ev){
-    return { id: ev.id, title: ev.title, text: ev.text,
+    return { id: ev.id, title: ev.title, text: ev.text, when: ev.when || null,
       options: ev.options.map(function(o){
         if (typeof o === 'string') return { label: o, result: '' };
         return {

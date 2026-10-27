@@ -148,6 +148,7 @@
         if (list[i].id !== e.id) continue;
         if (e.title != null) list[i].title = e.title;
         if (e.text != null) list[i].text = e.text;
+        if (e.when !== undefined) list[i].when = e.when;
         (e.options || []).forEach(function (o, k) {
           if (!list[i].options[k]) return;
           if (typeof o === 'string') { list[i].options[k].label = o; return; }
@@ -483,8 +484,18 @@
   var pendingToast = '';
   var pendingItem = '';
   function openEvent() {
+    // 到这里才抽：只看此刻的局势，条件不满足的卡不会出现
+    if (!queue[state.events]) {
+      queue[state.events] = Z.pickEvent ? Z.pickEvent(state, cardsUsed) : null;
+    }
     curEvent = queue[state.events];
-    if (!curEvent) return;
+    if (!curEvent) {
+      // 没有符合条件的卡：这一回合就不出事件
+      state.events += 1;
+      persist();
+      toast("这一回合风平浪静，没有事件发生");
+      return;
+    }
     $('evIdx').textContent = Math.min(state.events + 1, eventTotal()) + '/' + eventTotal();
     $('evTitle').textContent = curEvent.title;
     $('evText').textContent = curEvent.text;
@@ -764,7 +775,7 @@
   function beginRun(mode, grade) {
     state = Z.createState();
     state.grade = grade || null;
-    queue = Z.drawQueue(Math.max(1, (Z.MAX_ROUNDS || 4) - 1)).slice();
+    queue = [];   // 每回合按当时的局势现抽（见 openEvent）
     sel = null;
     if (Track) Track.setProfile({ year: state.grade });
     trackStart(mode);
@@ -819,7 +830,7 @@
       if (!s) return;
       state = s;
       if (Track) Track.setProfile({ year: s.grade || null });
-      queue = Z.drawQueue(Math.max(1, (Z.MAX_ROUNDS || 4) - 1)).slice();
+      queue = [];   // 每回合按当时的局势现抽（见 openEvent）
       trackStart('resume');
       show('game');
       scene.resize();

@@ -38,6 +38,7 @@
   var EVENTS = [
     {
       id: 'bus', title: '校车又晚点', icon: 'bus',
+      when: { dims: [{ id: 'move', max: 2 }] },
       text: '早八的校车晚了 25 分钟。站台上有人在啃早饭，有人在背单词，有人在群里问"有没有人一起走回去"。',
       options: [
         { label: '加钱加密班次', cost: 3, result: '车来了，一次两辆，队伍短了一半。' },
@@ -53,6 +54,7 @@
     },
     {
       id: 'fitness', title: '体测周', icon: 'run',
+      when: { dims: [{ id: 'sport', max: 3 }] },
       text: '本学期体测开始。一千米、引体向上、坐位体前屈，三件套齐活。',
       options: [
         { label: '请教练特训', cost: 2, result: '教练说你的问题不在腿，在心态。但体测过了。' },
@@ -145,6 +147,7 @@
     },
     {
       id: 'chef', title: '大师傅要跳槽', icon: 'chef',
+      when: { dims: [{ id: 'food', min: 3 }] },
       text: '食堂最受欢迎的那个窗口，师傅被隔壁学校挖走了，工资翻了 1.5 倍。',
       options: [
         { label: '涨薪留人', cost: 4, result: '师傅留下来了，还带了个徒弟。队伍又长了十米。' },
@@ -153,6 +156,7 @@
     },
     {
       id: 'promo', title: '招生宣传片', icon: 'film',
+      when: { rounds: { min: 2 } },
       text: '宣传部想拍一支片子，预算不多，问你有没有什么想法。',
       options: [
         {
@@ -175,6 +179,47 @@
   }
 
   function drawQueue(n) { return shuffle(EVENTS).slice(0, n || 3); }
+
+  /* 事件触发条件：不写 when 就是任何时候都可能出现
+   *   when = {
+   *     rounds: { min: 1, max: 3 },              // 只在第几回合之间出现
+   *     dims:   [ { id: "move", max: 2 } ],      // 这些维度必须同时落在区间内（min/max 可省略一边）
+   *     pointsMin: 6                             // 剩余点数至少要这么多
+   *   }
+   */
+  function matchWhen(s, w) {
+    if (!w) return true;
+    var r = s.round || 1;
+    if (w.rounds) {
+      if (w.rounds.min != null && r < w.rounds.min) return false;
+      if (w.rounds.max != null && r > w.rounds.max) return false;
+    }
+    if (w.pointsMin != null && (s.points || 0) < w.pointsMin) return false;
+    var ds = w.dims || [];
+    for (var i = 0; i < ds.length; i++) {
+      var c = ds[i];
+      if (!c || !c.id) continue;
+      var tv = s.tiers[c.id];
+      if (tv == null) continue;
+      if (c.min != null && tv < c.min) return false;
+      if (c.max != null && tv > c.max) return false;
+    }
+    return true;
+  }
+
+  /* 按当前局势抽一张：排除已经出现过的，排除条件不满足的 */
+  function pickEvent(s, used) {
+    var u = used || [];
+    var pool = [];
+    for (var i = 0; i < EVENTS.length; i++) {
+      var e = EVENTS[i];
+      if (u.indexOf(e.id) >= 0) continue;
+      if (!matchWhen(s, e.when)) continue;
+      pool.push(e);
+    }
+    if (!pool.length) return null;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
 
   function afford(s, opt) { return !opt.cost || s.points >= opt.cost; }
 
@@ -257,5 +302,9 @@
     return r.text + (r.delta ? '（' + r.delta + '）' : '');
   }
 
-  return { EVENTS: EVENTS, drawQueue: drawQueue, afford: afford, apply: applyText, applyResult: apply, rollRandom: rollRandom, bump: bump };
+  return {
+    EVENTS: EVENTS, drawQueue: drawQueue, afford: afford, apply: applyText, applyResult: apply,
+    rollRandom: rollRandom, bump: bump,
+    matchWhen: matchWhen, pickEvent: pickEvent
+  };
 });
