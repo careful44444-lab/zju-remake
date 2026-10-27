@@ -46,6 +46,12 @@ tr.latest .idx{background:var(--gold);color:#241a05;font-weight:800}
 #toast.show{opacity:1;transform:translate(-50%,0)}
 .hint{font-size:11.5px;color:var(--dim);line-height:1.9;margin:10px 0 0}
 code{background:rgba(15,23,42,.05);padding:1px 6px;border-radius:5px;font-size:11.5px}
+  .bulkbar{display:flex;align-items:center;gap:10px;padding:10px 12px;margin:0 0 10px;background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;font-size:12.5px;color:#b45309}
+  .bulkbar.hidden{display:none}
+  .bulkbar #bulkCount{font-weight:700}
+  .bulkbar button{padding:6px 12px;font-size:12px;border-radius:8px}
+  td.pick{text-align:center}
+  td.pick input{width:15px;height:15px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -66,9 +72,15 @@ code{background:rgba(15,23,42,.05);padding:1px 6px;border-radius:5px;font-size:1
 
 <div class="card">
   <h2>所有备份 <span class="sub" id="cnt"></span></h2>
+  <div id="bulkBar" class="bulkbar hidden">
+    <span id="bulkCount">已选 0 份</span>
+    <button id="bulkDelete" class="danger">删除选中</button>
+    <button id="bulkClear" class="ghost">取消选择</button>
+  </div>
   <table>
     <thead>
       <tr>
+        <th style="width:32px"><input type="checkbox" id="pickAll" title="全选"></th>
         <th style="width:38px">#</th>
         <th style="width:150px">时间</th>
         <th style="width:56px">局数</th>
@@ -105,6 +117,30 @@ function fmtTime(iso) {
 }
 function kb(n) { return n >= 1024 * 1024 ? (n / 1048576).toFixed(1) + 'MB' : Math.max(1, Math.round(n / 1024)) + 'KB'; }
 
+var picked = {};   // file -> 1
+
+function pickedIds() { return Object.keys(picked); }
+
+function syncPick() {
+  var ids = pickedIds();
+  var bar = $("bulkBar");
+  if (!bar) return;
+  bar.classList.toggle("hidden", !ids.length);
+  $("bulkCount").textContent = "已选 " + ids.length + " 份";
+  var all = $("pickAll");
+  if (all) {
+    all.checked = ids.length > 0 && ids.length === DATA.items.length;
+    all.indeterminate = ids.length > 0 && ids.length < DATA.items.length;
+  }
+}
+
+function bulkDelete() {
+  var ids = pickedIds();
+  if (!ids.length) return;
+  if (!confirm("删除选中的 " + ids.length + " 份备份？\n\n备份文件会被永久删掉，恢复不了。")) return;
+  api({ action: "delete", files: ids }).then(function () { picked = {}; syncPick(); });
+}
+
 function render() {
   var c = DATA.current || { events: 0, runs: 0, finished: 0, users: 0, bytes: 0 };
   $('current').innerHTML =
@@ -128,6 +164,7 @@ function render() {
     if (i === 0) tr.className = 'latest';
     var idx = '<span class="idx">' + (i + 1) + '</span>';
     tr.innerHTML =
+      '<td class="pick"><input type="checkbox" data-pick="' + it.file + '"' + (picked[it.file] ? ' checked' : '') + '></td>' +
       '<td>' + idx + '</td>' +
       '<td style="color:#475569">' + fmtTime(it.at) + '</td>' +
       '<td class="num">' + it.runs + '</td>' +
@@ -149,8 +186,14 @@ function render() {
     inp.onchange = function () {
       api({ action: 'note', file: inp.dataset.file, note: inp.value }, '备注已保存');
     };
+    var ck2 = tr.querySelector('[data-pick]');
+    if (ck2) ck2.onchange = function () {
+      if (ck2.checked) picked[ck2.dataset.pick] = 1; else delete picked[ck2.dataset.pick];
+      syncPick();
+    };
     rows.appendChild(tr);
   });
+  syncPick();
 }
 
 function api(body, okMsg) {
@@ -183,6 +226,13 @@ $('btnSnap').onclick = function () {
   api({ action: 'snapshot', note: note }, '已备份');
 };
 $('btnRefresh').onclick = load;
+$('pickAll').onclick = function () {
+  if (this.checked) DATA.items.forEach(function (x) { picked[x.file] = 1; });
+  else picked = {};
+  render();
+};
+$('bulkDelete').onclick = bulkDelete;
+$('bulkClear').onclick = function () { picked = {}; render(); };
 
 function load() {
   fetch('/api/backups').then(function (r) { return r.json(); }).then(function (r) {

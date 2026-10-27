@@ -216,6 +216,15 @@ http.createServer(function (req, res) {
         var o = {};
         try { o = JSON.parse(body || '{}'); } catch (e) { return json(res, 400, { ok: false, msg: 'bad json' }); }
         var msg = '';
+        // 批量删除备份
+        if (Array.isArray(o.files)) {
+          var fs2 = o.files.filter(function (x) { return typeof x === 'string' && x; });
+          if (!fs2.length) return json(res, 400, { ok: false, msg: '没选中任何备份' });
+          if (o.action !== 'delete') return json(res, 400, { ok: false, msg: '批量只支持删除' });
+          var gone = 0;
+          fs2.forEach(function (f) { if (backup.remove(f)) gone += 1; });
+          return json(res, 200, { ok: true, msg: '已删除 ' + gone + ' 份备份', items: backup.items(), current: backup.currentStats() });
+        }
         if (o.action === 'snapshot') {
           var name = backup.snapshot({ note: o.note || '', keep: 60 });
           msg = name ? '已备份 ' + name : '没有新数据可备份';
@@ -289,6 +298,23 @@ http.createServer(function (req, res) {
       req.on('end', function () {
         var o = {};
         try { o = JSON.parse(rb || '{}'); } catch (e) { return json(res, 400, { ok: false, msg: 'bad json' }); }
+        // 批量：传 rids 数组，服务端一次处理完
+        if (Array.isArray(o.rids)) {
+          var ids = o.rids.filter(function (x) { return typeof x === 'string' && x; });
+          if (!ids.length) return json(res, 400, { ok: false, msg: '没选中任何一局' });
+          if (o.action === 'delete') {
+            backup.snapshot({ quiet: true, note: '批量删除对局前（' + ids.length + ' 局）' });
+            var dn = 0;
+            ids.forEach(function (id) { dn += runsMod.deleteRun(id) || 0; });
+            return json(res, 200, { ok: true, msg: '已删除 ' + ids.length + ' 局（' + dn + ' 条事件），删除前已自动备份', runs: runsMod.listRuns(), meta: require('./report.js').meta() });
+          }
+          if (o.action === 'exclude' || o.action === 'include') {
+            var on = o.action === 'exclude';
+            ids.forEach(function (id) { runsMod.setExcluded(id, on); });
+            return json(res, 200, { ok: true, msg: '已' + (on ? '排除' : '恢复') + ' ' + ids.length + ' 局', runs: runsMod.listRuns(), meta: require('./report.js').meta() });
+          }
+          return json(res, 400, { ok: false, msg: '批量操作不支持 ' + o.action });
+        }
         if (!o.rid) return json(res, 400, { ok: false, msg: '缺少 rid' });
         var msg = '';
         if (o.action === 'delete') {

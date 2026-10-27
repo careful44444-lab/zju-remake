@@ -69,7 +69,10 @@ function snapshot(opt) {
     return null;
   }
   var st = stats(text);
-  var name = stamp() + '-r' + st.runs + '-e' + st.events + '.jsonl';
+  var base = stamp() + '-r' + st.runs + '-e' + st.events;
+  // 同一秒连续备份会撞名，撞了就加 -2 / -3 后缀
+  var name = base + '.jsonl', dup = 2;
+  while (fs.existsSync(path.join(DIR, name))) { name = base + '-' + dup + '.jsonl'; dup += 1; }
   var file = path.join(DIR, name);
   fs.writeFileSync(file, text, 'utf8');
 

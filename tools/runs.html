@@ -70,6 +70,12 @@ tr.detail td{background:rgba(0,0,0,.28);padding:14px 16px}
   background:#ffffff;border:1px solid rgba(217,119,6,.4);color:var(--gold);
   font-size:13px;font-weight:600;opacity:0;transition:all .22s;pointer-events:none;z-index:99}
 #toast.show{opacity:1;transform:translate(-50%,0)}
+  .bulkbar{display:flex;align-items:center;gap:10px;padding:10px 12px;margin:10px 0 4px;background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;font-size:12.5px;color:#b45309}
+  .bulkbar.hidden{display:none}
+  .bulkbar #bulkCount{font-weight:700}
+  .bulkbar button{padding:6px 12px;font-size:12px;border-radius:8px}
+  td.pick, th input#pickAll{text-align:center}
+  td.pick input{width:15px;height:15px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -91,9 +97,17 @@ tr.detail td{background:rgba(0,0,0,.28);padding:14px 16px}
 <div class="card">
   <div class="kpis" id="kpis"></div>
   <div class="flagbar" id="flagBar"></div>
+  <div id="bulkBar" class="bulkbar hidden">
+    <span id="bulkCount">已选 0 局</span>
+    <button id="bulkExclude">排除选中</button>
+    <button id="bulkInclude">恢复选中</button>
+    <button id="bulkDelete" class="danger">删除选中</button>
+    <button id="bulkClear" class="ghost">取消选择</button>
+  </div>
   <table>
     <thead>
       <tr>
+        <th style="width:34px"><input type="checkbox" id="pickAll" title="全选当前筛选结果"></th>
         <th style="width:44px">#</th>
         <th style="width:120px">时间</th>
         <th style="width:64px">年级</th>
@@ -215,6 +229,36 @@ function detailHTML(r) {
   return parts.join('');
 }
 
+var picked = {};   // rid -> 1，跨筛选/刷新保留
+
+function pickedIds() { return Object.keys(picked); }
+
+function syncPick() {
+  var ids = pickedIds();
+  var bar = $("bulkBar");
+  if (!bar) return;
+  bar.classList.toggle("hidden", !ids.length);
+  $("bulkCount").textContent = "已选 " + ids.length + " 局";
+  var all = $("pickAll");
+  var visible = (DATA.runs || []).filter(matches).length;
+  var pickedVisible = (DATA.runs || []).filter(matches).filter(function (x) { return picked[x.rid]; }).length;
+  if (all) {
+    all.checked = visible > 0 && pickedVisible === visible;
+    all.indeterminate = pickedVisible > 0 && pickedVisible < visible;
+  }
+}
+
+function bulk(action) {
+  var ids = pickedIds();
+  if (!ids.length) return;
+  if (action === "delete") {
+    if (!confirm("删除选中的 " + ids.length + " 局？\n\n这些局的全部事件都会移除，删除前会自动备份一份。")) return;
+  }
+  api({ action: action, rids: ids }).then(function () {
+    if (action === "delete") { picked = {}; syncPick(); }
+  });
+}
+
 function render() {
   var all = DATA.runs, list = all.filter(matches);
   var ex = all.filter(function (r) { return r.excluded; }).length;
@@ -266,6 +310,7 @@ function render() {
     var tr = document.createElement('tr');
     tr.className = 'run' + (r.excluded ? ' excluded' : '');
     tr.innerHTML =
+      '<td class="pick"><input type="checkbox" data-pick="' + r.rid + '"' + (picked[r.rid] ? ' checked' : '') + '></td>' +
       '<td class="num" style="color:#64748b">' + (i + 1) + '</td>' +
       '<td style="color:#475569;white-space:nowrap">' + fmt(r.ts) + '</td>' +
       '<td>' + yearTag(r) + '</td>' +
@@ -285,7 +330,7 @@ function render() {
     var dtr = document.createElement('tr');
     dtr.className = 'detail';
     dtr.style.display = 'none';
-    dtr.innerHTML = '<td colspan="11">' + detailHTML(r) + '</td>';
+    dtr.innerHTML = '<td colspan="12">' + detailHTML(r) + '</td>';
 
     tr.querySelectorAll('button').forEach(function (b) {
       b.onclick = function () {
@@ -303,12 +348,18 @@ function render() {
       };
     });
 
+    var ck = tr.querySelector('[data-pick]');
+    if (ck) ck.onchange = function () {
+      if (ck.checked) picked[ck.dataset.pick] = 1; else delete picked[ck.dataset.pick];
+      syncPick();
+    };
     var inp = tr.querySelector('.note');
     inp.onchange = function () { api({ action: 'note', rid: rid, note: inp.value }); };
 
     rows.appendChild(tr);
     rows.appendChild(dtr);
   });
+  syncPick();
 }
 
 function api(body) {
@@ -354,6 +405,16 @@ $('btnExAll').onclick = function () {
 };
 
 $('btnReload').onclick = load;
+$('pickAll').onclick = function () {
+  var list = (DATA.runs || []).filter(matches);
+  if (this.checked) list.forEach(function (x) { picked[x.rid] = 1; });
+  else list.forEach(function (x) { delete picked[x.rid]; });
+  render();
+};
+$('bulkExclude').onclick = function () { bulk('exclude'); };
+$('bulkInclude').onclick = function () { bulk('include'); };
+$('bulkDelete').onclick = function () { bulk('delete'); };
+$('bulkClear').onclick = function () { picked = {}; render(); };
 $('q').oninput = function () { q = this.value; render(); };
 
 // 支持 /runs?uid=xxx 或 /runs?year=y3（从「按年级看」跳过来）
