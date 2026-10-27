@@ -407,6 +407,15 @@ http.createServer(function (req, res) {
     return;
   }
 
+  // 档位信物对照表（30 个图标，改完刷新即可看到）
+  if (p === "/relics") {
+    if (proxied) { res.writeHead(403); return res.end("403"); }
+    return fs.readFile(path.join(__dirname, "relics-test.html"), function (err, buf) {
+      res.writeHead(err ? 500 : 200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+      res.end(err ? "relics-test.html missing" : buf);
+    });
+  }
+
   // 管理后台（所有入口的中控页）
   if (p === "/admin") {
     if (proxied) { res.writeHead(403); return res.end("403"); }
