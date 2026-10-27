@@ -443,7 +443,8 @@ function whenText(w){
   }
   (w.dims || []).forEach(function(c){
     var d = (META.dims || []).filter(function(x){ return x.id === c.id; })[0];
-    var nm = d ? d.name : c.id;
+    if (!c.id && c.min == null && c.max == null) return;
+    var nm = d ? d.name : (c.id || '维度');
     if (c.min != null && c.max != null) parts.push(nm + " 在 T" + c.min + "–T" + c.max);
     else if (c.min != null) parts.push(nm + " ≥ T" + c.min);
     else if (c.max != null) parts.push(nm + " ≤ T" + c.max);
@@ -502,7 +503,12 @@ function bindWhen(main){
     var act = function(){
       if (!ev.when) ev.when = {};
       var W = ev.when;
-      if (w === "addDim") { W.dims = W.dims || []; W.dims.push({ id: (META.dims[0]||{}).id, max: 2 }); whenOpen[i] = true; render(); return; }
+      if (w === "addDim") {
+        if (!META.dims || !META.dims.length) { toast("读不到维度列表，刷新页面再试"); return; }
+        W.dims = W.dims || [];
+        W.dims.push({ id: META.dims[0].id, max: 2 });
+        whenOpen[i] = true; render(); return;
+      }
       if (w === "delDim") { W.dims.splice(+el.dataset.wi, 1); cleanWhen(ev); whenOpen[i] = true; render(); return; }
       if (w === "clear") { ev.when = null; whenOpen[i] = true; render(); return; }
       if (w === "rmin" || w === "rmax") {
@@ -520,6 +526,14 @@ function bindWhen(main){
     el[el.tagName === "SELECT" ? "onchange" : "oninput"] = act;
     if (el.tagName === "BUTTON") el.onclick = act;
   });
+  // 老数据里可能缺 id（早期 bug 存下来的），按界面上的选择补回去
+  var healed = {};
+  main.querySelectorAll('[data-w="dim"]').forEach(function(sel){ 
+    var i = +sel.dataset.ev, k = +sel.dataset.wi, ev = EVENTS[i];
+    var c = ev.when && ev.when.dims && ev.when.dims[k];
+    if (c && !c.id && sel.value) { c.id = sel.value; healed[i] = 1; }
+  });
+  Object.keys(healed).forEach(function(i){ syncWhen(+i); });
 }
 
 // 全空的 when 直接扔掉，避免存一堆空对象

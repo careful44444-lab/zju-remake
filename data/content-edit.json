@@ -554,6 +554,7 @@
           "cost": 5,
           "result": "一次来了两辆车，队伍短了一半诶！",
           "altResult": "",
+          "elseEffect": null,
           "cond": null,
           "effect": {
             "tiers": {
@@ -579,6 +580,7 @@
           "cost": 0,
           "result": "退一步省点预算~",
           "altResult": "",
+          "elseEffect": null,
           "cond": null,
           "effect": {
             "tiers": {
@@ -594,11 +596,11 @@
     {
       "id": "donate",
       "title": "校友捐赠到账",
-      "text": "一位不愿透露姓名的 98 级校友在看见紫金港的寝室后，默默给学校打了笔钱......",
+      "text": "一位不愿透露姓名的 98 级校友在看见紫金港的寝室后，默默给学校捐了款......",
       "when": {
         "dims": [
           {
-            "id": "food",
+            "id": "dorm",
             "max": 2
           }
         ]
@@ -607,18 +609,27 @@
         {
           "label": "还不快谢谢学长",
           "cost": 0,
-          "result": "",
-          "altResult": "",
+          "result": "校友在看见紫金港的伙食后，又默默捐了款......",
+          "altResult": "寝室翻修了？真的假的！",
+          "elseEffect": {
+            "points": 0,
+            "tiers": {
+              "dorm": 1
+            },
+            "cap": 5
+          },
           "cond": {
             "dim": "food",
             "lt": 2
           },
           "effect": {
             "points": 10,
-            "tiers": {}
+            "tiers": {
+              "dorm": -1
+            }
           },
           "cap": 5,
-          "item": null,
+          "item": "x15",
           "random": null
         }
       ]
@@ -626,32 +637,47 @@
     {
       "id": "fitness",
       "title": "体测周",
-      "text": "本学期体测开始。一千米、引体向上、坐位体前屈，三件套齐活。但是好像找不到地方锻炼……",
+      "text": "本学年体测开始。一千米、引体向上、坐位体前屈，三件套齐活。但是好像找不到地方锻炼……",
       "when": {
-        "dims": [
-          {
-            "id": "sport",
-            "max": 3
-          }
-        ]
+        "rounds": {
+          "min": 3,
+          "max": 4
+        }
       },
       "options": [
         {
-          "label": "开辟体育新地图",
+          "label": "那就算了，随便吧，到时候再说",
           "cost": 2,
-          "result": "教练说你的问题不在腿，在心态。但体测过了。",
+          "result": "体育老师说最大的问题是心态。还好心态稳住，体测过了。",
           "altResult": "",
+          "elseEffect": null,
           "cond": null,
-          "effect": null,
+          "effect": {
+            "tiers": {},
+            "points": 2
+          },
           "cap": 5,
           "item": null,
-          "random": null
+          "random": {
+            "p": 0.5,
+            "resultB": "体育老师说最大的问题是心态。心态崩了，体测更崩......",
+            "effectB": {
+              "points": -2,
+              "tiers": {},
+              "cap": 5
+            }
+          }
         },
         {
-          "label": "那就算了，随便吧，到时候再说",
+          "label": "开辟体育新地图",
           "cost": 0,
-          "result": "一千米跑完，你在跑道边重新思考人生。",
-          "altResult": "抢到了场地锻炼，你最终轻松过了。什么都没发生。",
+          "result": "健身房人满为患。体测结束时，你在跑道边思考人生。",
+          "altResult": "抢到了场地锻炼，你最终轻松过了。",
+          "elseEffect": {
+            "points": 4,
+            "tiers": {},
+            "cap": 5
+          },
           "cond": {
             "dim": "sport",
             "lt": 3
@@ -668,29 +694,25 @@
     },
     {
       "id": "hair",
-      "title": "食堂吃出头发",
-      "text": "一位同学在食堂吃出了头发，照片已经传到了校园墙。评论区正在自动分成三派。",
-      "when": null,
+      "title": "饭菜中有异物",
+      "text": "有位同学在某食堂的饭中吃出了头发，帖子已经传遍了98和朵朵。",
+      "when": {
+        "dims": [
+          {
+            "max": 3,
+            "id": "food"
+          }
+        ]
+      },
       "options": [
         {
-          "label": "全额整改",
-          "cost": 5,
-          "result": "明厨亮灶 + 全流程抽检。一周后全校都忘了这件事。",
+          "label": "要求全额整改",
+          "cost": 7,
+          "result": "明厨亮灶 + 全流程抽检。相信浙大后勤！",
           "altResult": "",
-          "cond": null,
-          "effect": null,
-          "cap": 5,
-          "item": null,
-          "random": null
-        },
-        {
-          "label": "让它上热搜",
-          "cost": 0,
-          "result": "学校连夜道歉，食堂连夜整改。你成了校园网红。",
-          "altResult": "",
+          "elseEffect": null,
           "cond": null,
           "effect": {
-            "points": 2,
             "tiers": {
               "food": -1
             }
@@ -698,6 +720,31 @@
           "cap": 5,
           "item": null,
           "random": null
+        },
+        {
+          "label": "（删帖捂嘴）谣言，绝对是谣言！",
+          "cost": 0,
+          "result": "一周后这件事的风波逐渐过去，成为传说。",
+          "altResult": "",
+          "elseEffect": null,
+          "cond": null,
+          "effect": {
+            "points": 5,
+            "tiers": {}
+          },
+          "cap": 5,
+          "item": null,
+          "random": {
+            "p": 0.4,
+            "resultB": "被人做成梗图，在其他地方流传开来。这下完了！",
+            "effectB": {
+              "points": 0,
+              "tiers": {
+                "food": -1
+              },
+              "cap": 5
+            }
+          }
         }
       ]
     },
@@ -712,6 +759,7 @@
           "cost": 3,
           "result": "服务器扩容了，下个学期再也没崩过（这次）。",
           "altResult": "",
+          "elseEffect": null,
           "cond": null,
           "effect": null,
           "cap": 5,
@@ -723,6 +771,7 @@
           "cost": 0,
           "result": "课没抢到，学分也没到手。",
           "altResult": "你早就拿到预约了，全程围观别人崩溃。什么都没发生。",
+          "elseEffect": null,
           "cond": {
             "dim": "study",
             "lt": 5
@@ -749,6 +798,7 @@
           "cost": 0,
           "result": "视频爆了，报考咨询量涨了三成。",
           "altResult": "",
+          "elseEffect": null,
           "cond": null,
           "effect": {
             "tiers": {
@@ -765,6 +815,7 @@
           "cost": 0,
           "result": "没有游客，没有排队，图书馆还是图书馆。",
           "altResult": "",
+          "elseEffect": null,
           "cond": null,
           "effect": {
             "points": 2,
@@ -787,6 +838,7 @@
           "cost": 4,
           "result": "海绵校园上线，下一场雨你甚至没带伞。",
           "altResult": "",
+          "elseEffect": null,
           "cond": null,
           "effect": null,
           "cap": 5,
@@ -798,6 +850,7 @@
           "cost": 0,
           "result": "雨靴销量全校第一。",
           "altResult": "",
+          "elseEffect": null,
           "cond": null,
           "effect": {
             "tiers": {
@@ -821,6 +874,7 @@
           "cost": 2,
           "result": "换了宿舍，找到了作息相近的室友，你睡得更好了。",
           "altResult": "",
+          "elseEffect": null,
           "cond": null,
           "effect": null,
           "cap": 5,
@@ -832,6 +886,7 @@
           "cost": 0,
           "result": "你们达成了一个脆弱的协议，为期两周。",
           "altResult": "",
+          "elseEffect": null,
           "cond": null,
           "effect": {
             "tiers": {
@@ -855,6 +910,7 @@
           "cost": 3,
           "result": "划了停车区，清了两千辆，路终于能走了。",
           "altResult": "",
+          "elseEffect": null,
           "cond": null,
           "effect": null,
           "cap": 5,
@@ -866,6 +922,7 @@
           "cost": 0,
           "result": "你收了管理费，但路被堵了。",
           "altResult": "",
+          "elseEffect": null,
           "cond": null,
           "effect": {
             "points": 2,
@@ -890,6 +947,7 @@
           "cost": 2,
           "result": "通宵自习室开了，灯亮了一整周。",
           "altResult": "",
+          "elseEffect": null,
           "cond": null,
           "effect": {
             "tiers": {
@@ -906,6 +964,7 @@
           "cost": 0,
           "result": "你睡得不错，但 GPA 不太行。",
           "altResult": "",
+          "elseEffect": null,
           "cond": null,
           "effect": {
             "points": -4,
@@ -935,6 +994,7 @@
           "cost": 4,
           "result": "师傅留下来了，还带了个徒弟。队伍又长了十米。",
           "altResult": "",
+          "elseEffect": null,
           "cond": null,
           "effect": null,
           "cap": 5,
@@ -946,6 +1006,7 @@
           "cost": 0,
           "result": "窗口换了个新人，糖醋里脊再也没有过那个味道。",
           "altResult": "",
+          "elseEffect": null,
           "cond": null,
           "effect": {
             "tiers": {
@@ -973,6 +1034,7 @@
           "cost": 3,
           "result": "片子火了，评论区在问\"这是哪个国家的学校\"。",
           "altResult": "",
+          "elseEffect": null,
           "cond": null,
           "effect": {
             "tiers": {
@@ -989,6 +1051,7 @@
           "cost": 0,
           "result": "省下的钱买了新的投影仪。",
           "altResult": "",
+          "elseEffect": null,
           "cond": null,
           "effect": {
             "points": 1,
