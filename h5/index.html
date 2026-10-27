@@ -242,11 +242,32 @@ if (/debug=1/.test(location.search)) {
       <p class="res-line" id="resLine"></p>
       <div class="res-ach" id="resAch"></div>
       <div class="res-dims" id="resDims"></div>
+      <button class="ask-box" id="btnSurvey">
+        <span class="ask-k">还有几个问题想问你</span>
+        <span class="ask-d">聊聊你的想法 →</span>
+      </button>
       <div class="res-actions">
         <button class="primary" id="btnShare">保存战绩图</button>
         <button class="ghost" id="btnAgain">再改一局</button>
       </div>
       <p class="tiny center">同人创作 · 与浙江大学官方无关</p>
+    </div>
+  </section>
+
+  <!-- ============ 问卷 ============ -->
+  <section id="survey" class="screen">
+    <div class="sv-wrap">
+      <div class="sv-head">
+        <span class="sv-progress" id="svProgress"></span>
+        <button class="sv-quit" id="svQuit">不答了</button>
+      </div>
+      <p class="sv-intro" id="svIntro"></p>
+      <h2 class="sv-title" id="svTitle"></h2>
+      <div class="sv-body" id="svBody"></div>
+      <div class="sv-foot">
+        <button class="ghost" id="svSkip">跳过这题</button>
+        <button class="primary" id="svNext">下一题</button>
+      </div>
     </div>
   </section>
 

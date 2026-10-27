@@ -340,6 +340,15 @@ http.createServer(function (req, res) {
     res.writeHead(405); return res.end();
   }
 
+  // 问卷题库编辑页
+  if (p === "/survey") {
+    if (proxied) { res.writeHead(403); return res.end("403"); }
+    return fs.readFile(path.join(__dirname, "survey.html"), function (err, buf) {
+      res.writeHead(err ? 500 : 200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+      res.end(err ? "survey.html missing" : buf);
+    });
+  }
+
   // 数值设置
   if (p === "/settings") {
     if (proxied) { res.writeHead(403); return res.end("403"); }
@@ -347,6 +356,49 @@ http.createServer(function (req, res) {
       res.writeHead(err ? 500 : 200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
       res.end(err ? "settings.html missing" : buf);
     });
+  }
+
+  // 问卷题库：读 / 存
+  if (p === "/api/survey") {
+    if (proxied) { res.writeHead(403); return res.end("403"); }
+    var SURVEY_FILE = path.join(root, "data", "survey.json");
+    if (req.method === "GET") {
+      var sv = null;
+      try { sv = JSON.parse(fs.readFileSync(SURVEY_FILE, "utf8")); } catch (e) { }
+      if (!sv) sv = { intro: "", outro: "", questions: [] };
+      return json(res, 200, sv);
+    }
+    if (req.method === "POST") {
+      var sb = "";
+      req.on("data", function (c) { sb += c; if (sb.length > 65536) req.destroy(); });
+      req.on("end", function () {
+        var o = {};
+        try { o = JSON.parse(sb || "{}"); } catch (e) { return json(res, 400, { ok: false, msg: "bad json" }); }
+        if (!o || !Array.isArray(o.questions)) return json(res, 400, { ok: false, msg: "缺少 questions" });
+        var out = {
+          intro: String(o.intro || ""),
+          outro: String(o.outro || ""),
+          questions: o.questions.slice(0, 20).map(function (q, i) {
+            return {
+              id: String(q.id || ("q" + (i + 1))),
+              type: (q.type === "text") ? "text" : "choice",
+              title: String(q.title || ""),
+              options: Array.isArray(q.options) ? q.options.slice(0, 12).map(String) : [],
+              allowText: !!q.allowText,
+              textHint: String(q.textHint || ""),
+              placeholder: String(q.placeholder || "")
+            };
+          })
+        };
+        try {
+          if (!fs.existsSync(path.join(root, "data"))) fs.mkdirSync(path.join(root, "data"));
+          writeTextSafe(SURVEY_FILE, JSON.stringify(out, null, 2));
+          json(res, 200, { ok: true, msg: "已保存" });
+        } catch (e) { json(res, 500, { ok: false, msg: String(e.message) }); }
+      });
+      return;
+    }
+    res.writeHead(405); return res.end();
   }
 
   if (p === "/config-edit") {

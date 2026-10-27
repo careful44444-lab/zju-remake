@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>问卷 · 紫金港改造计划</title>
+<style>
+  :root{
+    --bg:#f1f5f9; --panel:#ffffff; --line:#e2e8f0; --fg:#0f172a; --dim:#64748b;
+    --gold:#d97706; --red:#e11d48; --r:14px;
+  }
+  .hidden{display:none !important}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB",system-ui,sans-serif;font-size:13px}
+  header{display:flex;align-items:center;gap:12px;padding:16px 22px;background:#fff;
+    border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+  h1{font-size:17px;margin:0;font-weight:800}
+  .sub{color:var(--dim);font-size:11.5px}
+  .spacer{flex:1}
+  button{font:inherit;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--fg);
+    padding:8px 14px;border-radius:10px;font-size:12.5px}
+  button:hover{background:#f8fafc}
+  button.primary{background:var(--gold);border-color:var(--gold);color:#fff;font-weight:700}
+  button.primary:hover{background:#b45309}
+  button.danger{color:var(--red);border-color:#fecdd3}
+  button.ghost{background:#fff}
+  main{max-width:860px;margin:0 auto;padding:20px 22px 80px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;margin-bottom:14px}
+  .card h2{margin:0 0 4px;font-size:13.5px;font-weight:700}
+  .hint{color:var(--dim);font-size:11.5px;line-height:1.7;margin:6px 0 0}
+  label{display:block;font-size:11.5px;color:var(--dim);margin:14px 0 5px;font-weight:600}
+  input[type=text],textarea,select{width:100%;font:inherit;font-size:13px;padding:9px 11px;
+    border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--fg);outline:0}
+  input[type=text]:focus,textarea:focus,select:focus{border-color:rgba(217,119,6,.5)}
+  textarea{resize:vertical;line-height:1.7}
+  .qhead{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+  .qno{width:26px;height:26px;border-radius:8px;background:#fffbeb;color:#b45309;
+    display:grid;place-items:center;font-weight:800;font-size:12px;flex:0 0 auto}
+  .qhead select{width:130px;flex:0 0 auto}
+  .qhead .spacer{flex:1}
+  .row{display:flex;gap:14px;flex-wrap:wrap}
+  .row > div{flex:1;min-width:190px}
+  .foot{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);
+    padding:12px 22px;display:flex;gap:10px;justify-content:center}
+  #toast{position:fixed;left:50%;bottom:78px;transform:translateX(-50%);background:#0f172a;color:#fff;
+    padding:9px 18px;border-radius:10px;font-size:12.5px;opacity:0;transition:opacity .2s;pointer-events:none}
+  #toast.show{opacity:1}
+  .chk{display:flex;align-items:center;gap:8px;font-size:12px;color:#334155;margin-top:12px}
+  .chk input{width:auto}
+</style>
+</head>
+<body>
+<header>
+  <h1>问卷</h1>
+  <span class="sub">存在 data/survey.json · 保存后游戏刷新即生效 · 打包时会内联进单文件</span>
+  <span class="spacer"></span>
+  <button class="primary" id="btnSave">保存</button>
+  <button id="btnReload">重新读取</button>
+  <button onclick="location.href='/admin'">← 后台</button>
+</header>
+
+<main>
+  <div class="card">
+    <h2>开场与结束语</h2>
+    <label>进入问卷时显示</label>
+    <input type="text" id="intro" placeholder="还有几个问题想问问你（都可以跳过）">
+    <label>提交后显示</label>
+    <input type="text" id="outro" placeholder="谢谢，你的想法会被收进统计。">
+  </div>
+
+  <div id="list"></div>
+
+  <div class="card" style="text-align:center">
+    <button id="btnAdd">+ 加一道题</button>
+    <p class="hint">建议 2–3 道。选项题完成率最高，纯文本题留一道就够。</p>
+  </div>
+</main>
+
+<div class="foot">
+  <button class="primary" id="btnSave2">保存</button>
+</div>
+<div id="toast"></div>
+
+<script>
+var DATA = { intro: '', outro: '', questions: [] };
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s == null ? '' : s).replace(/[<>&"]/g, function(c){ return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]; }); }
+function toast(msg){
+  var t = $('toast'); t.textContent = msg; t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 1800);
+}
+
+function render(){
+  $('intro').value = DATA.intro || '';
+  $('outro').value = DATA.outro || '';
+  $('list').innerHTML = DATA.questions.map(function(q, i){
+    var isChoice = q.type !== 'text';
+    return '<div class="card" data-i="' + i + '">' +
+      '<div class="qhead">' +
+        '<span class="qno">' + (i + 1) + '</span>' +
+        '<select data-f="type" data-i="' + i + '">' +
+          '<option value="choice"' + (isChoice ? ' selected' : '') + '>选项题</option>' +
+          '<option value="text"' + (!isChoice ? ' selected' : '') + '>纯文本</option>' +
+        '</select>' +
+        '<span class="spacer"></span>' +
+        '<button class="danger" data-del="' + i + '">删除</button>' +
+      '</div>' +
+      '<label>题目</label>' +
+      '<input type="text" data-f="title" data-i="' + i + '" value="' + esc(q.title) + '" placeholder="这一局里，你最先放弃的是哪个维度？">' +
+      (isChoice ? (
+        '<label>选项（一行一个，或用逗号分隔）</label>' +
+        '<textarea data-f="options" data-i="' + i + '" rows="3">' + esc((q.options || []).join('\n')) + '</textarea>' +
+        '<div class="chk"><input type="checkbox" data-f="allowText" data-i="' + i + '"' + (q.allowText ? ' checked' : '') + '>' +
+          '<span>允许补充一句（选填）</span></div>' +
+        '<label>补充框的提示语</label>' +
+        '<input type="text" data-f="textHint" data-i="' + i + '" value="' + esc(q.textHint || '') + '" placeholder="说说为什么（选填）">'
+      ) : (
+        '<label>输入框占位提示</label>' +
+        '<input type="text" data-f="placeholder" data-i="' + i + '" value="' + esc(q.placeholder || '') + '" placeholder="随便写一句也行">'
+      )) +
+    '</div>';
+  }).join('');
+
+  document.querySelectorAll('[data-f]').forEach(function(el){
+    var h = (el.type === 'checkbox' || el.tagName === 'SELECT') ? 'onchange' : 'oninput';
+    el[h] = function(){
+      var i = +el.dataset.i, f = el.dataset.f, q = DATA.questions[i];
+      if (!q) return;
+      if (f === 'options') { q.options = el.value.split(/[\n,，、]/).map(function(s){ return s.trim(); }).filter(Boolean); return; }
+      if (f === 'allowText') { q.allowText = el.checked; return; }
+      if (f === 'type') { q.type = el.value; render(); return; }
+      q[f] = el.value;
+    };
+  });
+  document.querySelectorAll('[data-del]').forEach(function(b){
+    b.onclick = function(){
+      if (!confirm('删掉第 ' + (+b.dataset.del + 1) + ' 题？')) return;
+      DATA.questions.splice(+b.dataset.del, 1);
+      render();
+    };
+  });
+}
+
+$('btnAdd').onclick = function(){
+  DATA.questions.push({
+    id: 'q' + (DATA.questions.length + 1),
+    type: 'choice', title: '', options: ['食','住','学','体','文','行'],
+    allowText: true, textHint: '说说为什么（选填）', placeholder: ''
+  });
+  render();
+};
+
+function save(){
+  DATA.intro = $('intro').value;
+  DATA.outro = $('outro').value;
+  // 补 id
+  DATA.questions.forEach(function(q, i){ if (!q.id) q.id = 'q' + (i + 1); });
+  fetch('/api/survey', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(DATA)
+  }).then(function(r){ return r.json(); }).then(function(r){
+    toast(r.ok ? '已保存，游戏刷新即生效' : ('保存失败：' + (r.msg || '')));
+  }).catch(function(e){ toast('保存失败：' + e.message); });
+}
+$('btnSave').onclick = save;
+$('btnSave2').onclick = save;
+
+$('btnReload').onclick = load;
+
+function load(){
+  return fetch('/api/survey', { cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(d){
+    DATA = d || { intro: '', outro: '', questions: [] };
+    if (!Array.isArray(DATA.questions)) DATA.questions = [];
+    render();
+  });
+}
+load().catch(function(e){ toast('读取失败：' + e.message); });
+</script>
+</body>
+</html>

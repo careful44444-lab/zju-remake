@@ -484,6 +484,119 @@
   var curEvent = null;
   var pendingToast = '';
   var pendingItem = '';
+  /* ----------------------------- 问卷 ----------------------------- */
+  var SURVEY = null, svIdx = 0, svAns = {};
+
+  var SURVEY_DEFAULT = {
+    intro: "还有几个问题想问问你（都可以跳过）",
+    outro: "谢谢。你的想法会和这一局的数据一起，被收进统计里。",
+    questions: []
+  };
+
+  function loadSurvey() {
+    if (window.__ZJU_SURVEY__) { SURVEY = window.__ZJU_SURVEY__; return Promise.resolve(); }
+    try {
+      return fetch("/api/survey", { cache: "no-store" }).then(function (r) { return r.json(); })
+        .then(function (d) { SURVEY = (d && d.questions && d.questions.length) ? d : SURVEY_DEFAULT; })
+        .catch(function () { SURVEY = SURVEY || SURVEY_DEFAULT; });
+    } catch (e) { SURVEY = SURVEY || SURVEY_DEFAULT; return Promise.resolve(); }
+  }
+
+  function openSurvey() {
+    loadSurvey().then(function () {
+      if (!SURVEY || !SURVEY.questions.length) { toast("暂时没有问题"); return; }
+      svIdx = 0; svAns = {};
+      show("survey");
+      renderSurvey();
+    });
+  }
+
+  function renderSurvey() {
+    var qs = SURVEY.questions, q = qs[svIdx];
+    $("svProgress").textContent = (svIdx + 1) + " / " + qs.length;
+    $("svIntro").textContent = svIdx === 0 ? (SURVEY.intro || "") : "";
+    $("svIntro").style.display = svIdx === 0 ? "" : "none";
+    $("svTitle").textContent = q.title || "";
+    $("svNext").textContent = (svIdx >= qs.length - 1) ? "提交" : "下一题";
+
+    var body = $("svBody");
+    body.innerHTML = "";
+    var cur = svAns[q.id] || {};
+
+    if (q.type === "choice") {
+      var wrap = el("div", "sv-opts");
+      (q.options || []).forEach(function (opt) {
+        var b = el("button", "sv-opt" + (cur.choice === opt ? " on" : ""));
+        b.textContent = opt;
+        b.addEventListener("click", function () {
+          svAns[q.id] = svAns[q.id] || {};
+          svAns[q.id].choice = (svAns[q.id].choice === opt) ? null : opt;
+          renderSurvey();
+        });
+        wrap.appendChild(b);
+      });
+      body.appendChild(wrap);
+      if (q.allowText) {
+        var h = el("p", "sv-hint"); h.textContent = q.textHint || "补充说明（选填）";
+        body.appendChild(h);
+      }
+    }
+
+    if (q.type === "text" || q.allowText) {
+      var ta = document.createElement("textarea");
+      ta.value = cur.text || "";
+      ta.placeholder = q.type === "text" ? (q.placeholder || "随便写一句也行") : "选填";
+      ta.addEventListener("input", function () {
+        svAns[q.id] = svAns[q.id] || {};
+        svAns[q.id].text = ta.value;
+      });
+      body.appendChild(ta);
+    }
+  }
+
+  function saveAnswer(skipped) {
+    var q = SURVEY.questions[svIdx];
+    var a = svAns[q.id] || {};
+    var rec = {
+      qid: q.id,
+      title: q.title || "",
+      type: q.type,
+      choice: skipped ? null : (a.choice || null),
+      text: skipped ? "" : (a.text || ""),
+      skipped: !!skipped
+    };
+    svAns[q.id] = rec;
+    if (Track && Track.answer) Track.answer(rec);
+  }
+
+  function nextSurvey(skipped) {
+    saveAnswer(skipped);
+    if (svIdx >= SURVEY.questions.length - 1) { finishSurvey(); return; }
+    svIdx += 1;
+    renderSurvey();
+    beep(600, 0.05, "sine", 0.02);
+  }
+
+  function finishSurvey() {
+    var answered = 0, skipped = 0;
+    SURVEY.questions.forEach(function (q) {
+      var a = svAns[q.id];
+      if (!a || a.skipped) skipped += 1; else answered += 1;
+    });
+    if (Track && Track.action) Track.action({ type: "survey_done", answered: answered, skipped: skipped, round: state ? state.round : null });
+    if (Track && Track.flush) Track.flush();
+
+    $("svProgress").textContent = "";
+    $("svIntro").style.display = "none";
+    $("svTitle").textContent = SURVEY.outro || "谢谢";
+    $("svBody").innerHTML = "";
+    $("svSkip").style.display = "none";
+    $("svNext").textContent = "回到结算";
+    $("svNext").onclick = function () { $("svNext").onclick = svNextHandler; show("result"); };
+  }
+
+  function svNextHandler() { nextSurvey(false); }
+
   /* 每回合开始先弹一次「拨款通知」，点「已阅」才继续（有事件就接着弹事件卡） */
   var grantNext = null;
   function showGrant(amount, next) {
@@ -813,7 +926,7 @@
     var started = false;
     function go() { if (started) return; started = true; startUI(); }
     try {
-      Promise.all([loadConfigOverride(), loadOverrides()]).then(go).catch(go);
+      Promise.all([loadConfigOverride(), loadOverrides(), loadSurvey()]).then(go).catch(go);
       setTimeout(go, 500);
     } catch (e) { go(); }
   }
@@ -881,6 +994,14 @@
       closeSheet();
     });
     $('evNext').addEventListener('click', function () { triggerFlash(this, closeEvent, 340); });
+
+    $('btnSurvey').addEventListener('click', function () { openSurvey(); });
+    $('svNext').addEventListener('click', svNextHandler);
+    $('svSkip').addEventListener('click', function () { nextSurvey(true); });
+    $('svQuit').addEventListener('click', function () {
+      if (Track && Track.action) Track.action({ type: 'survey_quit', answered: Object.keys(svAns).length });
+      show('result');
+    });
 
     $('grantOk').addEventListener('click', function () {
       $('grantModal').classList.add('hidden');

@@ -212,6 +212,9 @@
   function action(props) { return emit('action', props || {}); }
   function card(props) { return emit('card', props || {}); }
 
+  // 问卷作答（qid / choice / text / skipped）
+  function answer(props) { return emit('answer', props || {}); }
+
   function endRun(props, finished) {
     if (st.ended || !st.rid) return null;
     st.ended = true;
@@ -239,6 +242,7 @@
       startRun: startRun,
       action: action,
       card: card,
+    answer: answer,
       endRun: endRun,
       abandon: abandon,
       flush: function () { flush(false); },

@@ -46,6 +46,15 @@ html = html.replace(/<script src="([^"]+)"><\/script>/g, function (m, src) {
   return '<script>\n/* ' + path.relative(root, f).split(path.sep).join('/') + ' */\n' + js + '\n</script>';
 });
 
+// 把问卷题库也内联进来（data/survey.json）
+var surveyPath = path.join(root, "data", "survey.json");
+var surveyJson = null;
+try { surveyJson = JSON.parse(fs.readFileSync(surveyPath, "utf8")); } catch (e) { }
+if (surveyJson && surveyJson.questions && surveyJson.questions.length) {
+  html = html.replace("</head>", "<script>window.__ZJU_SURVEY__ = " + JSON.stringify(surveyJson) + ";<\/script>\n</head>");
+  console.log("已内联问卷题库（" + surveyJson.questions.length + " 题）");
+}
+
 if (collectUrl && html.indexOf(collectUrl) < 0) {
   console.error('⚠️  上报地址没写进去');
   process.exit(1);

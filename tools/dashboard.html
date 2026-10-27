@@ -128,6 +128,11 @@ td.opts{max-width:420px;line-height:1.9}
     <table id="titleTable"></table>
   </section>
 
+  <section class="card" style="grid-column:1/-1" id="surveyCard">
+    <h2>问卷 <small>选项分布 · 跳过率 · 原文</small></h2>
+    <div id="surveyBox"></div>
+  </section>
+
   <section class="card" style="grid-column:1/-1">
     <h2>最近对局 <a class="more" href="/grades">按年级看 →</a><a class="more" href="/runs" style="margin-right:14px">管理每一局 →</a></h2>
     <table id="recentTable"></table>
@@ -141,8 +146,44 @@ function el(id) { return document.getElementById(id); }
 function pct(n, d) { return d ? Math.round(n / d * 100) + '%' : '—'; }
 function esc(s) { return String(s == null ? '' : s).replace(/[<>&]/g, function (c) { return { '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]; }); }
 
+function renderSurvey(sv) {
+  var box = document.getElementById("surveyBox");
+  if (!box) return;
+  var ids = Object.keys(sv || {});
+  if (!ids.length) { box.innerHTML = '<p class="hint">还没有人填过问卷。</p>'; return; }
+  var html = "";
+  ids.sort().forEach(function (qid) {
+    var q = sv[qid];
+    var answered = q.total - q.skipped;
+    var rate = q.total ? Math.round(answered / q.total * 100) : 0;
+    html += '<div style="padding:10px 0;border-top:1px solid rgba(15,23,42,.06)">';
+    html += '<div style="font-weight:600;font-size:13px;margin-bottom:6px">' + (q.title || qid) +
+      ' <span style="color:#94a3b8;font-weight:400;font-size:11.5px">答 ' + answered + ' / 跳过 ' + q.skipped + '（' + rate + '% 作答）</span></div>';
+    var ks = Object.keys(q.choices);
+    if (ks.length) {
+      ks.sort(function (a, b) { return q.choices[b] - q.choices[a]; });
+      html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">';
+      ks.forEach(function (k) {
+        html += '<span class="chip" style="font-size:11.5px">' + k + ' <b>' + q.choices[k] + '</b></span>';
+      });
+      html += '</div>';
+    }
+    if (q.texts && q.texts.length) {
+      html += '<details><summary style="cursor:pointer;font-size:11.5px;color:#64748b">原文 ' + q.texts.length + ' 条</summary>';
+      html += '<div style="margin-top:6px;max-height:180px;overflow:auto">';
+      q.texts.slice(0, 30).forEach(function (x) {
+        html += '<div style="font-size:12px;color:#475569;padding:5px 0;border-bottom:1px dashed rgba(15,23,42,.06)">' + x.replace(/[<>&]/g, function (c) { return { "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]; }) + '</div>';
+      });
+      html += '</div></details>';
+    }
+    html += '</div>';
+  });
+  box.innerHTML = html;
+}
+
 function render(d) {
   META = META || d.meta;
+  renderSurvey(d.survey);
   var t = d.totals;
 
   el('updated').textContent = '最后更新 ' + new Date(d.generatedAt).toLocaleTimeString('zh-CN');

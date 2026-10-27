@@ -72,6 +72,7 @@ function aggregate(file) {
   // 同一回合里同一个维度「升了又降」= 白折腾，不算进统计
   // 先按 (局|回合|维度) 攒起来，最后只记净值
   var netActs = {}, noRoundSeq = 0;
+  var survey = {};   // qid -> { title, type, total, skipped, choices, texts }
 
   ev.forEach(function (e) {
     if (e.uid) users[e.uid] = 1;
@@ -97,6 +98,18 @@ function aggregate(file) {
       }
       if (p.type === 'upgrade' && p.cap) {
         caps[p.dim][p.cap] = (caps[p.dim][p.cap] || 0) + 1;
+      }
+    }
+    if (e.ev === 'answer') {
+      var pa = e.props || {};
+      var qid = pa.qid || 'unknown';
+      var sq = survey[qid] || (survey[qid] = { title: pa.title || '', type: pa.type || 'choice', total: 0, skipped: 0, choices: {}, texts: [] });
+      if (!sq.title && pa.title) sq.title = pa.title;
+      sq.total += 1;
+      if (pa.skipped) sq.skipped += 1;
+      else {
+        if (pa.choice) sq.choices[pa.choice] = (sq.choices[pa.choice] || 0) + 1;
+        if (pa.text) sq.texts.push(String(pa.text).slice(0, 300));
       }
     }
     if (e.ev === 'card') {
@@ -235,6 +248,7 @@ function aggregate(file) {
     tiers: tierDist,
     achievements: achievements,
     actions: { upgrades: upgrades, downgrades: downgrades },
+    survey: survey,
     caps: caps,
     cards: cards,
     titles: titles,

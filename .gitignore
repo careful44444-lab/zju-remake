@@ -3,6 +3,7 @@ data/*
 # 但这两份是「策划改的文案/数值」，属于产品的一部分，要提交
 !data/content-edit.json
 !data/config-edit.json
+!data/survey.json
 
 backups/
 
