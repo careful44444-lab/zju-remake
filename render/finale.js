@@ -318,8 +318,6 @@
   }
   // 地块（旧剪影）的不透明度：0~0.5 保持原样，0.5~0.64 退场，之后一直为 0
   function zoneAlphaOf(t, id) {
-    // 「体」的旧剪影在彩蛋状态下画不出来（跑道环不显示），先整体隐去，只让新建筑升起
-    if (id === 'sport') return 0;
     var pos = -1, n = 0;
     for (var i = 0; i < CW.length; i++) {
       if (CW[i] === id) { pos = n; break; }

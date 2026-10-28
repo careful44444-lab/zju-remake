@@ -1131,8 +1131,7 @@
     var ca = 0;
     if (t >= TL.contentStart) ca = Math.min(1, (t - TL.contentStart) / (TL.contentEnd - TL.contentStart));
     ca = 1 - Math.pow(1 - ca, 3);
-    scene.hideAllZones = false;
-    window.__FIN_CT = true;      // 彩蛋态标记
+    scene.hideAllZones = true;   // 彩蛋自己画，已知可用
     scene.contentAlpha = ca;
     var zm = {};
     finaleState.order.forEach(function (it, i) {
