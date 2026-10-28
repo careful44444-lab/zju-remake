@@ -299,5 +299,5 @@ if (/debug=1/.test(location.search)) {
 <script src="../render/scene.js"></script>
 <script src="../render/finale.js"></script>
 <script src="ui.js"></script>
-<script>setTimeout(function(){var u={};__LOG.forEach(function(s){var a=s.split(" ");if(a[0]==="px"){u[a[1]]=a.slice(2).join(",");}});var p=document.createElement("pre");p.style.cssText="position:fixed;left:0;top:0;z-index:99999;background:#fff;font-size:12px;padding:8px";p.textContent=Object.keys(u).map(function(k){return k+" 像素 rgba("+u[k]+")";}).join("\n");document.body.appendChild(p);},6000);</script></body>
+<script>setTimeout(function(){var s=__LOG.filter(function(x){return x.indexOf("track")===0;}).slice(-1)[0]||"(没有 track 日志)";var p=document.createElement("pre");p.style.cssText="position:fixed;left:0;top:0;z-index:99999;background:#fff;font-size:13px;padding:8px";p.textContent=s;document.body.appendChild(p);},6000);</script></body>
 </html>

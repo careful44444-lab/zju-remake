@@ -402,7 +402,6 @@
     if (zoneA <= 0.002) zoneA = 0;
     var t = this.anim[d.id];
     var p = this.zones[d.id];
-    if (window.__FIN_DBG) console.log("pos", d.id, Math.round(p.x), Math.round(p.y), "sel", this.selected === d.id);
     var tier = Math.max(1, Math.min(5, Math.round(t)));
     var col = TIER_COLOR[tier];
     var build = P.buildAt(t);
@@ -458,7 +457,6 @@
     if (d.motif === 'track') this.drawTrack(p, t);
 
     // 建筑
-    if (window.__FIN_DBG) console.log("build", d.id, "motif", d.motif, "zoneA", zoneA.toFixed(2), "boxes", (this.layout(d.motif, t) || []).length);
     var boxes = this.layout(d.motif, t);
     boxes.sort(function (a, b) { return a.dy - b.dy; });
     for (var i = 0; i < boxes.length; i++) {
