@@ -285,6 +285,7 @@
     return { x: px, y: py - b.h * sc * 0.58 + b.h * sc };   // 图片有像素的底边中点
   }
   function drawRoads(g, c, w, h, area, t, order) {
+    return;   // 已放弃铺路方案：彩蛋只做「启真湖 + 建筑替换」
     if (!c.roads || !c.roads.road) return;
     var p = projection(w, h, area);
     var byId = {};
