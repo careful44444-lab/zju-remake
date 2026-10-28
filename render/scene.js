@@ -287,7 +287,7 @@
     ctx.fillStyle = 'rgba(30, 58, 95, 0.75)';
     ctx.font = '700 20px ' + FONT;
     ctx.textAlign = 'center';
-    ctx.fillText('求 是 湖', CX, CY + 6);
+    ctx.fillText('启 真 湖', CX, CY + 6);
     ctx.font = '500 13px ' + FONT;
     ctx.fillStyle = 'rgba(50, 80, 115, 0.55)';
     ctx.fillText('ZU  ·  ZIJINGANG', CX, CY + 30);
