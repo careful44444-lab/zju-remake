@@ -1224,14 +1224,15 @@
     var order = ITEMS.slice().sort(function (a, b) {
       return (tiers[a.id] - tiers[b.id]) || (ITEMS.indexOf(a) - ITEMS.indexOf(b));
     });
-    // 净投入 = 升档花的 - 降档退的；最高的那个维度点亮
+    // 净投入 = 从开局档位走到现在档位之间的净花费（升降都按同一张价格表）
     var spend = {};
-    for (var si = 0; si < ITEMS.length; si++) spend[ITEMS[si].id] = 0;
-    var ops = (state && state.ops) || [];
-    for (var oi = 0; oi < ops.length; oi++) {
-      var o = ops[oi];
-      if (!o || !spend.hasOwnProperty(o.id)) continue;
-      spend[o.id] += (o.cost || 0) - (o.refund || 0);
+    var dimsCfg = (window.ZJU && ZJU.DIMS) || [];
+    for (var di = 0; di < dimsCfg.length; di++) {
+      var dc = dimsCfg[di];
+      var init = dc.init || 1, cur = tiers[dc.id] || 1, sum = 0;
+      if (cur > init) { for (var k = init + 1; k <= cur; k++) sum += ZJU.stepPrice(dc.id, k); }
+      else if (cur < init) { for (var k2 = cur + 1; k2 <= init; k2++) sum -= ZJU.stepPrice(dc.id, k2); }
+      spend[dc.id] = sum;
     }
     var glow = null, best = 0;
     for (var gi = 0; gi < order.length; gi++) {
