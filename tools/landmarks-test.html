@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>地标剪影预览</title>
+<style>
+  body{margin:0;background:#f8fafc;color:#0f172a;font-family:"PingFang SC","Microsoft YaHei",sans-serif;padding:22px}
+  h1{font-size:15px;color:#64748b;font-weight:600;margin:0 0 14px}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .cell{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:12px;display:grid;place-items:center}
+  .cell figcaption{font-size:11.5px;color:#94a3b8;margin-top:6px}
+  canvas{display:block}
+  .row{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;margin-top:10px}
+  .row figure{margin:0;text-align:center}
+  .row figcaption{font-size:10.5px;color:#94a3b8;margin-top:4px}
+  .dark{background:#0f172a;border-radius:14px;padding:14px;margin-top:18px}
+  .dark h1{color:#94a3b8}
+</style>
+</head>
+<body>
+<h1>6 个地标剪影（大图，200×130）</h1>
+<div class="grid" id="grid"></div>
+
+<h1 style="margin-top:22px">地图上的实际尺寸</h1>
+<div class="row" id="row"></div>
+
+<div class="dark">
+  <h1>深色底（看对比度是否够）</h1>
+  <div class="row" id="dark"></div>
+</div>
+
+<script src="../render/landmarks.js"></script>
+<script>
+var LIST = [
+  ['food', '食 · 东区大食堂'],
+  ['dorm', '住 · 月牙楼'],
+  ['study', '学 · 求是大讲堂'],
+  ['sport', '体 · 亚运比赛馆'],
+  ['culture', '文 · 艺博馆'],
+  ['move', '行 · 求是大道']
+];
+
+function cell(motif, size, opt) {
+  var cv = document.createElement('canvas');
+  var dpr = window.devicePixelRatio || 2;
+  var w = size, h = size * 0.68;
+  cv.width = w * dpr; cv.height = h * dpr;
+  cv.style.width = w + 'px'; cv.style.height = h + 'px';
+  var ctx = cv.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ZJU.drawLandmark(ctx, motif, w / 2, h / 2, w, opt || {});
+  return cv;
+}
+
+var g = document.getElementById('grid');
+LIST.forEach(function (m) {
+  var d = document.createElement('div'); d.className = 'cell';
+  d.appendChild(cell(m[0], 300));
+  var c = document.createElement('figcaption'); c.textContent = m[1];
+  d.appendChild(c);
+  g.appendChild(d);
+});
+
+var r = document.getElementById('row');
+LIST.forEach(function (m) {
+  [[120, '120'], [72, '72'], [46, '46']].forEach(function (s) {
+    var f = document.createElement('figure');
+    f.appendChild(cell(m[0], s[0]));
+    var c = document.createElement('figcaption'); c.textContent = m[0] + ' ' + s[1];
+    f.appendChild(c);
+    r.appendChild(f);
+  });
+});
+
+var dk = document.getElementById('dark');
+LIST.forEach(function (m) {
+  var f = document.createElement('figure');
+  f.appendChild(cell(m[0], 110, { color: '#e2e8f0', stroke: 'rgba(255,255,255,.5)', ground: 'rgba(255,255,255,.2)' }));
+  var c = document.createElement('figcaption'); c.textContent = m[0];
+  f.appendChild(c);
+  dk.appendChild(f);
+});
+</script>
+</body>
+</html>
