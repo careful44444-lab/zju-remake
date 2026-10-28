@@ -805,7 +805,7 @@ http.createServer(function (req, res) {
   if (p.slice(-1) === '/') p += 'index.html';
 
   // 白名单：只对外提供前端资源。data/（玩家数据）、tools/、dist 之外的目录一律不给
-  var ALLOW = ['/h5/', '/game/', '/render/', '/dist/'];
+  var ALLOW = ['/h5/', '/game/', '/render/', '/dist/', '/assets/'];
   var okPath = false;
   for (var i = 0; i < ALLOW.length; i++) if (p.indexOf(ALLOW[i]) === 0) okPath = true;
   if (!okPath) {
@@ -817,7 +817,7 @@ http.createServer(function (req, res) {
   var rel = path.relative(root, f);
   // 必须真的落在允许的四个目录里，且不能跑出项目根目录
   var okReal = rel && rel.indexOf('..') !== 0 && 
-    ['h5', 'game', 'render', 'dist'].some(function (d) { return rel === d || rel.indexOf(d + path.sep) === 0; });
+    ['h5', 'game', 'render', 'dist', 'assets'].some(function (d) { return rel === d || rel.indexOf(d + path.sep) === 0; });
   if (!okReal) { res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' }); return res.end('403 forbidden'); }
   fs.readFile(f, function (err, buf) {
     if (err) { res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }); return res.end('404 ' + p); }

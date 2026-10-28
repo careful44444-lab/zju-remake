@@ -591,8 +591,11 @@
     $("svTitle").textContent = SURVEY.outro || "谢谢";
     $("svBody").innerHTML = "";
     $("svSkip").style.display = "none";
-    $("svNext").textContent = "回到结算";
-    $("svNext").onclick = function () { $("svNext").onclick = svNextHandler; show("result"); };
+    $("svNext").textContent = "看一眼真实的紫金港";
+    $("svNext").onclick = function () {
+      $("svNext").onclick = svNextHandler;
+      playFinale();                      // 彩蛋：从结算画面渐变到真实地标
+    };
   }
 
   function svNextHandler() { nextSurvey(false); }
@@ -1038,6 +1041,14 @@
       setTimeout(function () { openTutor('intro'); tutStep = Math.max(0, tutStepParam); renderTutor(); }, 120);
     } else if (dm && dm[1] === 'grade') {
       setTimeout(openGradePicker, 400);
+    } else if (dm && dm[1] === 'finale') {
+      beginRun('new', 'y3');
+      setTimeout(function () {
+        var ok = $('grantOk');
+        if (ok) ok.click();                       // 先把开局拨款弹窗关掉
+        doUp('dorm', null);
+        setTimeout(playFinale, 320);
+      }, 320);
     } else if (dm) {
       beginRun('new', 'y3');
       setTimeout(function () {
@@ -1105,6 +1116,88 @@
       }, 120);
     }
   }
+
+  /* ==================================================================
+   *  彩蛋：从游戏画面渐变到「真实的紫金港」
+   * ================================================================== */
+
+  var finaleBusy = false;
+
+  function closeFinale() {
+    var box = $('finale');
+    var start = 0;
+    function fade(ts) {
+      if (!start) start = ts;
+      var k = Math.min(1, (ts - start) / 500);
+      box.style.opacity = String(1 - k);
+      if (k < 1) requestAnimationFrame(fade);
+      else {
+        box.classList.remove('on');
+        box.style.opacity = '';
+        box.setAttribute('aria-hidden', 'true');
+      }
+    }
+    requestAnimationFrame(fade);
+    finaleBusy = false;
+  }
+
+  function playFinale() {
+    if (finaleBusy || !window.ZJUFinale) return;
+    finaleBusy = true;
+
+    var box = $('finale');
+    var cb = $('finaleCanvas');
+    var w = window.innerWidth;
+    var h = window.innerHeight;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cb.width = Math.round(w * dpr);
+    cb.height = Math.round(h * dpr);
+    cb.style.width = '100%';
+    cb.style.height = '100%';
+
+    box.setAttribute('aria-hidden', 'false');
+    box.classList.add('on');
+
+    // 让底层画面停住，别再跟着动
+    if (scene && scene.pause) scene.pause();
+
+    // 调试：?still=1 直接画最终帧（headless 里 rAF 不跑，方便截图核对）
+    if (/[?&]still=1/.test(location.search)) {
+      box.style.opacity = '1';
+      ZJUFinale.load('../assets/finale/').then(function () {
+        var g = cb.getContext('2d');
+        g.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ZJUFinale.draw(g, w, h, 1);
+      });
+      return;
+    }
+
+    // 正常播放：rAF 推透明度做「从旧画面渐变过来」，canvas 自己再演一遍镜头
+    box.style.opacity = '0';
+    var start = 0;
+    function fade(ts) {
+      if (!start) start = ts;
+      var k = Math.min(1, (ts - start) / 600);
+      box.style.opacity = String(k);
+      if (k < 1) requestAnimationFrame(fade);
+    }
+    requestAnimationFrame(fade);
+    // 兜底：万一 rAF 被节流/冻住，700ms 后强制显示
+    setTimeout(function () { box.style.opacity = '1'; }, 700);
+
+    ZJUFinale.play({
+      canvas: cb,
+      w: w,
+      h: h,
+      dpr: dpr,
+      duration: 2600
+    }).catch(function (err) {
+      console.warn('[彩蛋]', err);
+      closeFinale();
+    });
+  }
+
+  $('finaleClose') && $('finaleClose').addEventListener('click', closeFinale);
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);

@@ -1103,3 +1103,23 @@ button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit
 .ask-box:hover{background:#fef3c7;border-color:#f59e0b}
 .ask-box .ask-k{display:block;font-size:14px;font-weight:700;color:#b45309}
 .ask-box .ask-d{display:block;font-size:11.5px;color:#d97706;margin-top:3px}
+
+/* ============ 彩蛋：真实的紫金港 ============ */
+#finale{
+  position:fixed; inset:0; z-index:80;
+  background:#f8fafc;
+  opacity:0; visibility:hidden;
+}
+#finale.on{ opacity:1; visibility:visible; }
+#finaleCanvas{display:block; width:100%; height:100%;}
+#finaleClose{
+  position:absolute; top:14px; right:14px;
+  width:36px; height:36px; line-height:1;
+  font-size:20px; color:#64748b;
+  background:rgba(255,255,255,.82);
+  border:1px solid rgba(15,23,42,.10);
+  border-radius:50%;
+  backdrop-filter:blur(6px);
+  cursor:pointer;
+}
+#finaleClose:hover{color:#0f172a; background:#fff;}
