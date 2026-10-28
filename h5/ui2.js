@@ -1010,7 +1010,6 @@
       });
 
     $('btnUndo').addEventListener('click', undo);
-    $('btnEnd').addEventListener('click', function () { triggerFlash(this, endRun, 340); });
     $('btnRound').addEventListener('click', function () { triggerFlash(this, nextRound, 340); });
     $('btnAgain').addEventListener('click', function () {
       beginRun('again', state ? state.grade : null);
@@ -1204,6 +1203,7 @@
     hideGameUI(false);
     if (scene && scene.resize) scene.resize();   // 同步，避免首帧用旧尺寸导致缩放跳变
     resetFinaleScene();
+    show("result");   // 退出彩蛋回到结算页
     var start = 0;
     function fade(ts) {
       if (!start) start = ts;
@@ -1253,7 +1253,7 @@
 
     box.setAttribute('aria-hidden', 'false');
     box.classList.add('on');
-    try { if (window.ZJUAudio) { ZJUAudio.stopBgm(); ZJUAudio.startSong(96); } } catch (e) { console.warn('[audio]', e); }
+    try { if (window.ZJUAudio) { ZJUAudio.stopBgm(); ZJUAudio.startSong(9999); } } catch (e) { console.warn('[audio]', e); }
     document.body.classList.add('finale-on');
     hideGameUI(true);                            // 藏掉 HUD / 回合条 / 底部条
     if (scene && scene.resize) scene.resize();   // 同步，避免首帧用旧尺寸导致缩放跳变
@@ -1288,8 +1288,6 @@
       var sid = order[gi].id;
       if (spend[sid] > best) { best = spend[sid]; glow = sid; }
     }
-    var ov = /[?&]glow=(\w+)/.exec(location.search);
-    if (ov) glow = ov[1];                     // 调试：强制指定金色维度
     if (window.__FIN_DBG) console.log("glow", String(glow), "best", String(best));
     finaleState = { order: order, glow: glow, tiers: tiers, spend: spend, t: 0 };
 

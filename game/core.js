@@ -113,6 +113,10 @@
     if (t <= 1) return 0;
     var paid = (s.breadthPaid && s.breadthPaid[id]) || 0;
     return stepPrice(id, t) + paid;
+    // 降回本回合起点 → 不再算「已动工」
+    if (s.roundBase && s.tiers[id] === s.roundBase[id]) {
+      s.roundDims = (s.roundDims || []).filter(function (x) { return x !== id; });
+    }
   }
 
   // 当前状态里两种税各占多少（给界面显示用）
