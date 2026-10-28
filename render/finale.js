@@ -27,7 +27,7 @@
   ];
 
   /* 四层湖：同一张 1399×1124 画布上的同心图（1=湖面 / 2=+树 / 3=+路 / 4=全景） */
-  var LAKES = ["lake1.png", "lake2.png", "lake3.png", "lake4.jpg"];
+  var LAKES = ["lake1.png", "lake2.png", "lake3.png", "lake4.png"];
 
   var KICKER = "改造计划 · 彩蛋";
   var TITLE = "这就是紫金港";
@@ -106,14 +106,60 @@
         dims[it.id] = rest[i];
         box[it.id] = alphaBox(rest[i]) || { x: 0, y: 0, w: rest[i].width, h: rest[i].height };
       });
+      var water = lakes.map(function (im) { return waterCenter(im); });
       cache = {
         lakes: lakes,
+        water: water,
         dims: dims,
         box: box,
         lakeBox: alphaBox(lakes[0]) || { x: 0, y: 0, w: lakes[0].width, h: lakes[0].height }
       };
       return cache;
     });
+  }
+
+  /* 在缩略图上找「过中心那一行/那一列的水面」，得到水面中心（相对于图片尺寸的比例） */
+  /* 在缩略图上取「最大连通水面」的包围盒，用它给四张图做配准（位置 + 缩放） */
+  function waterCenter(img) {
+    var W = 300, H = Math.max(1, Math.round(W * img.height / img.width));
+    var cv = document.createElement("canvas");
+    cv.width = W; cv.height = H;
+    var g2 = cv.getContext("2d");
+    g2.drawImage(img, 0, 0, W, H);
+    var d;
+    try { d = g2.getImageData(0, 0, W, H).data; } catch (e) { return { x: 0.5, y: 0.5, w: 0.5, h: 0.5 }; }
+    var mask = new Uint8Array(W * H);
+    for (var i = 0; i < W * H; i++) {
+      var r = d[i * 4], gg = d[i * 4 + 1], b = d[i * 4 + 2], al = d[i * 4 + 3];
+      if (al > 40 && b > r + 35 && b > 150 && gg > 110 && gg < b) mask[i] = 1;
+    }
+    // 从中心附近找一个水像素当种子
+    var seed = -1, cx0 = Math.floor(W / 2), cy0 = Math.floor(H / 2);
+    for (var rr = 0; rr < H / 2 && seed < 0; rr += 2) {
+      for (var th = 0; th < 6.283 && seed < 0; th += 0.3) {
+        var xx = Math.round(cx0 + Math.cos(th) * rr), yy = Math.round(cy0 + Math.sin(th) * rr);
+        if (xx >= 0 && yy >= 0 && xx < W && yy < H && mask[yy * W + xx]) seed = yy * W + xx;
+      }
+    }
+    if (seed < 0) return { x: 0.5, y: 0.5, w: 0.5, h: 0.5 };
+    // 洪水填充，取最大连通块
+    var stack = [seed], seen = new Uint8Array(W * H), minX = W, maxX = -1, minY = H, maxY = -1;
+    seen[seed] = 1;
+    while (stack.length) {
+      var cur = stack.pop(), px = cur % W, py = (cur - px) / W;
+      if (px < minX) minX = px; if (px > maxX) maxX = px;
+      if (py < minY) minY = py; if (py > maxY) maxY = py;
+      var nb = [cur - 1, cur + 1, cur - W, cur + W];
+      for (var k = 0; k < 4; k++) {
+        var id = nb[k];
+        if (id < 0 || id >= W * H || seen[id] || !mask[id]) continue;
+        seen[id] = 1; stack.push(id);
+      }
+    }
+    return {
+      x: ((minX + maxX) / 2) / W, y: ((minY + maxY) / 2) / H,
+      w: (maxX - minX) / W, h: (maxY - minY) / H
+    };
   }
 
   function projection(w, h, area) {
@@ -128,18 +174,16 @@
   /* 固定变换：全程不移动、不缩放，四张图永远像素级重合。
    * 缩放取「铺满整屏」——图1 的湖会略大于游戏里的湖（几何上无法两全），
    * 但湖心始终停在游戏湖的中心，看起来就是「湖从原地长出来」。 */
+  /* 固定变换：全程不动、不缩放。四张图按各自水面中心对齐，像素级重合。 */
+  /* 固定变换，全程不动不缩放。每张图各自按水面配准（缩放 + 平移），所以四层完全重合。 */
   function lakeTransform(c, w, h, area) {
     var p = projection(w, h, area);
     var cx = p.ox + MAP_CX * p.scale;
     var cy = p.oy + MAP_CY * p.scale;
-
-    var masterW = c.lakes[0].width, masterH = c.lakes[0].height;
-    var lb = c.lakeBox;
-    var bcx = lb.x + lb.w / 2, bcy = lb.y + lb.h / 2;
-
-    var s = Math.max(w / masterW, h / masterH, (2 * LAKE_RX * p.scale) / lb.w);
-    return { s: s, x: cx - bcx * s, y: cy - bcy * s, w: masterW * s, h: masterH * s,
-      cx: cx, cy: cy, rx: lb.w * s / 2, ry: lb.h * s / 2 };
+    var w0 = c.water[0];
+    var iw0 = c.lakes[0].width;
+    var s0 = Math.max((2 * LAKE_RX * p.scale * 1.04) / (w0.w * iw0), 0.05);
+    return { cx: cx, cy: cy, s0: s0 };
   }
 
   function drawLakes(g, c, w, h, area, t) {
@@ -147,8 +191,13 @@
     for (var i = 0; i < c.lakes.length; i++) {
       var a = ramp(t, LAKE_TL[i][0], LAKE_TL[i][1]);
       if (a <= 0.002) continue;
+      var im = c.lakes[i], wc = c.water[i], w0 = c.water[0];
+      var s = T.s0 * (w0.w / wc.w);          // 水面宽度对齐 ⇒ 内容等比重合
+      var dw = im.width * s, dh = im.height * s;
+      var dx = T.cx - wc.x * dw;
+      var dy = T.cy - wc.y * dh;
       g.globalAlpha = a;
-      g.drawImage(c.lakes[i], T.x, T.y, T.w, T.h);
+      g.drawImage(im, dx, dy, dw, dh);
     }
     g.globalAlpha = 1;
   }
