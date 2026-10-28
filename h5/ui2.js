@@ -1231,7 +1231,9 @@
   });
   function playFinale() {
     // __FIN_SAFE：先让遮罩出现，任何后续异常都不至于卡在上一屏
-    try { var fb = $('finale'); if (fb) fb.classList.add('on');
+    try { var fb = $('finale');
+          if (fb && fb.parentNode !== document.body) document.body.appendChild(fb);   // 提到 body 下，避免被 #stage 压住
+          if (fb) fb.classList.add('on');
           if (scene && scene.start) scene.start();   // 结算后渲染循环可能已停
           document.body.classList.add('finale-on');
           ['hud','roundBar','itemBar','strip'].forEach(function(id){ var el=$(id); if(el) el.style.opacity='0'; });
