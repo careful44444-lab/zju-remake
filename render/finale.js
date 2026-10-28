@@ -243,52 +243,61 @@
     return { x: p.ox + MAP_CX * p.scale + Math.cos(rad) * R,
              y: p.oy + MAP_CY * p.scale + Math.sin(rad) * R };
   }
-  function lay(g, asset, box, p, ax, ay, bx, by, prog, dw) {
+  function lay(g, asset, box, p, ax, ay, bx, by, prog, dw, ext) {
     if (!asset || prog <= 0) return;
     var dx = bx - ax, dy = by - ay;
     var len = Math.sqrt(dx * dx + dy * dy);
-    if (len < 6) return;
+    if (len < 4) return;
+    var ex = ext || 6;
+    var ux = dx / len, uy = dy / len;
     var dh = dw * box.h / box.w;
     var rot = Math.atan2(dy, dx) + ANG;
-    var L = len * prog + dw * 0.5;
+    var Lp = len * prog + ex * 2;
     g.save();
-    g.translate(ax, ay);
+    g.translate(ax - ux * ex, ay - uy * ex);
     g.rotate(rot);
-    // 整段一次拉伸：直段拉伸不会变形，也就没有拼缝
-    g.drawImage(asset, box.x, box.y, box.w, box.h, -dw * 0.25, -dh * 0.55, L, dh);
+    g.drawImage(asset, box.x, box.y, box.w, box.h, 0, -dh * 0.55, Lp, dh);
     g.restore();
+  }
+  function baseOf(it, p, c) {
+    var R = MAP_R * p.scale * 1.02;
+    var rad = it.angle * Math.PI / 180;
+    var px = p.ox + MAP_CX * p.scale + Math.cos(rad) * R;
+    var py = p.oy + MAP_CY * p.scale + Math.sin(rad) * R;
+    var b = c.box[it.id];
+    if (!b) return { x: px, y: py };
+    var sc = Math.min(PAD_W * 1.10 * p.scale / b.w, PAD_H * 0.90 * p.scale / b.h);
+    return { x: px, y: py - b.h * sc * 0.58 + b.h * sc };   // 图片有像素的底边中点
   }
   function drawRoads(g, c, w, h, area, t, order) {
     if (!c.roads || !c.roads.road) return;
     var p = projection(w, h, area);
-    var list = revealOrder(order);
-    var pos = list.map(function (it) { return roadPos(it, p); });
+    var byId = {};
+    for (var i = 0; i < ITEMS.length; i++) byId[ITEMS[i].id] = ITEMS[i];
+    // 顺时针：南大门 → 食 → 住 → 学 → 体 → 文 → 回南大门
+    var SEQ = ["move", "food", "dorm", "study", "sport", "culture"];
+    var list = [];
+    for (var s = 0; s < SEQ.length; s++) {
+      if (byId[SEQ[s]] && c.box[SEQ[s]]) list.push(byId[SEQ[s]]);
+    }
+    if (list.length < 2) return;
+    var base = list.map(function (it) { return baseOf(it, p, c); });
     var legs = [];
-    // 入口路：从画面外斜着铺到「南大门」图片里有像素的底边中点
-    var gate0 = list[0];
-    var b0 = c.box[gate0.id];
-    var sc0 = Math.min(PAD_W * 1.10 * p.scale / b0.w, PAD_H * 0.90 * p.scale / b0.h);
-    var dh0 = b0.h * sc0;
-    var gy = pos[0].y - dh0 * 0.58 + dh0;        // 图片底边（不是透明外框）
-    legs.push({ ax: pos[0].x - 260, ay: gy + 130, bx: pos[0].x, by: gy, bridge: false,
+    legs.push({ a: { x: base[0].x - 300, y: base[0].y + 150 }, b: base[0],
                 t0: TL.buildStart - 0.045, dur: 0.046 });
     for (var k = 1; k < list.length; k++) {
-      legs.push({ ax: pos[k - 1].x, ay: pos[k - 1].y, bx: pos[k].x, by: pos[k].y,
-                  bridge: !isAdjacent(list[k - 1].id, list[k].id),
+      legs.push({ a: base[k - 1], b: base[k],
                   t0: TL.buildStart + k * TL.buildGap - 0.030, dur: 0.044 });
     }
-    for (var i = 0; i < legs.length; i++) {
-      var L = legs[i];
-      var prog = ramp(t, L.t0, L.dur);
+    legs.push({ a: base[list.length - 1], b: base[0],
+                t0: TL.buildStart + (list.length - 1) * TL.buildGap + 0.050, dur: 0.050 });
+    var rd = c.roads.road;
+    var bw = 112 * p.scale;
+    for (var n = 0; n < legs.length; n++) {
+      var L2 = legs[n];
+      var prog = ramp(t, L2.t0, L2.dur);
       if (prog <= 0) continue;
-      if (!L.bridge) {
-        var rd = c.roads.road;
-        lay(g, rd.img, rd.box, p, L.ax, L.ay, L.bx, L.by, prog, 118 * p.scale);
-      } else {
-        var br = c.roads.bridge, pier = c.roads.pier;
-        var deckBox = { x: 0, y: DECK.y, w: br.img.width, h: DECK.h };
-        lay(g, br.img, deckBox, p, L.ax, L.ay, L.bx, L.by, prog, 240 * p.scale);
-      }
+      lay(g, rd.img, rd.box, p, L2.a.x, L2.a.y, L2.b.x, L2.b.y, prog, bw, 6);
     }
   }
   function localAt(t, rank) {
