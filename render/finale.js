@@ -41,7 +41,7 @@
   var TL = {
     lakeEnd: 0.26,
     contentStart: 0.27, contentEnd: 0.32,
-    buildStart: 0.38, buildGap: 0.092, buildDur: 0.064,
+    buildStart: 0.28, buildGap: 0.106, buildDur: 0.090,
     title: 0.93
   };
   // 四张湖图各自的淡入起点 / 时长

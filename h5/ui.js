@@ -1242,18 +1242,18 @@
       // 建筑起来的那块地，白色台基连带淡出
       scene.zoneAlpha = function (d) {
         if (!finaleState) return 1;
-        // 用「实际出场顺序」算名次（南大门永远第一个），否则它的字会排到最后才收
-        var ord = finaleState.order.slice();
-        for (var m = 0; m < ord.length; m++) {
-          if (ord[m].id === 'move') { ord.unshift(ord.splice(m, 1)[0]); break; }
+        // 与 finale.js 完全一致的顺时针顺序：南大门 → 食 → 住 → 学 → 体 → 文
+        var CW = ["move", "food", "dorm", "study", "sport", "culture"];
+        var by = {};
+        for (var q = 0; q < finaleState.order.length; q++) by[finaleState.order[q].id] = finaleState.order[q];
+        var pos = -1, n = 0;
+        for (var c = 0; c < CW.length; c++) {
+          if (!by[CW[c]]) continue;
+          if (CW[c] === d.id) { pos = n; break; }
+          n++;
         }
-        var idx = -1;
-        for (var i = 0; i < ord.length; i++) {
-          if (ord[i].id === d.id) { idx = i; break; }
-        }
-        if (idx < 0) return 1;
-        var e = ZJUFinale.localAt(finaleState.t, idx);
-        // 一升起来就开始收，升到一半字就没了
+        if (pos < 0) return 1;
+        var e = ZJUFinale.localAt(finaleState.t, pos);
         return 1 - Math.min(1, Math.max(0, e / 0.45));
       };
       scene.overlay = function (g, W, H) {
