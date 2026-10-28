@@ -1240,10 +1240,6 @@
         ZJUFinale.backdrop(g, W, H, finaleState ? finaleState.t : 0, mapRect());
       };
       // 建筑起来的那块地，白色台基连带淡出
-      scene.zoneAlpha = function (d) {
-        if (!finaleState) return 1;
-        return ZJUFinale.zoneAlphaOf(finaleState.t, d.id);
-      };
       scene.overlay = function (g, W, H) {
         ZJUFinale.front(g, W, H, finaleState ? finaleState.t : 0, mapRect(), finaleState);
       };

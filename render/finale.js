@@ -316,18 +316,6 @@
       lay(g, rd.img, rd.box, p, L2.a.x, L2.a.y, L2.b.x, L2.b.y, prog, bw, 6);
     }
   }
-  // 地块（旧剪影）的不透明度：0~0.5 保持原样，0.5~0.64 退场，之后一直为 0
-  function zoneAlphaOf(t, id) {
-    var pos = -1, n = 0;
-    for (var i = 0; i < CW.length; i++) {
-      if (CW[i] === id) { pos = n; break; }
-      n++;
-    }
-    if (pos < 0) return 1;
-    var e = localAt(t, pos);
-    if (e <= 0) return 1;
-    return 1 - clamp01((e - 0.5) / 0.14);
-  }
   function localAt(t, rank) {
     return clamp01((t - TL.buildStart - rank * TL.buildGap) / TL.buildDur);
   }
@@ -479,6 +467,6 @@
     draw: draw,
     play: play,
     stop: stop,
-    localAt: localAt, zoneAlphaOf: zoneAlphaOf
+    localAt: localAt
   };
 });
