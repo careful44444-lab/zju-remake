@@ -613,6 +613,7 @@
       $("svNext").textContent = "看一眼真实的紫金港";
       $("svNext").onclick = function () {
         $("svNext").onclick = null;
+        show("game");            // 切回游戏画面，彩蛋是画在 #map 画布上的
         playFinale();
       };
     }
