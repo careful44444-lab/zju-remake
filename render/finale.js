@@ -353,7 +353,7 @@
       if (isGlow) {
         var ga = g.globalAlpha;
         g.globalAlpha = ga * gT;
-        var gg = g.createRadialGradient(px, dy + dh * 0.6, 4, px, dy + dh * 0.6, Math.max(dw, dh) * 0.55);
+        var gg = g.createRadialGradient(px, dy + dh * 0.6, 4, px, dy + dh * 0.6, Math.max(dw, dh) * 0.95);
         gg.addColorStop(0, "rgba(255, 214, 102, 0.40)");
         gg.addColorStop(0.5, "rgba(251, 191, 36, 0.15)");
         gg.addColorStop(1, "rgba(251, 191, 36, 0)");
