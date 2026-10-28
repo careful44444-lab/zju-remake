@@ -1131,7 +1131,7 @@
     var ca = 0;
     if (t >= TL.contentStart) ca = Math.min(1, (t - TL.contentStart) / (TL.contentEnd - TL.contentStart));
     ca = 1 - Math.pow(1 - ca, 3);
-    scene.hideAllZones = true;   // 彩蛋自己画建筑，不再让 scene 参与
+    scene.hideAllZones = false;  // 地块照常参与：先看到旧剪影，再被新建筑替换
     scene.contentAlpha = ca;
     var zm = {};
     finaleState.order.forEach(function (it, i) {
@@ -1242,20 +1242,7 @@
       // 建筑起来的那块地，白色台基连带淡出
       scene.zoneAlpha = function (d) {
         if (!finaleState) return 1;
-        // 与 finale.js 完全一致的顺时针顺序：南大门 → 食 → 住 → 学 → 体 → 文
-        var CW = ["move", "food", "dorm", "study", "sport", "culture"];
-        var by = {};
-        for (var q = 0; q < finaleState.order.length; q++) by[finaleState.order[q].id] = finaleState.order[q];
-        var pos = -1, n = 0;
-        for (var c = 0; c < CW.length; c++) {
-          if (!by[CW[c]]) continue;
-          if (CW[c] === d.id) { pos = n; break; }
-          n++;
-        }
-        if (pos < 0) { if (window.__FIN_DBG) console.log("zone", d.id, "not found"); return 1; }
-        var e = ZJUFinale.localAt(finaleState.t, pos);
-        if (window.__FIN_DBG) console.log("zone", d.id, "pos", pos, "e", e.toFixed(3));
-        return 1 - Math.min(1, Math.max(0, (e - 0.50) / 0.14));
+        return ZJUFinale.zoneAlphaOf(finaleState.t, d.id);
       };
       scene.overlay = function (g, W, H) {
         ZJUFinale.front(g, W, H, finaleState ? finaleState.t : 0, mapRect(), finaleState);
