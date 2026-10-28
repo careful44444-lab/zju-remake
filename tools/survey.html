@@ -47,6 +47,9 @@
   #toast.show{opacity:1}
   .chk{display:flex;align-items:center;gap:8px;font-size:12px;color:#334155;margin-top:12px}
   .chk input{width:auto}
+.mini{min-width:30px;padding:4px 8px;border:1px solid #cbd5e1;background:#fff;border-radius:8px;cursor:pointer;font-size:13px;color:#334155}
+.mini:hover:not(:disabled){background:#f1f5f9}
+.mini:disabled{opacity:.35;cursor:not-allowed}
 </style>
 </head>
 <body>
@@ -106,6 +109,8 @@ function render(){
           '<option value="text"' + (!isChoice ? ' selected' : '') + '>纯文本</option>' +
         '</select>' +
         '<span class="spacer"></span>' +
+        '<button class="mini" data-up="' + i + '"' + (i === 0 ? ' disabled' : '') + ' title="上移">↑</button>' +
+        '<button class="mini" data-down="' + i + '"' + (i === DATA.questions.length - 1 ? ' disabled' : '') + ' title="下移">↓</button>' +
         '<button class="danger" data-del="' + i + '">删除</button>' +
       '</div>' +
       '<label>题目</label>' +
@@ -133,6 +138,18 @@ function render(){
       if (f === 'allowText') { q.allowText = el.checked; return; }
       if (f === 'type') { q.type = el.value; render(); return; }
       q[f] = el.value;
+    };
+  });
+  document.querySelectorAll('[data-up],[data-down]').forEach(function(b){
+    b.onclick = function(){
+      var up = b.dataset.up !== undefined;
+      var i = +(up ? b.dataset.up : b.dataset.down);
+      var j = i + (up ? -1 : 1);
+      if (j < 0 || j >= DATA.questions.length) return;
+      var tmp = DATA.questions[i];
+      DATA.questions[i] = DATA.questions[j];
+      DATA.questions[j] = tmp;
+      render();
     };
   });
   document.querySelectorAll('[data-del]').forEach(function(b){
