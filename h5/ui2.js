@@ -1,4 +1,6 @@
 /* 紫金港改造计划 · 浏览器界面层 */
+  window.__BUILD_TAG = '2026-10-29-a';
+  try { console.log('ZJU build', window.__BUILD_TAG); } catch (e) {}
 (function () {
   'use strict';
 
