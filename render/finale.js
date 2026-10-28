@@ -403,7 +403,7 @@
     o = o || {};
     var canvas = o.canvas;
     var w = o.w, h = o.h, dpr = o.dpr || 1;
-    var duration = o.duration || 20000;
+    var duration = o.duration || 30000;
     var g = canvas.getContext("2d");
     var t0 = 0;
     canvas.width = Math.round(w * dpr);

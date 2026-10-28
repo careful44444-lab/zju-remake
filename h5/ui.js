@@ -1242,13 +1242,19 @@
       // 建筑起来的那块地，白色台基连带淡出
       scene.zoneAlpha = function (d) {
         if (!finaleState) return 1;
-        var idx = -1, tiers = finaleState.tiers || {};
-        for (var i = 0; i < finaleState.order.length; i++) {
-          if (finaleState.order[i].id === d.id) { idx = i; break; }
+        // 用「实际出场顺序」算名次（南大门永远第一个），否则它的字会排到最后才收
+        var ord = finaleState.order.slice();
+        for (var m = 0; m < ord.length; m++) {
+          if (ord[m].id === 'move') { ord.unshift(ord.splice(m, 1)[0]); break; }
+        }
+        var idx = -1;
+        for (var i = 0; i < ord.length; i++) {
+          if (ord[i].id === d.id) { idx = i; break; }
         }
         if (idx < 0) return 1;
         var e = ZJUFinale.localAt(finaleState.t, idx);
-        return 1 - Math.min(1, Math.max(0, (e - 0.15)) / 0.5);
+        // 一升起来就开始收，升到一半字就没了
+        return 1 - Math.min(1, Math.max(0, e / 0.5));
       };
       scene.overlay = function (g, W, H) {
         ZJUFinale.front(g, W, H, finaleState ? finaleState.t : 0, mapRect(), finaleState);
