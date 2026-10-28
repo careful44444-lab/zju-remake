@@ -1254,7 +1254,7 @@
         }
         if (pos < 0) return 1;
         var e = ZJUFinale.localAt(finaleState.t, pos);
-        return 1 - Math.min(1, Math.max(0, e / 0.45));
+        return 1 - Math.min(1, Math.max(0, (e - 0.50) / 0.14));
       };
       scene.overlay = function (g, W, H) {
         ZJUFinale.front(g, W, H, finaleState ? finaleState.t : 0, mapRect(), finaleState);

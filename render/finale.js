@@ -330,9 +330,9 @@
       if (!img) continue;
       var e = localAt(t, i);
       if (e <= 0.002) continue;
-      var e2 = Math.max(0, (e - 0.45) / 0.55);   // 前 45% 只让旧剪影退场
-      var a = e2 <= 0 ? 0 : Math.min(1, e2 * 2.2);
-      if (a <= 0.001) continue;
+      var e2 = Math.max(0, (e - 0.52) / 0.48);   // 0.52 起才开始升，前一半旧剪影原地不动
+      var a = Math.min(1, e2 * 2.4);
+      if (a <= 0.002) continue;
 
       var rad = it.angle * Math.PI / 180;
       var px = p.ox + (MAP_CX + Math.cos(rad) * R / p.scale) * p.scale;
