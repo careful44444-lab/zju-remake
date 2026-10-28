@@ -1,6 +1,7 @@
-/* render/finale.js —— 彩蛋：从游戏画面渐变到「真实的紫金港」
+/* render/finale.js —— 彩蛋：游戏地图上，真实地标从各自位置升起，背景换成启真湖
  *
- * 六张建筑图 + 一张启真湖背景，按 2×3 摆在湖上，逐个浮起。
+ * 六张建筑图 + 一张启真湖背景。锚点复用游戏地图的方位（-90/-30/30/90/150/210 度，
+ * 半径 300，地图逻辑空间 1000×1000），所以它们正好从「食住学体文行」六个台基上长出来。
  * 依赖：无（纯 canvas）。UMD：浏览器挂 window.ZJUFinale，Node 里 require。
  */
 (function (root, factory) {
@@ -10,31 +11,37 @@
 })(typeof window !== "undefined" ? window : this, function () {
   "use strict";
 
-  /* 素材清单：id 与六个维度一一对应 */
+  /* 与 game/config.js 的 DIMS 一一对应：id / 图标文件 / 维度字 / 真实名字 / 方位角 */
   var ITEMS = [
-    { id: "food", file: "food.png", dim: "食", name: "玉湖餐厅" },
-    { id: "dorm", file: "dorm.png", dim: "住", name: "月牙楼" },
-    { id: "study", file: "study.png", dim: "学", name: "求是大讲堂" },
-    { id: "sport", file: "sport.png", dim: "体", name: "亚运篮球馆" },
-    { id: "culture", file: "culture.png", dim: "文", name: "艺博馆" },
-    { id: "move", file: "move.png", dim: "行", name: "南大门" }
+    { id: "food", file: "food.png", dim: "食", name: "玉湖餐厅", angle: -90 },
+    { id: "dorm", file: "dorm.png", dim: "住", name: "月牙楼", angle: -30 },
+    { id: "study", file: "study.png", dim: "学", name: "求是大讲堂", angle: 30 },
+    { id: "sport", file: "sport.png", dim: "体", name: "亚运篮球馆", angle: 90 },
+    { id: "culture", file: "culture.png", dim: "文", name: "艺博馆", angle: 150 },
+    { id: "move", file: "move.png", dim: "行", name: "南大门", angle: 210 }
   ];
   var LAKE = "lake.jpg";
 
-  var TITLE = "这就是紫金港";
   var KICKER = "改造计划 · 彩蛋";
+  var TITLE = "这就是紫金港";
   var FOOT = "同人作品 · 与浙江大学官方无关";
 
-  var cache = null; // { lake:{img,...}, items:[{img,box}], } }
+  // 与 render/scene.js 完全一致的地图投影
+  var MAP_CX = 500, MAP_CY = 500, MAP_R = 300, MAP_BOX = 820, PAD_W = 216;
+
+  var cache = null;
 
   /* ---------- 加载 ---------- */
 
-  function loadImage(src) {
+  function loadImage(src, name) {
+    // 单文件版把素材内联成 data URL 了，优先用它
+    var inline = (typeof window !== 'undefined' && window.__ZJU_FINALE_ASSETS__) || null;
+    var real = (inline && name && inline[name]) ? inline[name] : src;
     return new Promise(function (res, rej) {
       var im = new Image();
       im.onload = function () { res(im); };
-      im.onerror = function () { rej(new Error("图片加载失败：" + src)); };
-      im.src = src;
+      im.onerror = function () { rej(new Error("图片加载失败：" + real.slice(0, 40))); };
+      im.src = real;
     });
   }
 
@@ -47,7 +54,7 @@
     g.drawImage(im, 0, 0);
     var d;
     try { d = g.getImageData(0, 0, w, h).data; }
-    catch (e) { return { x: 0, y: 0, w: w, h: h }; } // 跨域就放弃裁边
+    catch (e) { return { x: 0, y: 0, w: w, h: h }; }
     var minX = w, minY = h, maxX = -1, maxY = -1;
     for (var y = 0; y < h; y++) {
       var row = y * w * 4;
@@ -66,11 +73,10 @@
 
   function load(base) {
     if (cache) return Promise.resolve(cache);
-    // 页面在 h5/ 下，素材在项目根的 assets/finale/
     var b = base || "../assets/finale/";
     return Promise.all([
-      loadImage(b + LAKE),
-      Promise.all(ITEMS.map(function (it) { return loadImage(b + it.file); }))
+      loadImage(b + LAKE, LAKE),
+      Promise.all(ITEMS.map(function (it) { return loadImage(b + it.file, it.file); }))
     ]).then(function (res) {
       cache = {
         lake: res[0],
@@ -82,29 +88,33 @@
     });
   }
 
-  /* ---------- 布局 ---------- */
+  /* ---------- 地图坐标 → 画布坐标 ---------- */
 
-  function layout(w, h) {
-    var pad = Math.round(w * 0.05);
-    var top = Math.round(h * 0.165);
-    var bottom = Math.round(h * 0.07);
-    var rows = 3, cols = 2;
-    var cellH = (h - top - bottom) / rows;
-    var cellW = (w - pad * 2) / cols;
-    var out = [];
-    for (var i = 0; i < 6; i++) {
-      var r = Math.floor(i / cols), c = i % cols;
-      var cellTop = top + cellH * r;
-      out.push({
-        cx: pad + cellW * (c + 0.5),
-        // 图片区占一个格子上部，标签固定落在下面那条带子里，互不重叠
-        imgCy: cellTop + cellH * 0.36,
-        labelY: cellTop + cellH * 0.78,
-        maxW: cellW * 0.92,
-        maxH: cellH * 0.58
-      });
-    }
-    return out;
+  /* area: 地图画布在屏幕上的矩形（CSS px）。不传就按整屏估一个 */
+  function projection(w, h, area) {
+    var a = area || { x: 0, y: Math.round(h * 0.11), w: w, h: Math.round(h * 0.76) };
+    var scale = Math.min(a.w, a.h) / MAP_BOX;
+    return {
+      scale: scale,
+      ox: a.x + (a.w - 1000 * scale) / 2,
+      oy: a.y + (a.h - 1000 * scale) / 2,
+      area: a
+    };
+  }
+
+  function slotOf(item, pr) {
+    var rad = item.angle * Math.PI / 180;
+    var R2 = MAP_R * 0.80;              // 比游戏里收一点，建筑才不会被切到屏幕外
+    var lx = MAP_CX + Math.cos(rad) * R2;
+    var ly = MAP_CY + Math.sin(rad) * R2;
+    var padW = PAD_W * pr.scale;
+    return {
+      cx: pr.ox + lx * pr.scale,
+      cy: pr.oy + ly * pr.scale,
+      baseY: pr.oy + ly * pr.scale + padW * 0.30,   // 站在台基下沿
+      w: padW * 1.15,
+      h: padW * 0.88
+    };
   }
 
   /* ---------- 绘制 ---------- */
@@ -113,138 +123,125 @@
   function clamp01(t) { return t < 0 ? 0 : t > 1 ? 1 : t; }
   function lerp(a, b, t) { return a + (b - a) * t; }
 
-  function roundRect(g, x, y, w, h, r) {
-    g.beginPath();
-    g.moveTo(x + r, y);
-    g.arcTo(x + w, y, x + w, y + h, r);
-    g.arcTo(x + w, y + h, x, y + h, r);
-    g.arcTo(x, y + h, x, y, r);
-    g.arcTo(x, y, x + w, y, r);
-    g.closePath();
-  }
-
-  function drawLake(g, w, h, t) {
+  function drawLake(g, w, h, t, alpha) {
+    if (alpha <= 0.001) return;
     var lake = cache.lake;
-    var zoom = lerp(1.12, 1.0, ease(clamp01(t / 0.55)));
-    // 先铺满，再乘一个放大系数，并把「湖心」对准画面中部（原图是横构图，
-    // 直接 cover 会只截到两侧的树林）
+    var zoom = lerp(1.16, 1.0, ease(clamp01(t / 0.7)));
     var s = Math.max(w / lake.width, h / lake.height) * 1.32 * zoom;
     var dw = lake.width * s, dh = lake.height * s;
-    var focusX = 0.52, focusY = 0.45;          // 湖心在原图里的相对位置
+    var focusX = 0.52, focusY = 0.45;
     var dx = w / 2 - dw * focusX;
     var dy = h * 0.46 - dh * focusY;
-    // 别露出空白
     dx = Math.min(0, Math.max(w - dw, dx));
     dy = Math.min(0, Math.max(h - dh, dy));
+
+    g.save();
+    g.globalAlpha = alpha;
     g.drawImage(lake, dx, dy, dw, dh);
 
-    // 上下的软遮罩，只压住标题和尾注，湖面尽量露出来
     var gt = g.createLinearGradient(0, 0, 0, h);
-    gt.addColorStop(0, "rgba(248,250,252,0.94)");
-    gt.addColorStop(0.13, "rgba(248,250,252,0.55)");
-    gt.addColorStop(0.28, "rgba(248,250,252,0.06)");
-    gt.addColorStop(0.80, "rgba(248,250,252,0.10)");
-    gt.addColorStop(0.94, "rgba(248,250,252,0.62)");
-    gt.addColorStop(1, "rgba(248,250,252,0.90)");
+    gt.addColorStop(0, "rgba(248,250,252,0.90)");
+    gt.addColorStop(0.14, "rgba(248,250,252,0.42)");
+    gt.addColorStop(0.32, "rgba(248,250,252,0.02)");
+    gt.addColorStop(0.80, "rgba(248,250,252,0.06)");
+    gt.addColorStop(0.95, "rgba(248,250,252,0.55)");
+    gt.addColorStop(1, "rgba(248,250,252,0.86)");
     g.fillStyle = gt;
     g.fillRect(0, 0, w, h);
+    g.restore();
   }
 
-  function drawItem(g, it, slot, local, w) {
+  function drawItem(g, it, slot, local, w, push) {
     var a = ease(local);
     if (a <= 0) return;
-    var lift = (1 - a) * 16;
-    var sc = lerp(0.94, 1, a);
+    var rise = (1 - a) * (slot.h * 0.55);      // 从台基下面升上来
+    var sc = lerp(0.82, 1, a) * push;
 
     var bw = it.box.w, bh = it.box.h;
-    var k = Math.min(slot.maxW / bw, slot.maxH / bh) * sc;
+    var k = Math.min(slot.w / bw, slot.h / bh) * sc;
     var dw = bw * k, dh = bh * k;
     var dx = slot.cx - dw / 2;
-    var dy = slot.imgCy - dh / 2 + lift;
+    var dy = slot.baseY - dh + rise;
 
-    // 地面投影
     g.save();
-    g.globalAlpha = a * 0.14;
+    g.globalAlpha = a * 0.13;
     g.fillStyle = "#0f172a";
     g.beginPath();
-    g.ellipse(slot.cx, dy + dh + 3, dw * 0.32, Math.max(4, dh * 0.05), 0, 0, Math.PI * 2);
+    g.ellipse(slot.cx, slot.baseY + 2, dw * 0.30, Math.max(3, dh * 0.045), 0, 0, Math.PI * 2);
     g.fill();
     g.restore();
 
-    // 建筑
     g.save();
     g.globalAlpha = a;
     g.drawImage(it.img, it.box.x, it.box.y, bw, bh, dx, dy, dw, dh);
     g.restore();
 
-    // 标签：固定落在格子下部，不跟着图片高度跑
-    var fs = Math.round(w * 0.030);
-    g.save();
-    g.globalAlpha = a;
-    g.textAlign = "center";
-    g.textBaseline = "top";
-    g.lineJoin = "round";
-    var ly = slot.labelY + lift * 0.4;
-
-    // 白描边，压在花花绿绿的湖面上也读得清
-    g.font = "700 " + fs + "px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
-    g.strokeStyle = "rgba(255,255,255,0.92)";
-    g.lineWidth = Math.max(3, fs * 0.34);
-    g.strokeText(it.def.name, slot.cx, ly);
-    g.fillStyle = "#0f172a";
-    g.fillText(it.def.name, slot.cx, ly);
-
-    var fs2 = Math.round(fs * 0.82);
-    g.font = "500 " + fs2 + "px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
-    g.lineWidth = Math.max(3, fs2 * 0.34);
-    g.strokeText(it.def.dim + " · 现实中的这一块", slot.cx, ly + fs + 5);
-    g.fillStyle = "#64748b";
-    g.fillText(it.def.dim + " · 现实中的这一块", slot.cx, ly + fs + 5);
-    g.restore();
+    // 名字标签：等建筑基本就位才出现
+    var la = ease(clamp01((local - 0.55) / 0.45));
+    if (la > 0) {
+      var fs = Math.round(clamp01(slot.w / 150) * 13 + 3);
+      g.save();
+      g.globalAlpha = la;
+      g.textAlign = "center";
+      g.textBaseline = "top";
+      g.lineJoin = "round";
+      g.font = "700 " + fs + "px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
+      g.strokeStyle = "rgba(255,255,255,0.92)";
+      g.lineWidth = Math.max(3, fs * 0.36);
+      g.strokeText(it.def.name, slot.cx, slot.baseY + 6);
+      g.fillStyle = "#0f172a";
+      g.fillText(it.def.name, slot.cx, slot.baseY + 6);
+      g.restore();
+    }
   }
 
   function drawText(g, w, h, t) {
-    var a = ease(clamp01((t - 0.55) / 0.32));
+    var a = ease(clamp01((t - 0.74) / 0.26));
     if (a <= 0) return;
     g.save();
     g.globalAlpha = a;
     g.textAlign = "center";
-
-    // 顶部小字
     g.textBaseline = "alphabetic";
-    g.font = "600 " + Math.round(w * 0.030) + "px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
+    g.font = "600 " + Math.round(w * 0.028) + "px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
     g.fillStyle = "#b45309";
-    g.fillText(KICKER, w / 2, h * 0.075);
-
-    // 主标题
-    g.font = "800 " + Math.round(w * 0.078) + "px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
+    g.fillText(KICKER, w / 2, h * 0.062);
+    g.font = "800 " + Math.round(w * 0.072) + "px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
     g.fillStyle = "#0f172a";
-    g.fillText(TITLE, w / 2, h * 0.135);
-
-    // 尾注
-    g.font = "500 " + Math.round(w * 0.026) + "px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
+    g.fillText(TITLE, w / 2, h * 0.118);
+    g.font = "500 " + Math.round(w * 0.024) + "px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
     g.fillStyle = "#94a3b8";
     g.fillText(FOOT, w / 2, h * 0.975);
     g.restore();
   }
 
-  function draw(g, w, h, t) {
+  /* t: 0→1 进度；area: 地图画布矩形（可省略） */
+  function draw(g, w, h, t, area) {
+    var pr = projection(w, h, area);
     g.save();
-    g.fillStyle = "#f8fafc";
-    g.fillRect(0, 0, w, h);
-    drawLake(g, w, h, t);
-    var slots = layout(w, h);
+    g.clearRect(0, 0, w, h);
+
+    // 背景：整片草地慢慢换成启真湖
+    drawLake(g, w, h, t, ease(clamp01(t / 0.78)));
+
+    // 六个地标从各自台基上长出来
+    var push = lerp(1, 1.06, ease(clamp01((t - 0.55) / 0.45)));
     for (var i = 0; i < cache.items.length; i++) {
-      var local = clamp01((t - (0.16 + i * 0.085)) / 0.30);
-      drawItem(g, cache.items[i], slots[i], local, w);
+      var slot = slotOf(cache.items[i].def, pr);
+      slot.cx = (slot.cx - w / 2) * push + w / 2;
+      slot.cy = (slot.cy - h / 2) * push + h / 2;
+      slot.baseY = (slot.baseY - h / 2) * push + h / 2;
+      slot.w *= push;
+      slot.h *= push;
+      var local = clamp01((t - (0.08 + i * 0.075)) / 0.42);
+      drawItem(g, cache.items[i], slot, local, w, 1);
     }
+
     drawText(g, w, h, t);
     g.restore();
   }
 
   /* ---------- 播放 ---------- */
 
-  /* opts: {canvas, w, h, dpr, duration, onDone} */
   function play(opts) {
     var o = opts || {};
     var canvas = o.canvas;
@@ -257,7 +254,7 @@
     var g = canvas.getContext("2d");
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    var dur = o.duration || 2600;
+    var dur = o.duration || 3000;
     var start = 0;
 
     return load(o.base).then(function () {
@@ -265,7 +262,7 @@
         function frame(ts) {
           if (!start) start = ts;
           var t = clamp01((ts - start) / dur);
-          draw(g, w, h, t);
+          draw(g, w, h, t, o.area);
           if (t < 1) requestAnimationFrame(frame);
           else { if (o.onDone) o.onDone(); resolve(); }
         }
@@ -277,8 +274,8 @@
   return {
     ITEMS: ITEMS,
     load: load,
-    draw: function (ctx, w, h, t) { return draw(ctx, w, h, t); },
-    layout: layout,
+    draw: function (ctx, w, h, t, area) { return draw(ctx, w, h, t, area); },
+    projection: projection,
     play: play,
     clearCache: function () { cache = null; }
   };

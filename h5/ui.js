@@ -1147,6 +1147,11 @@
 
     var box = $('finale');
     var cb = $('finaleCanvas');
+    // 地图画布的实际矩形：彩蛋用它复刻同一套投影，锚点才落得准
+    var mapEl = $('map');
+    var mr = mapEl ? mapEl.getBoundingClientRect() : null;
+    var area = mr ? { x: mr.left, y: mr.top, w: mr.width, h: mr.height } : null;
+
     var w = window.innerWidth;
     var h = window.innerHeight;
     var dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -1162,12 +1167,13 @@
     if (scene && scene.pause) scene.pause();
 
     // 调试：?still=1 直接画最终帧（headless 里 rAF 不跑，方便截图核对）
-    if (/[?&]still=1/.test(location.search)) {
+    var stillM = /[?&]still=([\d.]+)/.exec(location.search);
+    if (stillM) {
       box.style.opacity = '1';
       ZJUFinale.load('../assets/finale/').then(function () {
         var g = cb.getContext('2d');
         g.setTransform(dpr, 0, 0, dpr, 0, 0);
-        ZJUFinale.draw(g, w, h, 1);
+        ZJUFinale.draw(g, w, h, Math.min(1, parseFloat(stillM[1])), area);
       });
       return;
     }
@@ -1190,7 +1196,8 @@
       w: w,
       h: h,
       dpr: dpr,
-      duration: 2600
+      duration: 3000,
+      area: area
     }).catch(function (err) {
       console.warn('[彩蛋]', err);
       closeFinale();

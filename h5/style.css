@@ -1107,7 +1107,7 @@ button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit
 /* ============ 彩蛋：真实的紫金港 ============ */
 #finale{
   position:fixed; inset:0; z-index:80;
-  background:#f8fafc;
+  background:transparent;   /* 透明，才能看到下面的游戏画面渐变过去 */
   opacity:0; visibility:hidden;
 }
 #finale.on{ opacity:1; visibility:visible; }

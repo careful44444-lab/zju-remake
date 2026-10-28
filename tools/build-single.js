@@ -70,6 +70,24 @@ if (cfgJson) {
   html = html.slice(0, fi) + cfgTag + "\n" + html.slice(fi);
   console.log("已内联数值设置（data/config-edit.json）");
 }
+// 彩蛋素材：单文件版没有 assets 目录，直接把图内联成 data URL
+(function () {
+  var dir = path.join(root, 'assets', 'finale');
+  if (!fs.existsSync(dir)) { console.log('（没有 assets/finale，跳过彩蛋素材）'); return; }
+  var mime = { '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp' };
+  var map = {}, total = 0;
+  fs.readdirSync(dir).forEach(function (f) {
+    var ext = path.extname(f).toLowerCase();
+    if (!mime[ext]) return;
+    var buf = fs.readFileSync(path.join(dir, f));
+    total += buf.length;
+    map[f] = 'data:' + mime[ext] + ';base64,' + buf.toString('base64');
+  });
+  var tag = '<script>window.__ZJU_FINALE_ASSETS__ = ' + JSON.stringify(map) + ';<\/script>';
+  html = html.replace('</head>', tag + '\n</head>');
+  console.log('已内联彩蛋素材 ' + Object.keys(map).length + ' 张（原图 ' + Math.round(total / 1024) + ' KB）');
+})();
+
 // 把文案编辑器的改动也打进单文件（data/content-edit.json）
 var overridePath = path.join(root, 'data', 'content-edit.json');
 var overrideJson = null;
