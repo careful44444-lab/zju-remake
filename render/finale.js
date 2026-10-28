@@ -340,10 +340,10 @@
       var slotH = PAD_H * 0.90 * p.scale;
       var b = c.box[it.id];
       var sc = Math.min(slotW / b.w, slotH / b.h);
-      var ks = 0.86 + 0.14 * e2;
+      var ks = 1;                                    // 不做缩放弹跳
       var dw = b.w * sc * ks, dh = b.h * sc * ks;
       var dx = px - dw / 2;
-      var rise = (1 - e2) * dh * 0.55;
+      var rise = 0;                                  // 不再上浮，原地淡入
       var dy = py - dh * 0.58 + rise;
       var gT = clamp01((t - TL.glowAt) / 0.05);          // 全部建筑落地后才点亮
       var isGlow = glowId && it.id === glowId && gT > 0;

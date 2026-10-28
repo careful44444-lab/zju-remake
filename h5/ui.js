@@ -1229,16 +1229,20 @@
     var dimsCfg = (window.ZJU && ZJU.DIMS) || [];
     for (var di = 0; di < dimsCfg.length; di++) {
       var dc = dimsCfg[di];
-      var init = dc.init || 1, cur = tiers[dc.id] || 1, sum = 0;
+      var init = dc.init || 1, cur = (state.tiers || tiers || {})[dc.id] || 1, sum = 0;
       if (cur > init) { for (var k = init + 1; k <= cur; k++) sum += ZJU.stepPrice(dc.id, k); }
       else if (cur < init) { for (var k2 = cur + 1; k2 <= init; k2++) sum -= ZJU.stepPrice(dc.id, k2); }
       spend[dc.id] = sum;
     }
+    if (window.__FIN_DBG) console.log("spend", JSON.stringify(spend), "cur", JSON.stringify(state.tiers), "init", JSON.stringify(dimsCfg.map(function(d){return d.init;})));
     var glow = null, best = 0;
     for (var gi = 0; gi < order.length; gi++) {
       var sid = order[gi].id;
       if (spend[sid] > best) { best = spend[sid]; glow = sid; }
     }
+    var ov = /[?&]glow=(\w+)/.exec(location.search);
+    if (ov) glow = ov[1];                     // 调试：强制指定金色维度
+    if (window.__FIN_DBG) console.log("glow", String(glow), "best", String(best));
     finaleState = { order: order, glow: glow, tiers: tiers, spend: spend, t: 0 };
 
     var D = 14000;                               // 总时长：14 秒
