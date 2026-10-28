@@ -1254,7 +1254,7 @@
         if (idx < 0) return 1;
         var e = ZJUFinale.localAt(finaleState.t, idx);
         // 一升起来就开始收，升到一半字就没了
-        return 1 - Math.min(1, Math.max(0, e / 0.5));
+        return 1 - Math.min(1, Math.max(0, e / 0.45));
       };
       scene.overlay = function (g, W, H) {
         ZJUFinale.front(g, W, H, finaleState ? finaleState.t : 0, mapRect(), finaleState);

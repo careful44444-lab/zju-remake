@@ -329,7 +329,9 @@
       if (!img) continue;
       var e = localAt(t, i);
       if (e <= 0.002) continue;
-      var a = Math.min(1, e * 1.6);
+      var e2 = Math.max(0, (e - 0.45) / 0.55);   // 前 45% 只让旧剪影退场
+      var a = e2 <= 0 ? 0 : Math.min(1, e2 * 2.2);
+      if (a <= 0.001) continue;
 
       var rad = it.angle * Math.PI / 180;
       var px = p.ox + (MAP_CX + Math.cos(rad) * R / p.scale) * p.scale;
@@ -339,12 +341,12 @@
       var slotH = PAD_H * 0.90 * p.scale;
       var b = c.box[it.id];
       var sc = Math.min(slotW / b.w, slotH / b.h);
-      var ks = 0.86 + 0.14 * e;
+      var ks = 0.86 + 0.14 * e2;
       var dw = b.w * sc * ks, dh = b.h * sc * ks;
       var dx = px - dw / 2;
-      var rise = (1 - e) * dh * 0.55;
+      var rise = (1 - e2) * dh * 0.55;
       var dy = py - dh * 0.58 + rise;
-      var isGlow = glowId && it.id === glowId && e > 0.25;
+      var isGlow = glowId && it.id === glowId && e2 > 0.4;
 
       g.save();
       g.globalAlpha = a;
