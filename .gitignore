@@ -24,3 +24,6 @@ Thumbs.db
 node_modules/
 # 截图临时目录（放在系统 TEMP，别进仓库）
 .shots-tmp/
+
+# 单文件是构建产物，5.8MB 因为内嵌了四张原始湖图
+dist/紫金港改造计划.html
