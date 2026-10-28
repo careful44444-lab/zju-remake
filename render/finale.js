@@ -39,14 +39,18 @@
 
   // 时间轴（0~1）
   var TL = {
-    lakeEnd: 0.40,
-    contentStart: 0.42, contentEnd: 0.50,
-    buildStart: 0.50, buildGap: 0.070, buildDur: 0.085,
+    lakeEnd: 0.26,
+    contentStart: 0.27, contentEnd: 0.32,
+    buildStart: 0.38, buildGap: 0.078, buildDur: 0.048,
     title: 0.93
   };
   // 四张湖图各自的淡入起点 / 时长
-  var LAKE_TL = [[0.02, 0.10], [0.11, 0.11], [0.21, 0.12], [0.34, 0.12]];
+  var LAKE_TL = [[0.01, 0.07], [0.08, 0.07], [0.15, 0.07], [0.21, 0.06]];
 
+  var ROAD_DIR = "roads2/";
+  var ROAD_IMG = { road: "road1.png", bridge: "bridge1.png", pier: "pier.png" };
+  var ANG = 0.46;
+  var DECK = { y: 54, h: 41 };
   var BASE = "../assets/finale/";
   var cache = null;
 
@@ -97,7 +101,10 @@
     if (cache) return Promise.resolve(cache);
     var b = base || BASE;
     var jobs = LAKES.map(function (f) { return loadImage(b + f, f); })
-      .concat(ITEMS.map(function (it) { return loadImage(b + it.file, it.file); }));
+      .concat(ITEMS.map(function (it) { return loadImage(b + it.file, it.file); }))
+      .concat(Object.keys(ROAD_IMG).map(function (k) {
+        return loadImage(b + ROAD_DIR + ROAD_IMG[k], ROAD_IMG[k]).catch(function () { return null; });
+      }));
     return Promise.all(jobs).then(function (imgs) {
       var lakes = imgs.slice(0, LAKES.length);
       var rest = imgs.slice(LAKES.length);
@@ -106,8 +113,15 @@
         dims[it.id] = rest[i];
         box[it.id] = alphaBox(rest[i]) || { x: 0, y: 0, w: rest[i].width, h: rest[i].height };
       });
+      var rimg = {};
+      var rs = LAKES.length + ITEMS.length;
+      Object.keys(ROAD_IMG).forEach(function (k, i) {
+        var im = imgs[rs + i];
+        rimg[k] = im ? { img: im, box: alphaBox(im) || { x: 0, y: 0, w: im.width, h: im.height } } : null;
+      });
       var water = lakes.map(function (im) { return waterCenter(im); });
       cache = {
+        roads: rimg,
         lakes: lakes,
         water: water,
         dims: dims,
@@ -209,6 +223,86 @@
   };
 
   /* 某栋建筑在当前时刻的进度（0=还没开始，1=落位） */
+  var RING = ['move', 'food', 'dorm', 'study', 'sport', 'culture'];
+  function isAdjacent(a, b) {
+    var i = RING.indexOf(a), j = RING.indexOf(b);
+    if (i < 0 || j < 0) return false;
+    var d = Math.abs(i - j);
+    return d === 1 || d === RING.length - 1;
+  }
+  function revealOrder(order) {
+    var out = [], gate = null;
+    for (var i = 0; i < order.length; i++) {
+      if (order[i].id === 'move') gate = order[i]; else out.push(order[i]);
+    }
+    return gate ? [gate].concat(out) : order.slice();
+  }
+  function roadPos(it, p) {
+    var R = MAP_R * p.scale * 1.02;
+    var rad = it.angle * Math.PI / 180;
+    return { x: p.ox + MAP_CX * p.scale + Math.cos(rad) * R,
+             y: p.oy + MAP_CY * p.scale + Math.sin(rad) * R };
+  }
+  function lay(g, asset, box, p, ax, ay, bx, by, prog, dw) {
+    if (!asset || prog <= 0) return;
+    var dx = bx - ax, dy = by - ay;
+    var len = Math.sqrt(dx * dx + dy * dy);
+    if (len < 6) return;
+    var dh = dw * box.h / box.w;
+    var step = dw * 0.86;
+    var nSeg = Math.max(1, Math.round(len / step));
+    var shown = prog * nSeg;
+    var rot = Math.atan2(dy, dx) + ANG;
+    for (var i = 0; i < nSeg; i++) {
+      if (i > shown) break;
+      var k = i / nSeg;
+      var cx = ax + dx * k, cy = ay + dy * k;
+      var a = (i > shown - 1.3) ? Math.max(0, (shown - i) / 1.3) : 1;
+      g.save(); g.globalAlpha = a;
+      g.translate(cx, cy); g.rotate(rot);
+      g.drawImage(asset, box.x, box.y, box.w, box.h, -dw / 2, -dh * 0.55, dw, dh);
+      g.restore();
+    }
+  }
+  function drawRoads(g, c, w, h, area, t, order) {
+    if (!c.roads || !c.roads.road) return;
+    var p = projection(w, h, area);
+    var list = revealOrder(order);
+    var pos = list.map(function (it) { return roadPos(it, p); });
+    var legs = [];
+    legs.push({ ax: -140, ay: pos[0].y + 60, bx: pos[0].x, by: pos[0].y, bridge: false,
+                t0: TL.buildStart - 0.045, dur: 0.028 });
+    for (var k = 1; k < list.length; k++) {
+      legs.push({ ax: pos[k - 1].x, ay: pos[k - 1].y, bx: pos[k].x, by: pos[k].y,
+                  bridge: !isAdjacent(list[k - 1].id, list[k].id),
+                  t0: TL.buildStart + k * TL.buildGap - 0.030, dur: 0.026 });
+    }
+    for (var i = 0; i < legs.length; i++) {
+      var L = legs[i];
+      var prog = ramp(t, L.t0, L.dur);
+      if (prog <= 0) continue;
+      if (!L.bridge) {
+        var rd = c.roads.road;
+        lay(g, rd.img, rd.box, p, L.ax, L.ay, L.bx, L.by, prog, 118 * p.scale);
+      } else {
+        var br = c.roads.bridge, pier = c.roads.pier;
+        var deckBox = { x: 0, y: DECK.y, w: br.img.width, h: DECK.h };
+        lay(g, br.img, deckBox, p, L.ax, L.ay, L.bx, L.by, prog, 160 * p.scale);
+        if (pier) {
+          var dx2 = L.bx - L.ax, dy2 = L.by - L.ay;
+          var len2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+          var cnt = Math.max(1, Math.floor(len2 / 84));
+          var pb = pier.box;
+          for (var j = 1; j <= cnt; j++) {
+            var kk = (j / (cnt + 1)) * prog;
+            var px = L.ax + dx2 * kk, py = L.ay + dy2 * kk;
+            var pw = 26 * p.scale, ph = pw * pb.h / pb.w;
+            g.drawImage(pier.img, pb.x, pb.y, pb.w, pb.h, px - pw / 2, py - ph * 0.05, pw, ph);
+          }
+        }
+      }
+    }
+  }
   function localAt(t, rank) {
     return clamp01((t - TL.buildStart - rank * TL.buildGap) / TL.buildDur);
   }
@@ -299,7 +393,8 @@
     if (!cache) return;
     g.clearRect(0, 0, w, h);
     drawLakes(g, cache, w, h, area, t);
-    drawBuildings(g, cache, w, h, area, t, opts.order || ITEMS, opts.glow || null);
+    try { drawRoads(g, cache, w, h, area, t, opts.order || ITEMS); } catch (e) {}
+    drawBuildings(g, cache, w, h, area, t, revealOrder(opts.order || ITEMS), opts.glow || null);
     drawTitle(g, w, h, area, t);
   }
 
@@ -340,7 +435,8 @@
   function front(g, w, h, t, area, opts) {
     if (!cache) return;
     opts = opts || {};
-    drawBuildings(g, cache, w, h, area, t, opts.order || ITEMS, opts.glow || null);
+    try { drawRoads(g, cache, w, h, area, t, opts.order || ITEMS); } catch (e) {}
+    drawBuildings(g, cache, w, h, area, t, revealOrder(opts.order || ITEMS), opts.glow || null);
     drawTitle(g, w, h, area, t);
   }
 
