@@ -395,12 +395,14 @@
 
   // ---- 单个地块 ----
   Scene.prototype.drawZone = function (d, pal) {
+    if (this.hideAllZones) return;   // 彩蛋期间地块全部由彩蛋自己画，顺序只由一条时间轴决定
     var ctx = this.ctx, self = this;
     var zm = (this.zoneMap && this.zoneMap[d.id]) || null;
     var zoneA = zm && zm.zone != null ? zm.zone : 1;   // 建筑本体的透明度（彩蛋里被真建筑替代时淡出）
     if (zoneA <= 0.002) zoneA = 0;
     var t = this.anim[d.id];
     var p = this.zones[d.id];
+    if (window.__FIN_DBG) console.log("pos", d.id, Math.round(p.x), Math.round(p.y), "sel", this.selected === d.id);
     var tier = Math.max(1, Math.min(5, Math.round(t)));
     var col = TIER_COLOR[tier];
     var build = P.buildAt(t);
@@ -456,6 +458,7 @@
     if (d.motif === 'track') this.drawTrack(p, t);
 
     // 建筑
+    if (window.__FIN_DBG) console.log("build", d.id, "motif", d.motif, "zoneA", zoneA.toFixed(2), "boxes", (this.layout(d.motif, t) || []).length);
     var boxes = this.layout(d.motif, t);
     boxes.sort(function (a, b) { return a.dy - b.dy; });
     for (var i = 0; i < boxes.length; i++) {
@@ -471,6 +474,7 @@
 
     }
     ctx.globalAlpha = g0;
+    if (window.__FIN_DBG) { var _d = ctx.getImageData(Math.round(p.x * (window.devicePixelRatio||1)), Math.round((p.y - 60) * (window.devicePixelRatio||1)), 1, 1).data; console.log("px", d.id, _d[0], _d[1], _d[2], _d[3]); }
 
     if (!this.hidePads) {
     // 档位徽章

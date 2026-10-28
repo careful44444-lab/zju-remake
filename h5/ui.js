@@ -1131,7 +1131,7 @@
     var ca = 0;
     if (t >= TL.contentStart) ca = Math.min(1, (t - TL.contentStart) / (TL.contentEnd - TL.contentStart));
     ca = 1 - Math.pow(1 - ca, 3);
-    scene.hidePads = true;    // 只藏白台基，建筑与文字照常显示
+    scene.hideAllZones = true;   // 彩蛋自己画建筑，不再让 scene 参与
     scene.contentAlpha = ca;
     var zm = {};
     finaleState.order.forEach(function (it, i) {
@@ -1165,7 +1165,7 @@
   function resetFinaleScene() {
     if (!scene) return;
     scene.contentAlpha = 1;
-    scene.hidePads = false;
+    scene.hideAllZones = false;
     scene.zoneMap = null;
   }
 
@@ -1252,8 +1252,9 @@
           if (CW[c] === d.id) { pos = n; break; }
           n++;
         }
-        if (pos < 0) return 1;
+        if (pos < 0) { if (window.__FIN_DBG) console.log("zone", d.id, "not found"); return 1; }
         var e = ZJUFinale.localAt(finaleState.t, pos);
+        if (window.__FIN_DBG) console.log("zone", d.id, "pos", pos, "e", e.toFixed(3));
         return 1 - Math.min(1, Math.max(0, (e - 0.50) / 0.14));
       };
       scene.overlay = function (g, W, H) {
