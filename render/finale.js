@@ -265,6 +265,15 @@
       g.restore();
     }
   }
+  // 出场顺序：南大门起顺时针（不再按档位先低后高）
+  var CW = ["move", "food", "dorm", "study", "sport", "culture"];
+  function spatialOrder(list) {
+    var by = {};
+    for (var i = 0; i < list.length; i++) by[list[i].id] = list[i];
+    var out = [];
+    for (var k = 0; k < CW.length; k++) if (by[CW[k]]) out.push(by[CW[k]]);
+    return out.length ? out : list;
+  }
   function baseOf(it, p, c) {
     var R = MAP_R * p.scale * 1.02;
     var rad = it.angle * Math.PI / 180;
@@ -397,7 +406,7 @@
     g.clearRect(0, 0, w, h);
     drawLakes(g, cache, w, h, area, t);
     try { drawRoads(g, cache, w, h, area, t, opts.order || ITEMS); } catch (e) {}
-    drawBuildings(g, cache, w, h, area, t, revealOrder(opts.order || ITEMS), opts.glow || null);
+    drawBuildings(g, cache, w, h, area, t, spatialOrder(opts.order || ITEMS), opts.glow || null);
     drawTitle(g, w, h, area, t);
   }
 
@@ -439,7 +448,7 @@
     if (!cache) return;
     opts = opts || {};
     try { drawRoads(g, cache, w, h, area, t, opts.order || ITEMS); } catch (e) {}
-    drawBuildings(g, cache, w, h, area, t, revealOrder(opts.order || ITEMS), opts.glow || null);
+    drawBuildings(g, cache, w, h, area, t, spatialOrder(opts.order || ITEMS), opts.glow || null);
     drawTitle(g, w, h, area, t);
   }
 
