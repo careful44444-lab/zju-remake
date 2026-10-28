@@ -412,6 +412,10 @@
     ctx.scale(sc, sc);
     ctx.translate(-p.x, -p.y);
 
+    // 彩蛋：只藏白台基，建筑和文字照画
+    ctx.save();
+    if (this.hidePads) ctx.globalAlpha = 0;
+
     // 阴影
     ctx.fillStyle = 'rgba(15, 23, 42, 0.08)';
     ctx.beginPath(); ctx.ellipse(p.x + 4, p.y + PAD_H / 2 - 4, PAD_W / 2 - 4, 24, 0, 0, 6.283); ctx.fill();
@@ -442,6 +446,7 @@
       ctx.stroke();
       ctx.restore();
     }
+    ctx.restore();
 
     // —— 以下（跑道/建筑/装饰/信物）属于「建筑本体」，彩蛋替换时单独淡出 ——
     var g0 = ctx.globalAlpha;
@@ -467,6 +472,7 @@
     }
     ctx.globalAlpha = g0;
 
+    if (!this.hidePads) {
     // 档位徽章
     var bx = p.x + PAD_W / 2 - 6, by = p.y - PAD_H / 2 + 4;
     ctx.fillStyle = '#0f172a';
@@ -476,6 +482,7 @@
     ctx.font = 'bold 20px ' + FONT;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(String(tier), bx, by + 1);
+    }
 
     // 名称（彩蛋里 name 会被换成真实建筑名）
     var ly = p.y + PAD_H / 2 + 38;

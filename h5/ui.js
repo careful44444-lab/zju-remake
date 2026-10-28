@@ -1131,7 +1131,8 @@
     var ca = 0;
     if (t >= TL.contentStart) ca = Math.min(1, (t - TL.contentStart) / (TL.contentEnd - TL.contentStart));
     ca = 1 - Math.pow(1 - ca, 3);
-    scene.contentAlpha = 0;   // 台基都在湖面上，与「建筑不压蓝区」冲突，彩蛋期间不显示地块
+    scene.hidePads = true;    // 只藏白台基，建筑与文字照常显示
+    scene.contentAlpha = ca;
     var zm = {};
     finaleState.order.forEach(function (it, i) {
       var e = ZJUFinale.localAt(t, i);
@@ -1164,6 +1165,7 @@
   function resetFinaleScene() {
     if (!scene) return;
     scene.contentAlpha = 1;
+    scene.hidePads = false;
     scene.zoneMap = null;
   }
 
@@ -1172,7 +1174,7 @@
     if (scene) { scene.backdrop = null; scene.overlay = null; }
     document.body.classList.remove('finale-on');
     hideGameUI(false);
-    if (scene && scene.resize) { setTimeout(function () { scene.resize(); }, 30); }
+    if (scene && scene.resize) scene.resize();   // 同步，避免首帧用旧尺寸导致缩放跳变
     resetFinaleScene();
     var start = 0;
     function fade(ts) {
@@ -1208,7 +1210,7 @@
     box.classList.add('on');
     document.body.classList.add('finale-on');
     hideGameUI(true);                            // 藏掉 HUD / 回合条 / 底部条
-    if (scene && scene.resize) { setTimeout(function () { scene.resize(); }, 30); }
+    if (scene && scene.resize) scene.resize();   // 同步，避免首帧用旧尺寸导致缩放跳变
 
     // 档位 → 出场顺序（低→高）＋ 最看重的那一维（金色）
     var ITEMS = ZJUFinale.ITEMS;

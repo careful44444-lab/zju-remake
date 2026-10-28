@@ -165,13 +165,8 @@
   }
 
   function drawBuildings(g, c, w, h, area, t, order, glowId) {
-    var T = lakeTransform(c, w, h, area);
-    var lakeTop = T.cy - T.ry, lakeBot = T.cy + T.ry;   // 蓝区的上下边界
-    var colW = w / 3;
-    var maxW = colW * 0.86;
-    var rowTopH = Math.max(64, lakeTop * 0.68);          // 上排可用高度
-    var rowBotH = Math.max(64, (h - lakeBot) * 0.72);    // 下排可用高度
-
+    var p = projection(w, h, area);
+    var R = MAP_R * p.scale * 1.02;              // 与游戏里六个维度的相对位置一致
     for (var i = 0; i < order.length; i++) {
       var it = order[i];
       var img = c.dims[it.id];
@@ -180,47 +175,47 @@
       if (e <= 0.002) continue;
       var a = Math.min(1, e * 1.6);
 
-      var slot = SLOTS[it.id] || { col: 1, row: 0 };
-      var px = colW * (slot.col + 0.5);
-      var isTop = slot.row === 0;
-      var maxH = isTop ? rowTopH : rowBotH;
+      var rad = it.angle * Math.PI / 180;
+      var px = p.ox + (MAP_CX + Math.cos(rad) * R / p.scale) * p.scale;
+      var py = p.oy + (MAP_CY + Math.sin(rad) * R / p.scale) * p.scale;
 
+      var slotW = PAD_W * 1.10 * p.scale;
+      var slotH = PAD_H * 0.90 * p.scale;
       var b = c.box[it.id];
-      var sc = Math.min(maxW / b.w, maxH / b.h);
+      var sc = Math.min(slotW / b.w, slotH / b.h);
       var ks = 0.86 + 0.14 * e;
       var dw = b.w * sc * ks, dh = b.h * sc * ks;
       var dx = px - dw / 2;
-      var rise = (1 - e) * dh * 0.6;
-      var dy = isTop ? (lakeTop * 0.94 - dh + rise) : (lakeBot + (h - lakeBot) * 0.10 + rise);
-
+      var rise = (1 - e) * dh * 0.55;
+      var dy = py - dh * 0.58 + rise;
       var isGlow = glowId && it.id === glowId && e > 0.25;
 
       g.save();
       g.globalAlpha = a;
       if (isGlow) {
-        var gg = g.createRadialGradient(px, dy + dh * 0.6, 4, px, dy + dh * 0.6, Math.max(dw, dh) * 0.62);
-        gg.addColorStop(0, "rgba(255, 214, 102, 0.42)");
-        gg.addColorStop(0.5, "rgba(251, 191, 36, 0.16)");
+        var gg = g.createRadialGradient(px, dy + dh * 0.6, 4, px, dy + dh * 0.6, Math.max(dw, dh) * 0.55);
+        gg.addColorStop(0, "rgba(255, 214, 102, 0.40)");
+        gg.addColorStop(0.5, "rgba(251, 191, 36, 0.15)");
         gg.addColorStop(1, "rgba(251, 191, 36, 0)");
         g.fillStyle = gg;
         g.beginPath();
-        g.ellipse(px, dy + dh * 0.6, Math.max(dw, dh) * 0.52, Math.max(dw, dh) * 0.36, 0, 0, 6.283);
+        g.ellipse(px, dy + dh * 0.6, Math.max(dw, dh) * 0.48, Math.max(dw, dh) * 0.34, 0, 0, 6.283);
         g.fill();
       }
       g.drawImage(img, b.x, b.y, b.w, b.h, dx, dy, dw, dh);
       g.restore();
 
-      // 名字：上排写在楼上方、下排写在楼下方，都不压蓝区
-      var fs2 = Math.max(13, Math.min(19, w * 0.036));
+      // 只写建筑名
+      var fs2 = Math.max(12, Math.min(17, w * 0.032));
       g.save();
       g.globalAlpha = a;
       g.textAlign = "center";
-      g.textBaseline = isTop ? "bottom" : "top";
+      g.textBaseline = "top";
       g.font = "bold " + Math.round(fs2) + "px " + font();
       g.shadowColor = "rgba(255,255,255,.85)";
-      g.shadowBlur = 10;
+      g.shadowBlur = 9;
       g.fillStyle = isGlow ? "#b45309" : "#1f2937";
-      g.fillText(it.name, px, isTop ? (dy - 6) : (dy + dh + 8));
+      g.fillText(it.name, px, dy + dh + 6);
       g.restore();
     }
   }
