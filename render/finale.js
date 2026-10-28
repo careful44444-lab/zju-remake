@@ -264,7 +264,13 @@
     var list = revealOrder(order);
     var pos = list.map(function (it) { return roadPos(it, p); });
     var legs = [];
-    legs.push({ ax: pos[0].x - 260, ay: pos[0].y + 130, bx: pos[0].x, by: pos[0].y, bridge: false,
+    // 入口路：从画面外斜着铺到「南大门」图片里有像素的底边中点
+    var gate0 = list[0];
+    var b0 = c.box[gate0.id];
+    var sc0 = Math.min(PAD_W * 1.10 * p.scale / b0.w, PAD_H * 0.90 * p.scale / b0.h);
+    var dh0 = b0.h * sc0;
+    var gy = pos[0].y - dh0 * 0.58 + dh0;        // 图片底边（不是透明外框）
+    legs.push({ ax: pos[0].x - 260, ay: gy + 130, bx: pos[0].x, by: gy, bridge: false,
                 t0: TL.buildStart - 0.045, dur: 0.046 });
     for (var k = 1; k < list.length; k++) {
       legs.push({ ax: pos[k - 1].x, ay: pos[k - 1].y, bx: pos[k].x, by: pos[k].y,
