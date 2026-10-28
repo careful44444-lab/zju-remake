@@ -102,9 +102,6 @@
     var b = base || BASE;
     var jobs = LAKES.map(function (f) { return loadImage(b + f, f); })
       .concat(ITEMS.map(function (it) { return loadImage(b + it.file, it.file); }))
-      .concat(Object.keys(ROAD_IMG).map(function (k) {
-        return loadImage(b + ROAD_DIR + ROAD_IMG[k], ROAD_IMG[k]).catch(function () { return null; });
-      }));
     return Promise.all(jobs).then(function (imgs) {
       var lakes = imgs.slice(0, LAKES.length);
       var rest = imgs.slice(LAKES.length);
@@ -408,9 +405,7 @@
     opts = opts || {};
     if (!cache) return;
     g.clearRect(0, 0, w, h);
-    drawLakes(g, cache, w, h, area, t);
-    try { drawRoads(g, cache, w, h, area, t, opts.order || ITEMS); } catch (e) {}
-    drawBuildings(g, cache, w, h, area, t, spatialOrder(opts.order || ITEMS), opts.glow || null);
+    drawLakes(g, cache, w, h, area, t);    drawBuildings(g, cache, w, h, area, t, spatialOrder(opts.order || ITEMS), opts.glow || null);
     drawTitle(g, w, h, area, t);
   }
 
@@ -450,9 +445,7 @@
   }
   function front(g, w, h, t, area, opts) {
     if (!cache) return;
-    opts = opts || {};
-    try { drawRoads(g, cache, w, h, area, t, opts.order || ITEMS); } catch (e) {}
-    drawBuildings(g, cache, w, h, area, t, spatialOrder(opts.order || ITEMS), opts.glow || null);
+    opts = opts || {};    drawBuildings(g, cache, w, h, area, t, spatialOrder(opts.order || ITEMS), opts.glow || null);
     drawTitle(g, w, h, area, t);
   }
 
