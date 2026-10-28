@@ -1242,13 +1242,15 @@
       return (tiers[a.id] - tiers[b.id]) || (ITEMS.indexOf(a) - ITEMS.indexOf(b));
     });
     // 净投入 = 从开局档位走到现在档位之间的净花费（升降都按同一张价格表）
+    var __sp = (typeof ZJU.stepPrice === 'function') ? ZJU.stepPrice
+      : function (id, to) { var d = (tiers[id] || 1); return Math.max(1, to - d) * 3; };
     var spend = {};
     var dimsCfg = (window.ZJU && ZJU.DIMS) || [];
     for (var di = 0; di < dimsCfg.length; di++) {
       var dc = dimsCfg[di];
       var init = dc.init || 1, cur = (state.tiers || tiers || {})[dc.id] || 1, sum = 0;
-      if (cur > init) { for (var k = init + 1; k <= cur; k++) sum += ZJU.stepPrice(dc.id, k); }
-      else if (cur < init) { for (var k2 = cur + 1; k2 <= init; k2++) sum -= ZJU.stepPrice(dc.id, k2); }
+      if (cur > init) { for (var k = init + 1; k <= cur; k++) sum += __sp(dc.id, k); }
+      else if (cur < init) { for (var k2 = cur + 1; k2 <= init; k2++) sum -= __sp(dc.id, k2); }
       spend[dc.id] = sum;
     }
     if (window.__FIN_DBG) console.log("spend", JSON.stringify(spend), "cur", JSON.stringify(state.tiers), "init", JSON.stringify(dimsCfg.map(function(d){return d.init;})));
