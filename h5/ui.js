@@ -917,7 +917,8 @@
     sel = null;
     if (Track) Track.setProfile({ year: state.grade });
     trackStart(mode);
-    show('game');
+    if (window.ZJUAudio) ZJUAudio.startBgm();
+  show('game');
     scene.resize();
     refresh();
     setTimeout(function () { $('hint').style.opacity = 1; }, 100);
