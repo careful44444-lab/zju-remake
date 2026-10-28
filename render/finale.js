@@ -264,7 +264,7 @@
     var list = revealOrder(order);
     var pos = list.map(function (it) { return roadPos(it, p); });
     var legs = [];
-    legs.push({ ax: -140, ay: pos[0].y + 60, bx: pos[0].x, by: pos[0].y, bridge: false,
+    legs.push({ ax: pos[0].x - 260, ay: pos[0].y + 130, bx: pos[0].x, by: pos[0].y, bridge: false,
                 t0: TL.buildStart - 0.045, dur: 0.046 });
     for (var k = 1; k < list.length; k++) {
       legs.push({ ax: pos[k - 1].x, ay: pos[k - 1].y, bx: pos[k].x, by: pos[k].y,
@@ -281,25 +281,7 @@
       } else {
         var br = c.roads.bridge, pier = c.roads.pier;
         var deckBox = { x: 0, y: DECK.y, w: br.img.width, h: DECK.h };
-        lay(g, br.img, deckBox, p, L.ax, L.ay, L.bx, L.by, prog, 160 * p.scale);
-        if (pier) {
-          var dx2 = L.bx - L.ax, dy2 = L.by - L.ay;
-          var len2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
-          var rot2 = Math.atan2(dy2, dx2) + ANG;
-          var dwB = 160 * p.scale;
-          var dhB = dwB * DECK.h / br.img.width;
-          var cnt = Math.max(1, Math.floor(len2 / 86));
-          var pb = pier.box;
-          var pw = 22 * p.scale, ph = pw * pb.h / pb.w;
-          g.save();
-          g.translate(L.ax, L.ay);
-          g.rotate(rot2);
-          for (var j2 = 1; j2 <= cnt; j2++) {
-            var kk = ((j2 / (cnt + 1)) * prog) * (len2 + dwB * 0.25);
-            g.drawImage(pier.img, pb.x, pb.y, pb.w, pb.h, kk - pw / 2, dhB * 0.02, pw, ph);
-          }
-          g.restore();
-        }
+        lay(g, br.img, deckBox, p, L.ax, L.ay, L.bx, L.by, prog, 240 * p.scale);
       }
     }
   }
