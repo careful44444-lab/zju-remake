@@ -69,6 +69,16 @@ if (cfgJson) {
   var fi = html.indexOf("<script>");
   html = html.slice(0, fi) + cfgTag + "\n" + html.slice(fi);
   console.log("已内联数值设置（data/config-edit.json）");
+
+// 把音乐模块也打进单文件（game/song.js 与 game/audio.js）
+["game/song.js", "game/audio.js"].forEach(function (rel) {
+  var fp = path.join(root, rel);
+  if (!fs.existsSync(fp)) return;
+  var code = fs.readFileSync(fp, "utf8");
+  html = html.replace("</head>", "<script>\n" + code + "\n<\/script>\n</head>");
+  console.log("已内联 " + rel);
+});
+
 }
 // 彩蛋素材：单文件版没有 assets 目录，直接把图内联成 data URL
 (function () {
