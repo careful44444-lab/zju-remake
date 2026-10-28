@@ -591,11 +591,17 @@
     $("svTitle").textContent = SURVEY.outro || "谢谢";
     $("svBody").innerHTML = "";
     $("svSkip").style.display = "none";
-    $("svNext").textContent = "看一眼真实的紫金港";
-    $("svNext").onclick = function () {
+    if (skipped > 0) {
+      // 有跳过的题：不给彩蛋入口
+      $("svNext").textContent = "回到结算";
       $("svNext").onclick = svNextHandler;
-      playFinale();                      // 彩蛋：从结算画面渐变到真实地标
-    };
+    } else {
+      $("svNext").textContent = "看一眼真实的紫金港";
+      $("svNext").onclick = function () {
+        $("svNext").onclick = svNextHandler;
+        playFinale();
+      };
+    }
   }
 
   function svNextHandler() { nextSurvey(false); }
@@ -680,6 +686,12 @@
 
   /* ----------------------------- 撤销 ----------------------------- */
   function undo() {
+    // 只允许撤销本回合内的操作
+    var h = (state.history && state.history[state.history.length - 1]) || null;
+    if (h && h.round !== undefined && state.round !== undefined && h.round !== state.round) {
+      toast('只能撤销本回合的操作');
+      return;
+    }
     var r = Z.undo(state);
     if (!r.ok) { toast(r.msg); return; }
     sfxTap();
