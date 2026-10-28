@@ -827,7 +827,7 @@ http.createServer(function (req, res) {
     });
     res.end(buf);
   });
-}).listen(port, '0.0.0.0', function () {
+}).listen(port, function () {   // 不指定 host = 双栈（IPv4 + IPv6），隧道用 localhost 也能连上
   console.log('');
   console.log('  游戏        http://127.0.0.1:' + port + '/h5/');
   console.log('  带上报游戏  http://127.0.0.1:' + port + '/play      ← 自己玩 / 发给别人都用这个');

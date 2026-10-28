@@ -94,7 +94,7 @@ function loadCfg() {
 function startNamed(exe, cfg) {
   var host = (cfg.hostname || "").replace(/^https?:\/\//, "").replace(/\/$/, "");
   console.log("启动固定隧道 →  " + (host ? "https://" + host : "(域名未填)"));
-  var child = spawn(exe, ["tunnel", "--no-autoupdate", "run", "--token", cfg.token], {
+  var child = spawn(exe, ["tunnel", "--no-autoupdate", "--protocol", "http2", "run", "--token", cfg.token], {
     stdio: ["ignore", "pipe", "pipe"]
   });
   try {
@@ -130,7 +130,7 @@ function startNamed(exe, cfg) {
 
 function start(exe) {
   console.log('启动隧道：' + exe + '  →  http://127.0.0.1:' + port);
-  var child = spawn(exe, ['tunnel', '--url', 'http://127.0.0.1:' + port, '--no-autoupdate'], {
+  var child = spawn(exe, ['tunnel', '--no-autoupdate', '--protocol', 'http2', '--url', 'http://127.0.0.1:' + port], {
     stdio: ['ignore', 'pipe', 'pipe']
   });
   var printed = false;
