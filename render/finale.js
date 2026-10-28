@@ -321,6 +321,7 @@
   }
 
   function drawBuildings(g, c, w, h, area, t, order, glowId) {
+    order = spatialOrder(order);      // 唯一名次来源：顺时针，谁传进来都按这个排
     var p = projection(w, h, area);
     var R = MAP_R * p.scale * 1.02;              // 与游戏里六个维度的相对位置一致
     for (var i = 0; i < order.length; i++) {
