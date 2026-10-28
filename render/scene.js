@@ -627,10 +627,10 @@
   Scene.prototype.drawTrack = function (p, t) {
     var ctx = this.ctx;
     ctx.save();
-    ctx.strokeStyle = P.css([190, 96, 82], 0.85);
+    ctx.strokeStyle = 'rgba(190,96,82,0.85)';
     ctx.lineWidth = 16 + t * 1.5;
     ctx.beginPath(); ctx.ellipse(p.x, p.y + 30, 94, 42, 0, 0, 6.283); ctx.stroke();
-    ctx.strokeStyle = P.css([255, 255, 255], 0.5);
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.ellipse(p.x, p.y + 30, 94, 42, 0, 0, 6.283); ctx.stroke();
     ctx.restore();
