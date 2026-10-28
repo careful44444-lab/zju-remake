@@ -1224,13 +1224,21 @@
     var order = ITEMS.slice().sort(function (a, b) {
       return (tiers[a.id] - tiers[b.id]) || (ITEMS.indexOf(a) - ITEMS.indexOf(b));
     });
-    var glow = null;
-    if (maxT > minT) {
-      for (var gi = 0; gi < order.length; gi++) {
-        if (tiers[order[gi].id] === maxT) { glow = order[gi].id; break; }
-      }
+    // 净投入 = 升档花的 - 降档退的；最高的那个维度点亮
+    var spend = {};
+    for (var si = 0; si < ITEMS.length; si++) spend[ITEMS[si].id] = 0;
+    var ops = (state && state.ops) || [];
+    for (var oi = 0; oi < ops.length; oi++) {
+      var o = ops[oi];
+      if (!o || !spend.hasOwnProperty(o.id)) continue;
+      spend[o.id] += (o.cost || 0) - (o.refund || 0);
     }
-    finaleState = { order: order, glow: glow, tiers: tiers, t: 0 };
+    var glow = null, best = 0;
+    for (var gi = 0; gi < order.length; gi++) {
+      var sid = order[gi].id;
+      if (spend[sid] > best) { best = spend[sid]; glow = sid; }
+    }
+    finaleState = { order: order, glow: glow, tiers: tiers, spend: spend, t: 0 };
 
     var D = 14000;                               // 总时长：14 秒
 

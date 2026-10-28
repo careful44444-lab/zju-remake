@@ -42,7 +42,8 @@
     lakeEnd: 0.26,
     contentStart: 0.27, contentEnd: 0.32,
     buildStart: 0.28, buildGap: 0.106, buildDur: 0.090,
-    title: 0.93
+    title: 0.93,
+    glowAt: 0.90
   };
   // 四张湖图各自的淡入起点 / 时长
   var LAKE_TL = [[0.01, 0.07], [0.08, 0.07], [0.15, 0.07], [0.21, 0.06]];
@@ -344,11 +345,14 @@
       var dx = px - dw / 2;
       var rise = (1 - e2) * dh * 0.55;
       var dy = py - dh * 0.58 + rise;
-      var isGlow = glowId && it.id === glowId && e2 > 0.4;
+      var gT = clamp01((t - TL.glowAt) / 0.06);          // 全部建筑落地后才点亮
+      var isGlow = glowId && it.id === glowId && gT > 0;
 
       g.save();
       g.globalAlpha = a;
       if (isGlow) {
+        var ga = g.globalAlpha;
+        g.globalAlpha = ga * gT;
         var gg = g.createRadialGradient(px, dy + dh * 0.6, 4, px, dy + dh * 0.6, Math.max(dw, dh) * 0.55);
         gg.addColorStop(0, "rgba(255, 214, 102, 0.40)");
         gg.addColorStop(0.5, "rgba(251, 191, 36, 0.15)");
@@ -370,7 +374,7 @@
       g.font = "bold " + Math.round(fs2) + "px " + font();
       g.shadowColor = "rgba(255,255,255,.85)";
       g.shadowBlur = 9;
-      g.fillStyle = isGlow ? "#b45309" : "#1f2937";
+      g.fillStyle = (isGlow && gT > 0.5) ? "#b45309" : "#1f2937";
       g.fillText(it.name, px, dy + dh + 6);
       g.restore();
     }
