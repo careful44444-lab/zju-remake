@@ -342,7 +342,7 @@
       var it = order[i];
       var img = c.dims[it.id];
       if (!img) continue;
-      var e = localAt(t, i);
+      var e = localAt(t, Math.max(0, CW.indexOf(it.id)));   // 名次只认 id，防止循环顺序错位
       if (e <= 0.002) continue;
       var e2 = Math.max(0, (e - 0.52) / 0.48);   // 0.52 起才开始升，前一半旧剪影原地不动
       var a = Math.min(1, e2 * 2.4);
