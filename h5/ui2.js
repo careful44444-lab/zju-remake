@@ -593,14 +593,18 @@
     $("svTitle").textContent = SURVEY.outro || "谢谢";
     $("svBody").innerHTML = "";
     $("svSkip").style.display = "none";
+    var q = $("svQuit"); if (q) q.style.display = "none";   // 结语界面不再显示「不答了」
     if (skipped > 0) {
       // 有跳过的题：不给彩蛋入口
       $("svNext").textContent = "回到结算";
-      $("svNext").onclick = svNextHandler;
+      $("svNext").onclick = function () {
+        if (Track && Track.action) Track.action({ type: "survey_quit", answered: Object.keys(svAns).length });
+        show("result");
+      };
     } else {
       $("svNext").textContent = "看一眼真实的紫金港";
       $("svNext").onclick = function () {
-        $("svNext").onclick = svNextHandler;
+        $("svNext").onclick = null;
         playFinale();
       };
     }
