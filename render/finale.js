@@ -248,16 +248,22 @@
     var dx = bx - ax, dy = by - ay;
     var len = Math.sqrt(dx * dx + dy * dy);
     if (len < 4) return;
-    var ex = ext || 6;
     var ux = dx / len, uy = dy / len;
-    var dh = dw * box.h / box.w;
+    var dh = dw * box.h / box.w;             // 保持素材原始比例，不拉伸
     var rot = Math.atan2(dy, dx) + ANG;
-    var Lp = len * prog + ex * 2;
-    g.save();
-    g.translate(ax - ux * ex, ay - uy * ex);
-    g.rotate(rot);
-    g.drawImage(asset, box.x, box.y, box.w, box.h, 0, -dh * 0.55, Lp, dh);
-    g.restore();
+    var step = dw * 0.70;                    // 30% 重叠，接缝藏在上一段底下
+    var n = Math.max(1, Math.ceil((len + (ext || 0) * 2) / step));
+    var shown = prog * n;
+    for (var i = 0; i < n; i++) {
+      if (i > shown) break;
+      var cx = ax - ux * (ext || 0) + ux * i * step;
+      var cy = ay - uy * (ext || 0) + uy * i * step;
+      g.save();
+      g.translate(cx, cy);
+      g.rotate(rot);
+      g.drawImage(asset, box.x, box.y, box.w, box.h, 0, -dh * 0.55, dw, dh);
+      g.restore();
+    }
   }
   function baseOf(it, p, c) {
     var R = MAP_R * p.scale * 1.02;
