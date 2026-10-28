@@ -125,26 +125,25 @@
   }
 
   /* 湖图变换：t=0 时「图1 的湖」刚好盖住游戏的湖；t 到 lakeEnd 时铺满整屏 */
-  function lakeTransform(c, w, h, area, t) {
+  /* 固定变换：全程不移动、不缩放，四张图永远像素级重合。
+   * 缩放取「铺满整屏」——图1 的湖会略大于游戏里的湖（几何上无法两全），
+   * 但湖心始终停在游戏湖的中心，看起来就是「湖从原地长出来」。 */
+  function lakeTransform(c, w, h, area) {
     var p = projection(w, h, area);
     var cx = p.ox + MAP_CX * p.scale;
     var cy = p.oy + MAP_CY * p.scale;
-    var rx = LAKE_RX * p.scale, ry = LAKE_RY * p.scale;
 
     var masterW = c.lakes[0].width, masterH = c.lakes[0].height;
     var lb = c.lakeBox;
     var bcx = lb.x + lb.w / 2, bcy = lb.y + lb.h / 2;
 
-    var sLake = Math.max((2 * rx) / lb.w, (2 * ry) / lb.h);
-    var sCover = Math.max(w / masterW, h / masterH);
-    // 先让图1 稳稳盖住游戏的湖（t<0.13 不动），再推开到铺满
-    var s = lerp(sLake, sCover, ease(clamp01((t - 0.13) / (TL.lakeEnd - 0.13))));
-
-    return { s: s, x: cx - bcx * s, y: cy - bcy * s, w: masterW * s, h: masterH * s, cx: cx, cy: cy };
+    var s = Math.max(w / masterW, h / masterH, (2 * LAKE_RX * p.scale) / lb.w);
+    return { s: s, x: cx - bcx * s, y: cy - bcy * s, w: masterW * s, h: masterH * s,
+      cx: cx, cy: cy, rx: lb.w * s / 2, ry: lb.h * s / 2 };
   }
 
   function drawLakes(g, c, w, h, area, t) {
-    var T = lakeTransform(c, w, h, area, t);
+    var T = lakeTransform(c, w, h, area);
     for (var i = 0; i < c.lakes.length; i++) {
       var a = ramp(t, LAKE_TL[i][0], LAKE_TL[i][1]);
       if (a <= 0.002) continue;
@@ -154,14 +153,25 @@
     g.globalAlpha = 1;
   }
 
+  /* 六栋楼固定站位：只落在湖面上下的绿地里，绝不压到中间的蓝区 */
+  var SLOTS = {
+    move: { col: 0, row: 0 }, food: { col: 1, row: 0 }, dorm: { col: 2, row: 0 },
+    culture: { col: 0, row: 1 }, sport: { col: 1, row: 1 }, study: { col: 2, row: 1 }
+  };
+
   /* 某栋建筑在当前时刻的进度（0=还没开始，1=落位） */
   function localAt(t, rank) {
     return clamp01((t - TL.buildStart - rank * TL.buildGap) / TL.buildDur);
   }
 
   function drawBuildings(g, c, w, h, area, t, order, glowId) {
-    var p = projection(w, h, area);
-    var R = MAP_R * p.scale * 0.80;
+    var T = lakeTransform(c, w, h, area);
+    var lakeTop = T.cy - T.ry, lakeBot = T.cy + T.ry;   // 蓝区的上下边界
+    var colW = w / 3;
+    var maxW = colW * 0.86;
+    var rowTopH = Math.max(64, lakeTop * 0.68);          // 上排可用高度
+    var rowBotH = Math.max(64, (h - lakeBot) * 0.72);    // 下排可用高度
+
     for (var i = 0; i < order.length; i++) {
       var it = order[i];
       var img = c.dims[it.id];
@@ -170,46 +180,47 @@
       if (e <= 0.002) continue;
       var a = Math.min(1, e * 1.6);
 
-      var rad = it.angle * Math.PI / 180;
-      var px = p.ox + (MAP_CX + Math.cos(rad) * R / p.scale) * p.scale;
-      var py = p.oy + (MAP_CY + Math.sin(rad) * R / p.scale) * p.scale;
+      var slot = SLOTS[it.id] || { col: 1, row: 0 };
+      var px = colW * (slot.col + 0.5);
+      var isTop = slot.row === 0;
+      var maxH = isTop ? rowTopH : rowBotH;
 
-      var slotW = PAD_W * 1.15 * p.scale;
-      var slotH = PAD_H * 0.88 * p.scale;
       var b = c.box[it.id];
-      var sc = Math.min(slotW / b.w, slotH / b.h);
-      var bw = b.w * sc, bh = b.h * sc;
-
-      var rise = (1 - e) * bh * 0.55;
-      var ks = 0.84 + 0.16 * e;
-      var dw = bw * ks, dh = bh * ks;
+      var sc = Math.min(maxW / b.w, maxH / b.h);
+      var ks = 0.86 + 0.14 * e;
+      var dw = b.w * sc * ks, dh = b.h * sc * ks;
       var dx = px - dw / 2;
-      var dy = py - dh * 0.60 + rise;   // 建筑压在台基上，别空出半张白卡
+      var rise = (1 - e) * dh * 0.6;
+      var dy = isTop ? (lakeTop * 0.94 - dh + rise) : (lakeBot + (h - lakeBot) * 0.10 + rise);
 
       var isGlow = glowId && it.id === glowId && e > 0.25;
 
       g.save();
       g.globalAlpha = a;
       if (isGlow) {
-        var gg = g.createRadialGradient(px, dy + dh * 0.62, 4, px, dy + dh * 0.62, Math.max(dw, dh) * 0.95);
-        gg.addColorStop(0, "rgba(255, 214, 102, 0.80)");
-        gg.addColorStop(0.45, "rgba(251, 191, 36, 0.34)");
+        var gg = g.createRadialGradient(px, dy + dh * 0.6, 4, px, dy + dh * 0.6, Math.max(dw, dh) * 0.62);
+        gg.addColorStop(0, "rgba(255, 214, 102, 0.42)");
+        gg.addColorStop(0.5, "rgba(251, 191, 36, 0.16)");
         gg.addColorStop(1, "rgba(251, 191, 36, 0)");
         g.fillStyle = gg;
         g.beginPath();
-        g.ellipse(px, dy + dh * 0.58, Math.max(dw, dh) * 0.46, Math.max(dw, dh) * 0.34, 0, 0, 6.283);
+        g.ellipse(px, dy + dh * 0.6, Math.max(dw, dh) * 0.52, Math.max(dw, dh) * 0.36, 0, 0, 6.283);
         g.fill();
       }
       g.drawImage(img, b.x, b.y, b.w, b.h, dx, dy, dw, dh);
-      if (isGlow) {
-        g.globalCompositeOperation = "lighter";
-        g.globalAlpha = a * 0.26;
-        var g2 = g.createRadialGradient(px, dy + dh * 0.5, 2, px, dy + dh * 0.5, Math.max(dw, dh) * 0.62);
-        g2.addColorStop(0, "rgba(255, 205, 90, 0.9)");
-        g2.addColorStop(1, "rgba(255, 205, 90, 0)");
-        g.fillStyle = g2;
-        g.fillRect(dx - 20, dy - 20, dw + 40, dh + 40);
-      }
+      g.restore();
+
+      // 名字：上排写在楼上方、下排写在楼下方，都不压蓝区
+      var fs2 = Math.max(13, Math.min(19, w * 0.036));
+      g.save();
+      g.globalAlpha = a;
+      g.textAlign = "center";
+      g.textBaseline = isTop ? "bottom" : "top";
+      g.font = "bold " + Math.round(fs2) + "px " + font();
+      g.shadowColor = "rgba(255,255,255,.85)";
+      g.shadowBlur = 10;
+      g.fillStyle = isGlow ? "#b45309" : "#1f2937";
+      g.fillText(it.name, px, isTop ? (dy - 6) : (dy + dh + 8));
       g.restore();
     }
   }
@@ -226,13 +237,9 @@
     g.shadowColor = "rgba(15,23,42,.35)";
     g.shadowBlur = 10;
 
-    g.fillStyle = "#b45309";
-    g.font = "700 " + Math.round(fs * 0.66) + "px " + font();
-    g.fillText(KICKER, w / 2, top + fs * 1.9);
-
     g.fillStyle = "#0f172a";
     g.font = "bold " + Math.round(fs * 1.5) + "px " + font();
-    g.fillText(TITLE, w / 2, top + fs * 3.5);
+    g.fillText(TITLE, w / 2, top + fs * 2.2);
 
     g.shadowBlur = 0;
     g.globalAlpha = a * 0.72;

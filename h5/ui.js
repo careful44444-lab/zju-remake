@@ -1131,7 +1131,7 @@
     var ca = 0;
     if (t >= TL.contentStart) ca = Math.min(1, (t - TL.contentStart) / (TL.contentEnd - TL.contentStart));
     ca = 1 - Math.pow(1 - ca, 3);
-    scene.contentAlpha = ca;
+    scene.contentAlpha = 0;   // 台基都在湖面上，与「建筑不压蓝区」冲突，彩蛋期间不显示地块
     var zm = {};
     finaleState.order.forEach(function (it, i) {
       var e = ZJUFinale.localAt(t, i);
@@ -1236,6 +1236,17 @@
       // 两层都画在游戏画布上：湖在地块之下，真建筑在地块之上
       scene.backdrop = function (g, W, H) {
         ZJUFinale.backdrop(g, W, H, finaleState ? finaleState.t : 0, mapRect());
+      };
+      // 建筑起来的那块地，白色台基连带淡出
+      scene.zoneAlpha = function (d) {
+        if (!finaleState) return 1;
+        var idx = -1, tiers = finaleState.tiers || {};
+        for (var i = 0; i < finaleState.order.length; i++) {
+          if (finaleState.order[i].id === d.id) { idx = i; break; }
+        }
+        if (idx < 0) return 1;
+        var e = ZJUFinale.localAt(finaleState.t, idx);
+        return 1 - Math.min(1, Math.max(0, (e - 0.15)) / 0.5);
       };
       scene.overlay = function (g, W, H) {
         ZJUFinale.front(g, W, H, finaleState ? finaleState.t : 0, mapRect(), finaleState);

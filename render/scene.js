@@ -242,7 +242,13 @@
     var order = this.dims.slice();
     ctx.save();
     ctx.globalAlpha = (this.contentAlpha == null ? 1 : this.contentAlpha);
-    for (var i = 0; i < order.length; i++) this.drawZone(order[i], pal);
+    for (var i = 0; i < order.length; i++) {
+      var zA = this.zoneAlpha ? this.zoneAlpha(order[i]) : 1;
+      if (zA <= 0.01) continue;                    // 彩蛋里被真建筑替换掉的地块直接不画
+      ctx.globalAlpha = (this.contentAlpha == null ? 1 : this.contentAlpha) * zA;
+      this.drawZone(order[i], pal);
+    }
+    ctx.globalAlpha = (this.contentAlpha == null ? 1 : this.contentAlpha);
     this.drawSynergy(pal);
     ctx.restore();
 
