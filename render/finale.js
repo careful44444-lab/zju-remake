@@ -48,7 +48,6 @@
   // 四张湖图各自的淡入起点 / 时长
   var LAKE_TL = [[0.01, 0.07], [0.08, 0.07], [0.15, 0.07], [0.21, 0.06]];
 
-  var ROAD_DIR = "roads2/";
   var ROAD_IMG = { road: "road1.png", bridge: "bridge1.png", pier: "pier.png" };
   var ANG = 0.46;
   var DECK = { y: 54, h: 41 };
@@ -241,28 +240,6 @@
     return { x: p.ox + MAP_CX * p.scale + Math.cos(rad) * R,
              y: p.oy + MAP_CY * p.scale + Math.sin(rad) * R };
   }
-  function lay(g, asset, box, p, ax, ay, bx, by, prog, dw, ext) {
-    if (!asset || prog <= 0) return;
-    var dx = bx - ax, dy = by - ay;
-    var len = Math.sqrt(dx * dx + dy * dy);
-    if (len < 4) return;
-    var ux = dx / len, uy = dy / len;
-    var dh = dw * box.h / box.w;             // 保持素材原始比例，不拉伸
-    var rot = Math.atan2(dy, dx) + ANG;
-    var step = dw * 0.70;                    // 30% 重叠，接缝藏在上一段底下
-    var n = Math.max(1, Math.ceil((len + (ext || 0) * 2) / step));
-    var shown = prog * n;
-    for (var i = 0; i < n; i++) {
-      if (i > shown) break;
-      var cx = ax - ux * (ext || 0) + ux * i * step;
-      var cy = ay - uy * (ext || 0) + uy * i * step;
-      g.save();
-      g.translate(cx, cy);
-      g.rotate(rot);
-      g.drawImage(asset, box.x, box.y, box.w, box.h, 0, -dh * 0.55, dw, dh);
-      g.restore();
-    }
-  }
   // 出场顺序：南大门起顺时针（不再按档位先低后高）
   var CW = ["move", "food", "dorm", "study", "sport", "culture"];
   function spatialOrder(list) {
@@ -271,48 +248,6 @@
     var out = [];
     for (var k = 0; k < CW.length; k++) if (by[CW[k]]) out.push(by[CW[k]]);
     return out.length ? out : list;
-  }
-  function baseOf(it, p, c) {
-    var R = MAP_R * p.scale * 1.02;
-    var rad = it.angle * Math.PI / 180;
-    var px = p.ox + MAP_CX * p.scale + Math.cos(rad) * R;
-    var py = p.oy + MAP_CY * p.scale + Math.sin(rad) * R;
-    var b = c.box[it.id];
-    if (!b) return { x: px, y: py };
-    var sc = Math.min(PAD_W * 1.10 * p.scale / b.w, PAD_H * 0.90 * p.scale / b.h);
-    return { x: px, y: py - b.h * sc * 0.58 + b.h * sc };   // 图片有像素的底边中点
-  }
-  function drawRoads(g, c, w, h, area, t, order) {
-    return;   // 已放弃铺路方案：彩蛋只做「启真湖 + 建筑替换」
-    if (!c.roads || !c.roads.road) return;
-    var p = projection(w, h, area);
-    var byId = {};
-    for (var i = 0; i < ITEMS.length; i++) byId[ITEMS[i].id] = ITEMS[i];
-    // 顺时针：南大门 → 食 → 住 → 学 → 体 → 文 → 回南大门
-    var SEQ = ["move", "food", "dorm", "study", "sport", "culture"];
-    var list = [];
-    for (var s = 0; s < SEQ.length; s++) {
-      if (byId[SEQ[s]] && c.box[SEQ[s]]) list.push(byId[SEQ[s]]);
-    }
-    if (list.length < 2) return;
-    var base = list.map(function (it) { return baseOf(it, p, c); });
-    var legs = [];
-    legs.push({ a: { x: base[0].x - 300, y: base[0].y + 150 }, b: base[0],
-                t0: TL.buildStart - 0.045, dur: 0.046 });
-    for (var k = 1; k < list.length; k++) {
-      legs.push({ a: base[k - 1], b: base[k],
-                  t0: TL.buildStart + k * TL.buildGap - 0.030, dur: 0.044 });
-    }
-    legs.push({ a: base[list.length - 1], b: base[0],
-                t0: TL.buildStart + (list.length - 1) * TL.buildGap + 0.050, dur: 0.050 });
-    var rd = c.roads.road;
-    var bw = 112 * p.scale;
-    for (var n = 0; n < legs.length; n++) {
-      var L2 = legs[n];
-      var prog = ramp(t, L2.t0, L2.dur);
-      if (prog <= 0) continue;
-      lay(g, rd.img, rd.box, p, L2.a.x, L2.a.y, L2.b.x, L2.b.y, prog, bw, 6);
-    }
   }
   function localAt(t, rank) {
     return clamp01((t - TL.buildStart - rank * TL.buildGap) / TL.buildDur);
