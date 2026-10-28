@@ -1170,6 +1170,7 @@
   }
 
   function closeFinale() {
+    if (window.ZJUAudio) { ZJUAudio.stopSong(); ZJUAudio.startBgm(); }
     var box = $('finale');
     if (scene) { scene.backdrop = null; scene.overlay = null; }
     document.body.classList.remove('finale-on');
@@ -1194,6 +1195,7 @@
   }
 
   function playFinale() {
+    if (window.ZJUAudio) { ZJUAudio.stopBgm(); ZJUAudio.startSong(96); }
     if (finaleBusy || !window.ZJUFinale) return;
     var box = $('finale');
     if (!box) return;
