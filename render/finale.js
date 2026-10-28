@@ -41,7 +41,7 @@
   var TL = {
     lakeEnd: 0.26,
     contentStart: 0.27, contentEnd: 0.32,
-    buildStart: 0.38, buildGap: 0.078, buildDur: 0.048,
+    buildStart: 0.38, buildGap: 0.092, buildDur: 0.064,
     title: 0.93
   };
   // 四张湖图各自的淡入起点 / 时长
@@ -271,11 +271,11 @@
     var pos = list.map(function (it) { return roadPos(it, p); });
     var legs = [];
     legs.push({ ax: -140, ay: pos[0].y + 60, bx: pos[0].x, by: pos[0].y, bridge: false,
-                t0: TL.buildStart - 0.045, dur: 0.028 });
+                t0: TL.buildStart - 0.045, dur: 0.046 });
     for (var k = 1; k < list.length; k++) {
       legs.push({ ax: pos[k - 1].x, ay: pos[k - 1].y, bx: pos[k].x, by: pos[k].y,
                   bridge: !isAdjacent(list[k - 1].id, list[k].id),
-                  t0: TL.buildStart + k * TL.buildGap - 0.030, dur: 0.026 });
+                  t0: TL.buildStart + k * TL.buildGap - 0.030, dur: 0.044 });
     }
     for (var i = 0; i < legs.length; i++) {
       var L = legs[i];
@@ -403,7 +403,7 @@
     o = o || {};
     var canvas = o.canvas;
     var w = o.w, h = o.h, dpr = o.dpr || 1;
-    var duration = o.duration || 14000;
+    var duration = o.duration || 20000;
     var g = canvas.getContext("2d");
     var t0 = 0;
     canvas.width = Math.round(w * dpr);
