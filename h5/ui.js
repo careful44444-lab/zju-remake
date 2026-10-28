@@ -1171,7 +1171,7 @@
   }
 
   function closeFinale() {
-    if (window.ZJUAudio) { ZJUAudio.stopSong(); ZJUAudio.startBgm(); }
+    try { if (window.ZJUAudio) { ZJUAudio.stopSong(); ZJUAudio.startBgm(); } } catch (e) {}
     var box = $('finale');
     if (scene) { scene.backdrop = null; scene.overlay = null; }
     document.body.classList.remove('finale-on');
@@ -1196,7 +1196,6 @@
   }
 
   function playFinale() {
-    if (window.ZJUAudio) { ZJUAudio.stopBgm(); ZJUAudio.startSong(96); }
     if (finaleBusy || !window.ZJUFinale) return;
     var box = $('finale');
     if (!box) return;
@@ -1211,6 +1210,7 @@
 
     box.setAttribute('aria-hidden', 'false');
     box.classList.add('on');
+    try { if (window.ZJUAudio) { ZJUAudio.stopBgm(); ZJUAudio.startSong(96); } } catch (e) { console.warn('[audio]', e); }
     document.body.classList.add('finale-on');
     hideGameUI(true);                            // 藏掉 HUD / 回合条 / 底部条
     if (scene && scene.resize) scene.resize();   // 同步，避免首帧用旧尺寸导致缩放跳变
