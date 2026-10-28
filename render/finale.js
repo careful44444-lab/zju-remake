@@ -30,7 +30,7 @@
   var LAKES = ["lake1.png", "lake2.png", "lake3.png", "lake4.png"];
 
   var KICKER = "改造计划 · 彩蛋";
-  var TITLE = "这就是紫金港";
+  var TITLE = "我们的紫金港";
   var FOOT = "同人作品 · 与浙江大学官方无关";
 
   // 与 render/scene.js 完全一致的地图投影
