@@ -1195,7 +1195,21 @@
     finaleState = null;
   }
 
+  window.addEventListener('error', function (ev) {
+    try {
+      var d = document.getElementById('__FIN_ERRBAR');
+      if (!d) { d = document.createElement('div'); d.id = '__FIN_ERRBAR';
+        d.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:99999;background:#b91c1c;color:#fff;font:12px/1.5 monospace;padding:6px 8px;white-space:pre-wrap';
+        document.body.appendChild(d); }
+      d.textContent = 'JS ERROR: ' + (ev.message || ev.error) + ' @ ' + (ev.filename||'').split('/').pop() + ':' + (ev.lineno||'');
+    } catch (e) {}
+  });
   function playFinale() {
+    // __FIN_SAFE：先让遮罩出现，任何后续异常都不至于卡在上一屏
+    try { var fb = $('finale'); if (fb) fb.classList.add('on');
+          document.body.classList.add('finale-on');
+          ['hud','roundBar','itemBar','strip'].forEach(function(id){ var el=$(id); if(el) el.style.opacity='0'; });
+    } catch (e) {}
     if (finaleBusy || !window.ZJUFinale) return;
     var box = $('finale');
     if (!box) return;
