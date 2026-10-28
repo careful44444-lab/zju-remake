@@ -249,15 +249,20 @@
     var len = Math.sqrt(dx * dx + dy * dy);
     if (len < 6) return;
     var dh = dw * box.h / box.w;
+    var step = dw * 0.86;
+    var nSeg = Math.max(1, Math.round(len / step));
+    var shown = prog * nSeg;
     var rot = Math.atan2(dy, dx) + ANG;
-    var L = len * prog + dw * 0.5;
-    g.save();
-    g.translate(ax, ay);
-    g.rotate(rot);
-    // 整段一次拉伸：直段拉伸不会变形，也就没有拼缝
-    g.drawImage(asset, box.x, box.y, box.w, box.h,
-                -dw * 0.25, -dh * 0.55, L, dh);
-    g.restore();
+    for (var i = 0; i < nSeg; i++) {
+      if (i > shown) break;
+      var k = i / nSeg;
+      var cx = ax + dx * k, cy = ay + dy * k;
+      var a = (i > shown - 1.3) ? Math.max(0, (shown - i) / 1.3) : 1;
+      g.save(); g.globalAlpha = a;
+      g.translate(cx, cy); g.rotate(rot);
+      g.drawImage(asset, box.x, box.y, box.w, box.h, -dw / 2, -dh * 0.55, dw, dh);
+      g.restore();
+    }
   }
   function drawRoads(g, c, w, h, area, t, order) {
     if (!c.roads || !c.roads.road) return;
@@ -286,26 +291,16 @@
         if (pier) {
           var dx2 = L.bx - L.ax, dy2 = L.by - L.ay;
           var len2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
-          var rot2 = Math.atan2(dy2, dx2) + ANG;
-          var dwB = 160 * p.scale;
-          var dhB = dwB * DECK.h / br.img.width;
-          var cnt = Math.max(1, Math.floor(len2 / 86));
+          var cnt = Math.max(1, Math.floor(len2 / 84));
           var pb = pier.box;
-          var pw = 22 * p.scale, ph = pw * pb.h / pb.w;
-          g.save();
-          g.translate(L.ax, L.ay);
-          g.rotate(rot2);
           for (var j = 1; j <= cnt; j++) {
-            var kk = ((j / (cnt + 1)) * prog) * (len2 + dwB * 0.25);
-            // 桥面底边在 -dhB*0.55 + dhB*0.56 ≈ 0，墩从这里往下长
-            g.drawImage(pier.img, pb.x, pb.y, pb.w, pb.h,
-                        kk - pw / 2, dhB * 0.02, pw, ph);
+            var kk = (j / (cnt + 1)) * prog;
+            var px = L.ax + dx2 * kk, py = L.ay + dy2 * kk;
+            var pw = 26 * p.scale, ph = pw * pb.h / pb.w;
+            g.drawImage(pier.img, pb.x, pb.y, pb.w, pb.h, px - pw / 2, py - ph * 0.05, pw, ph);
           }
-          g.restore();
         }
       }
-    }
-  }      }
     }
   }
   function localAt(t, rank) {
