@@ -580,6 +580,12 @@
     beep(600, 0.05, "sine", 0.02);
   }
 
+  // 问卷一旦点过「回到结算」或进了彩蛋，就不要再出现「还有几个问题想问问你」的入口
+  function hideSurveyEntry() {
+    var b = $("btnSurvey"); if (b) b.style.display = "none";
+    var box = document.querySelector(".ask-box"); if (box) box.style.display = "none";
+  }
+
   function finishSurvey() {
     var answered = 0, skipped = 0;
     SURVEY.questions.forEach(function (q) {
@@ -591,6 +597,7 @@
 
     $("svProgress").textContent = "";
     $("svIntro").style.display = "none";
+    hideSurveyEntry();
     $("svTitle").textContent = SURVEY.outro || "谢谢";
     $("svBody").innerHTML = "";
     $("svSkip").style.display = "none";
@@ -599,6 +606,7 @@
       $("svNext").textContent = "回到结算";
       $("svNext").onclick = function () {
         if (Track && Track.action) Track.action({ type: "survey_quit", answered: Object.keys(svAns).length });
+        hideSurveyEntry();
         show("result");
       };
     } else {
