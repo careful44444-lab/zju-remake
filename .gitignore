@@ -22,3 +22,5 @@ Thumbs.db
 
 # 依赖（本项目零依赖，留着以防以后加）
 node_modules/
+# 截图临时目录（放在系统 TEMP，别进仓库）
+.shots-tmp/
