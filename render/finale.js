@@ -479,6 +479,6 @@
     draw: draw,
     play: play,
     stop: stop,
-    localAt: localAt
+    localAt: localAt, zoneAlphaOf: zoneAlphaOf
   };
 });
