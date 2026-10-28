@@ -1122,9 +1122,58 @@
    * ================================================================== */
 
   var finaleBusy = false;
+  var finaleState = null;
+
+  // 每帧同步给地图：内容淡入 + 单栋矢量建筑淡出 + 文字换名 + 金色强调
+  function setFinaleScene(t) {
+    if (!scene || !window.ZJUFinale) return;
+    var TL = ZJUFinale.TL;
+    var ca = 0;
+    if (t >= TL.contentStart) ca = Math.min(1, (t - TL.contentStart) / (TL.contentEnd - TL.contentStart));
+    ca = 1 - Math.pow(1 - ca, 3);
+    scene.contentAlpha = ca;
+    var zm = {};
+    finaleState.order.forEach(function (it, i) {
+      var e = ZJUFinale.localAt(t, i);
+      zm[it.id] = {
+        zone: 1 - Math.min(1, Math.max(0, (e - 0.42)) / 0.4),   // 真建筑升到一半，矢量建筑才淡出
+        name: e > 0.55 ? it.name : null,          // 文字换成建筑名
+        glow: finaleState.glow === it.id && e > 0.3
+      };
+    });
+    scene.zoneMap = zm;
+  }
+
+  var UI_HIDDEN = ['hud', 'roundBar', 'itemBar', 'strip'];
+  function hideGameUI(on) {
+    UI_HIDDEN.forEach(function (id) {
+      var el = $(id);
+      if (!el) return;
+      if (on) {
+        el.setAttribute('data-fx-op', el.style.opacity || '');
+        el.style.opacity = '0';
+        el.style.pointerEvents = 'none';
+      } else {
+        el.style.opacity = el.getAttribute('data-fx-op') || '';
+        el.style.pointerEvents = '';
+        el.removeAttribute('data-fx-op');
+      }
+    });
+  }
+
+  function resetFinaleScene() {
+    if (!scene) return;
+    scene.contentAlpha = 1;
+    scene.zoneMap = null;
+  }
 
   function closeFinale() {
     var box = $('finale');
+    if (scene) { scene.backdrop = null; scene.overlay = null; }
+    document.body.classList.remove('finale-on');
+    hideGameUI(false);
+    if (scene && scene.resize) { setTimeout(function () { scene.resize(); }, 30); }
+    resetFinaleScene();
     var start = 0;
     function fade(ts) {
       if (!start) start = ts;
@@ -1139,65 +1188,77 @@
     }
     requestAnimationFrame(fade);
     finaleBusy = false;
+    finaleState = null;
   }
 
   function playFinale() {
     if (finaleBusy || !window.ZJUFinale) return;
+    var box = $('finale');
+    if (!box) return;
     finaleBusy = true;
 
-    var box = $('finale');
-    var cb = $('finaleCanvas');
-    // 地图画布的实际矩形：彩蛋用它复刻同一套投影，锚点才落得准
+    // 地图画布的实际矩形：彩蛋复刻同一套投影
     var mapEl = $('map');
-    var mr = mapEl ? mapEl.getBoundingClientRect() : null;
-    var area = mr ? { x: mr.left, y: mr.top, w: mr.width, h: mr.height } : null;
-
-    var w = window.innerWidth;
-    var h = window.innerHeight;
-    var dpr = Math.min(window.devicePixelRatio || 1, 2);
-    cb.width = Math.round(w * dpr);
-    cb.height = Math.round(h * dpr);
-    cb.style.width = '100%';
-    cb.style.height = '100%';
+    var mapRect = function () {
+      var mr = mapEl ? mapEl.getBoundingClientRect() : null;
+      return mr ? { x: mr.left, y: mr.top, w: mr.width, h: mr.height } : null;
+    };
 
     box.setAttribute('aria-hidden', 'false');
     box.classList.add('on');
+    document.body.classList.add('finale-on');
+    hideGameUI(true);                            // 藏掉 HUD / 回合条 / 底部条
+    if (scene && scene.resize) { setTimeout(function () { scene.resize(); }, 30); }
 
-    // 让底层画面停住，别再跟着动
-    if (scene && scene.pause) scene.pause();
-
-    // 调试：?still=1 直接画最终帧（headless 里 rAF 不跑，方便截图核对）
-    var stillM = /[?&]still=([\d.]+)/.exec(location.search);
-    if (stillM) {
-      box.style.opacity = '1';
-      ZJUFinale.load('../assets/finale/').then(function () {
-        var g = cb.getContext('2d');
-        g.setTransform(dpr, 0, 0, dpr, 0, 0);
-        ZJUFinale.draw(g, w, h, Math.min(1, parseFloat(stillM[1])), area);
-      });
-      return;
+    // 档位 → 出场顺序（低→高）＋ 最看重的那一维（金色）
+    var ITEMS = ZJUFinale.ITEMS;
+    var tiers = {}, maxT = 1, minT = 9;
+    ITEMS.forEach(function (it) {
+      var v = (state.tiers && state.tiers[it.id]) || 1;
+      tiers[it.id] = v;
+      if (v > maxT) maxT = v;
+      if (v < minT) minT = v;
+    });
+    var order = ITEMS.slice().sort(function (a, b) {
+      return (tiers[a.id] - tiers[b.id]) || (ITEMS.indexOf(a) - ITEMS.indexOf(b));
+    });
+    var glow = null;
+    if (maxT > minT) {
+      for (var gi = 0; gi < order.length; gi++) {
+        if (tiers[order[gi].id] === maxT) { glow = order[gi].id; break; }
+      }
     }
+    finaleState = { order: order, glow: glow, tiers: tiers, t: 0 };
 
-    // 正常播放：rAF 推透明度做「从旧画面渐变过来」，canvas 自己再演一遍镜头
-    box.style.opacity = '0';
-    var start = 0;
-    function fade(ts) {
-      if (!start) start = ts;
-      var k = Math.min(1, (ts - start) / 600);
-      box.style.opacity = String(k);
-      if (k < 1) requestAnimationFrame(fade);
-    }
-    requestAnimationFrame(fade);
-    // 兜底：万一 rAF 被节流/冻住，700ms 后强制显示
-    setTimeout(function () { box.style.opacity = '1'; }, 700);
+    var D = 14000;                               // 总时长：14 秒
 
-    ZJUFinale.play({
-      canvas: cb,
-      w: w,
-      h: h,
-      dpr: dpr,
-      duration: 3000,
-      area: area
+    ZJUFinale.load('../assets/finale/').then(function () {
+      // 两层都画在游戏画布上：湖在地块之下，真建筑在地块之上
+      scene.backdrop = function (g, W, H) {
+        ZJUFinale.backdrop(g, W, H, finaleState ? finaleState.t : 0, mapRect());
+      };
+      scene.overlay = function (g, W, H) {
+        ZJUFinale.front(g, W, H, finaleState ? finaleState.t : 0, mapRect(), finaleState);
+      };
+
+      // 调试：?still=0.45 定格某一帧
+      var stillM = /[?&]still=([\d.]+)/.exec(location.search);
+      if (stillM) {
+        finaleState.t = Math.max(0, Math.min(1, parseFloat(stillM[1])));
+        setFinaleScene(finaleState.t);
+        return;
+      }
+
+      var t0 = 0;
+      function frame(now) {
+        if (!finaleState) return;
+        if (!t0) t0 = now;
+        var tt = Math.min(1, (now - t0) / D);
+        finaleState.t = tt;
+        setFinaleScene(tt);
+        if (tt < 1) requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
     }).catch(function (err) {
       console.warn('[彩蛋]', err);
       closeFinale();

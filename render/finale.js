@@ -1,7 +1,12 @@
-/* render/finale.js —— 彩蛋：游戏地图上，真实地标从各自位置升起，背景换成启真湖
+/* render/finale.js —— 彩蛋：启真湖一层层铺上来，真实地标按档位依次出现
  *
- * 六张建筑图 + 一张启真湖背景。锚点复用游戏地图的方位（-90/-30/30/90/150/210 度，
- * 半径 300，地图逻辑空间 1000×1000），所以它们正好从「食住学体文行」六个台基上长出来。
+ * 时间轴（t=0..1）：
+ *   0.00–0.40  启真湖 1→2→3→4 依次淡入；镜头从「贴合游戏里的湖」推到「铺满整屏」
+ *   0.42–0.50  游戏内容（台基 / 档位 / 文字）淡回来 —— 等于只换了一个背景
+ *   0.50–0.92  建筑按档位 低→高 依次升起，原地块的矢量建筑同时淡出、文字换成建筑名
+ *   0.93–1.00  标题
+ *
+ * 全部画在同一个 canvas 上，游戏画面在下面，全程不隐藏。
  * 依赖：无（纯 canvas）。UMD：浏览器挂 window.ZJUFinale，Node 里 require。
  */
 (function (root, factory) {
@@ -20,263 +25,285 @@
     { id: "culture", file: "culture.png", dim: "文", name: "艺博馆", angle: 150 },
     { id: "move", file: "move.png", dim: "行", name: "南大门", angle: 210 }
   ];
-  var LAKE = "lake.jpg";
+
+  /* 四层湖：同一张 1399×1124 画布上的同心图（1=湖面 / 2=+树 / 3=+路 / 4=全景） */
+  var LAKES = ["lake1.png", "lake2.png", "lake3.png", "lake4.jpg"];
 
   var KICKER = "改造计划 · 彩蛋";
   var TITLE = "这就是紫金港";
   var FOOT = "同人作品 · 与浙江大学官方无关";
 
   // 与 render/scene.js 完全一致的地图投影
-  var MAP_CX = 500, MAP_CY = 500, MAP_R = 300, MAP_BOX = 820, PAD_W = 216;
+  var MAP_CX = 500, MAP_CY = 500, MAP_R = 300, MAP_BOX = 820, PAD_W = 216, PAD_H = 120;
+  var LAKE_RX = 250, LAKE_RY = 200;          // 对齐目标的半径：略大于游戏湖岸(208/158)，好把白色广场盘盖住
 
+  // 时间轴（0~1）
+  var TL = {
+    lakeEnd: 0.40,
+    contentStart: 0.42, contentEnd: 0.50,
+    buildStart: 0.50, buildGap: 0.070, buildDur: 0.085,
+    title: 0.93
+  };
+  // 四张湖图各自的淡入起点 / 时长
+  var LAKE_TL = [[0.02, 0.10], [0.10, 0.10], [0.19, 0.10], [0.27, 0.12]];
+
+  var BASE = "../assets/finale/";
   var cache = null;
 
-  /* ---------- 加载 ---------- */
+  function font() {
+    return '-apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif';
+  }
+  function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
+  function ease(v) { v = clamp01(v); return 1 - Math.pow(1 - v, 3); }
+  function lerp(a, b, k) { return a + (b - a) * k; }
+  function ramp(t, start, dur) { return ease(clamp01((t - start) / dur)); }
 
-  function loadImage(src, name) {
-    // 单文件版把素材内联成 data URL 了，优先用它
-    var inline = (typeof window !== 'undefined' && window.__ZJU_FINALE_ASSETS__) || null;
-    var real = (inline && name && inline[name]) ? inline[name] : src;
+  function loadImage(src, key) {
     return new Promise(function (res, rej) {
-      var im = new Image();
-      im.onload = function () { res(im); };
-      im.onerror = function () { rej(new Error("图片加载失败：" + real.slice(0, 40))); };
-      im.src = real;
+      var inline = (typeof window !== "undefined" && window.__ZJU_FINALE_ASSETS__) || null;
+      var img = new Image();
+      img.onload = function () { res(img); };
+      img.onerror = function () { rej(new Error("加载失败: " + src)); };
+      img.src = (inline && key && inline[key]) ? inline[key] : src;
     });
   }
 
-  /* 透明边自动裁掉（这些图上下留白很多，不裁会显得很小） */
-  function alphaBox(im) {
-    var w = im.width, h = im.height;
-    var c = document.createElement("canvas");
-    c.width = w; c.height = h;
-    var g = c.getContext("2d");
-    g.drawImage(im, 0, 0);
-    var d;
-    try { d = g.getImageData(0, 0, w, h).data; }
-    catch (e) { return { x: 0, y: 0, w: w, h: h }; }
-    var minX = w, minY = h, maxX = -1, maxY = -1;
+  /* 用 alpha 求「有内容」的包围盒（跨域时退回整图） */
+  function alphaBox(img) {
+    var w = 140, h = Math.max(1, Math.round(140 * img.height / img.width));
+    var cv = document.createElement("canvas");
+    cv.width = w; cv.height = h;
+    var g = cv.getContext("2d");
+    g.drawImage(img, 0, 0, w, h);
+    var data;
+    try { data = g.getImageData(0, 0, w, h).data; } catch (e) { return null; }
+    var x0 = w, y0 = h, x1 = 0, y1 = 0;
     for (var y = 0; y < h; y++) {
-      var row = y * w * 4;
       for (var x = 0; x < w; x++) {
-        if (d[row + x * 4 + 3] > 8) {
-          if (x < minX) minX = x;
-          if (x > maxX) maxX = x;
-          if (y < minY) minY = y;
-          if (y > maxY) maxY = y;
+        if (data[(y * w + x) * 4 + 3] > 12) {
+          if (x < x0) x0 = x;
+          if (x > x1) x1 = x;
+          if (y < y0) y0 = y;
+          if (y > y1) y1 = y;
         }
       }
     }
-    if (maxX < 0) return { x: 0, y: 0, w: w, h: h };
-    return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
+    if (x1 <= x0 || y1 <= y0) return null;
+    var k = img.width / w;
+    return { x: x0 * k, y: y0 * k, w: (x1 - x0 + 1) * k, h: (y1 - y0 + 1) * k };
   }
 
   function load(base) {
     if (cache) return Promise.resolve(cache);
-    var b = base || "../assets/finale/";
-    return Promise.all([
-      loadImage(b + LAKE, LAKE),
-      Promise.all(ITEMS.map(function (it) { return loadImage(b + it.file, it.file); }))
-    ]).then(function (res) {
+    var b = base || BASE;
+    var jobs = LAKES.map(function (f) { return loadImage(b + f, f); })
+      .concat(ITEMS.map(function (it) { return loadImage(b + it.file, it.file); }));
+    return Promise.all(jobs).then(function (imgs) {
+      var lakes = imgs.slice(0, LAKES.length);
+      var rest = imgs.slice(LAKES.length);
+      var dims = {}, box = {};
+      ITEMS.forEach(function (it, i) {
+        dims[it.id] = rest[i];
+        box[it.id] = alphaBox(rest[i]) || { x: 0, y: 0, w: rest[i].width, h: rest[i].height };
+      });
       cache = {
-        lake: res[0],
-        items: res[1].map(function (img, i) {
-          return { def: ITEMS[i], img: img, box: alphaBox(img) };
-        })
+        lakes: lakes,
+        dims: dims,
+        box: box,
+        lakeBox: alphaBox(lakes[0]) || { x: 0, y: 0, w: lakes[0].width, h: lakes[0].height }
       };
       return cache;
     });
   }
 
-  /* ---------- 地图坐标 → 画布坐标 ---------- */
-
-  /* area: 地图画布在屏幕上的矩形（CSS px）。不传就按整屏估一个 */
   function projection(w, h, area) {
-    var a = area || { x: 0, y: Math.round(h * 0.11), w: w, h: Math.round(h * 0.76) };
-    var scale = Math.min(a.w, a.h) / MAP_BOX;
-    return {
-      scale: scale,
-      ox: a.x + (a.w - 1000 * scale) / 2,
-      oy: a.y + (a.h - 1000 * scale) / 2,
-      area: a
-    };
+    var aw = (area && area.w) || w, ah = (area && area.h) || h;
+    var scale = Math.min(aw, ah) / MAP_BOX;
+    var ox = (area ? area.x : 0) + (aw - 1000 * scale) / 2;
+    var oy = (area ? area.y : 0) + (ah - 1000 * scale) / 2;
+    return { scale: scale, ox: ox, oy: oy };
   }
 
-  function slotOf(item, pr) {
-    var rad = item.angle * Math.PI / 180;
-    var R2 = MAP_R * 0.80;              // 比游戏里收一点，建筑才不会被切到屏幕外
-    var lx = MAP_CX + Math.cos(rad) * R2;
-    var ly = MAP_CY + Math.sin(rad) * R2;
-    var padW = PAD_W * pr.scale;
-    return {
-      cx: pr.ox + lx * pr.scale,
-      cy: pr.oy + ly * pr.scale,
-      baseY: pr.oy + ly * pr.scale + padW * 0.30,   // 站在台基下沿
-      w: padW * 1.15,
-      h: padW * 0.88
-    };
+  /* 湖图变换：t=0 时「图1 的湖」刚好盖住游戏的湖；t 到 lakeEnd 时铺满整屏 */
+  function lakeTransform(c, w, h, area, t) {
+    var p = projection(w, h, area);
+    var cx = p.ox + MAP_CX * p.scale;
+    var cy = p.oy + MAP_CY * p.scale;
+    var rx = LAKE_RX * p.scale, ry = LAKE_RY * p.scale;
+
+    var masterW = c.lakes[0].width, masterH = c.lakes[0].height;
+    var lb = c.lakeBox;
+    var bcx = lb.x + lb.w / 2, bcy = lb.y + lb.h / 2;
+
+    var sLake = Math.max((2 * rx) / lb.w, (2 * ry) / lb.h);
+    var sCover = Math.max(w / masterW, h / masterH);
+    // 先让图1 稳稳盖住游戏的湖（t<0.13 不动），再推开到铺满
+    var s = lerp(sLake, sCover, ease(clamp01((t - 0.13) / (TL.lakeEnd - 0.13))));
+
+    return { s: s, x: cx - bcx * s, y: cy - bcy * s, w: masterW * s, h: masterH * s, cx: cx, cy: cy };
   }
 
-  /* ---------- 绘制 ---------- */
-
-  function ease(t) { t = t < 0 ? 0 : t > 1 ? 1 : t; return 1 - Math.pow(1 - t, 3); }
-  function clamp01(t) { return t < 0 ? 0 : t > 1 ? 1 : t; }
-  function lerp(a, b, t) { return a + (b - a) * t; }
-
-  function drawLake(g, w, h, t, alpha) {
-    if (alpha <= 0.001) return;
-    var lake = cache.lake;
-    var zoom = lerp(1.16, 1.0, ease(clamp01(t / 0.7)));
-    var s = Math.max(w / lake.width, h / lake.height) * 1.32 * zoom;
-    var dw = lake.width * s, dh = lake.height * s;
-    var focusX = 0.52, focusY = 0.45;
-    var dx = w / 2 - dw * focusX;
-    var dy = h * 0.46 - dh * focusY;
-    dx = Math.min(0, Math.max(w - dw, dx));
-    dy = Math.min(0, Math.max(h - dh, dy));
-
-    g.save();
-    g.globalAlpha = alpha;
-    g.drawImage(lake, dx, dy, dw, dh);
-
-    var gt = g.createLinearGradient(0, 0, 0, h);
-    gt.addColorStop(0, "rgba(248,250,252,0.90)");
-    gt.addColorStop(0.14, "rgba(248,250,252,0.42)");
-    gt.addColorStop(0.32, "rgba(248,250,252,0.02)");
-    gt.addColorStop(0.80, "rgba(248,250,252,0.06)");
-    gt.addColorStop(0.95, "rgba(248,250,252,0.55)");
-    gt.addColorStop(1, "rgba(248,250,252,0.86)");
-    g.fillStyle = gt;
-    g.fillRect(0, 0, w, h);
-    g.restore();
+  function drawLakes(g, c, w, h, area, t) {
+    var T = lakeTransform(c, w, h, area, t);
+    for (var i = 0; i < c.lakes.length; i++) {
+      var a = ramp(t, LAKE_TL[i][0], LAKE_TL[i][1]);
+      if (a <= 0.002) continue;
+      g.globalAlpha = a;
+      g.drawImage(c.lakes[i], T.x, T.y, T.w, T.h);
+    }
+    g.globalAlpha = 1;
   }
 
-  function drawItem(g, it, slot, local, w, push) {
-    var a = ease(local);
-    if (a <= 0) return;
-    var rise = (1 - a) * (slot.h * 0.55);      // 从台基下面升上来
-    var sc = lerp(0.82, 1, a) * push;
+  /* 某栋建筑在当前时刻的进度（0=还没开始，1=落位） */
+  function localAt(t, rank) {
+    return clamp01((t - TL.buildStart - rank * TL.buildGap) / TL.buildDur);
+  }
 
-    var bw = it.box.w, bh = it.box.h;
-    var k = Math.min(slot.w / bw, slot.h / bh) * sc;
-    var dw = bw * k, dh = bh * k;
-    var dx = slot.cx - dw / 2;
-    var dy = slot.baseY - dh + rise;
+  function drawBuildings(g, c, w, h, area, t, order, glowId) {
+    var p = projection(w, h, area);
+    var R = MAP_R * p.scale * 0.80;
+    for (var i = 0; i < order.length; i++) {
+      var it = order[i];
+      var img = c.dims[it.id];
+      if (!img) continue;
+      var e = localAt(t, i);
+      if (e <= 0.002) continue;
+      var a = Math.min(1, e * 1.6);
 
-    g.save();
-    g.globalAlpha = a * 0.13;
-    g.fillStyle = "#0f172a";
-    g.beginPath();
-    g.ellipse(slot.cx, slot.baseY + 2, dw * 0.30, Math.max(3, dh * 0.045), 0, 0, Math.PI * 2);
-    g.fill();
-    g.restore();
+      var rad = it.angle * Math.PI / 180;
+      var px = p.ox + (MAP_CX + Math.cos(rad) * R / p.scale) * p.scale;
+      var py = p.oy + (MAP_CY + Math.sin(rad) * R / p.scale) * p.scale;
 
-    g.save();
-    g.globalAlpha = a;
-    g.drawImage(it.img, it.box.x, it.box.y, bw, bh, dx, dy, dw, dh);
-    g.restore();
+      var slotW = PAD_W * 1.15 * p.scale;
+      var slotH = PAD_H * 0.88 * p.scale;
+      var b = c.box[it.id];
+      var sc = Math.min(slotW / b.w, slotH / b.h);
+      var bw = b.w * sc, bh = b.h * sc;
 
-    // 名字标签：等建筑基本就位才出现
-    var la = ease(clamp01((local - 0.55) / 0.45));
-    if (la > 0) {
-      var fs = Math.round(clamp01(slot.w / 150) * 13 + 3);
+      var rise = (1 - e) * bh * 0.55;
+      var ks = 0.84 + 0.16 * e;
+      var dw = bw * ks, dh = bh * ks;
+      var dx = px - dw / 2;
+      var dy = py - dh * 0.60 + rise;   // 建筑压在台基上，别空出半张白卡
+
+      var isGlow = glowId && it.id === glowId && e > 0.25;
+
       g.save();
-      g.globalAlpha = la;
-      g.textAlign = "center";
-      g.textBaseline = "top";
-      g.lineJoin = "round";
-      g.font = "700 " + fs + "px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
-      g.strokeStyle = "rgba(255,255,255,0.92)";
-      g.lineWidth = Math.max(3, fs * 0.36);
-      g.strokeText(it.def.name, slot.cx, slot.baseY + 6);
-      g.fillStyle = "#0f172a";
-      g.fillText(it.def.name, slot.cx, slot.baseY + 6);
+      g.globalAlpha = a;
+      if (isGlow) {
+        var gg = g.createRadialGradient(px, dy + dh * 0.62, 4, px, dy + dh * 0.62, Math.max(dw, dh) * 0.95);
+        gg.addColorStop(0, "rgba(255, 214, 102, 0.80)");
+        gg.addColorStop(0.45, "rgba(251, 191, 36, 0.34)");
+        gg.addColorStop(1, "rgba(251, 191, 36, 0)");
+        g.fillStyle = gg;
+        g.beginPath();
+        g.ellipse(px, dy + dh * 0.58, Math.max(dw, dh) * 0.46, Math.max(dw, dh) * 0.34, 0, 0, 6.283);
+        g.fill();
+      }
+      g.drawImage(img, b.x, b.y, b.w, b.h, dx, dy, dw, dh);
+      if (isGlow) {
+        g.globalCompositeOperation = "lighter";
+        g.globalAlpha = a * 0.26;
+        var g2 = g.createRadialGradient(px, dy + dh * 0.5, 2, px, dy + dh * 0.5, Math.max(dw, dh) * 0.62);
+        g2.addColorStop(0, "rgba(255, 205, 90, 0.9)");
+        g2.addColorStop(1, "rgba(255, 205, 90, 0)");
+        g.fillStyle = g2;
+        g.fillRect(dx - 20, dy - 20, dw + 40, dh + 40);
+      }
       g.restore();
     }
   }
 
-  function drawText(g, w, h, t) {
-    var a = ease(clamp01((t - 0.74) / 0.26));
-    if (a <= 0) return;
+  function drawTitle(g, w, h, area, t) {
+    var a = ramp(t, TL.title, 0.05);
+    if (a <= 0.002) return;
+    var top = (area ? area.y : 0);
+    var fs = Math.max(15, Math.min(26, w * 0.048));
     g.save();
     g.globalAlpha = a;
     g.textAlign = "center";
     g.textBaseline = "alphabetic";
-    g.font = "600 " + Math.round(w * 0.028) + "px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
+    g.shadowColor = "rgba(15,23,42,.35)";
+    g.shadowBlur = 10;
+
     g.fillStyle = "#b45309";
-    g.fillText(KICKER, w / 2, h * 0.062);
-    g.font = "800 " + Math.round(w * 0.072) + "px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
+    g.font = "700 " + Math.round(fs * 0.66) + "px " + font();
+    g.fillText(KICKER, w / 2, top + fs * 1.9);
+
     g.fillStyle = "#0f172a";
-    g.fillText(TITLE, w / 2, h * 0.118);
-    g.font = "500 " + Math.round(w * 0.024) + "px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
-    g.fillStyle = "#94a3b8";
-    g.fillText(FOOT, w / 2, h * 0.975);
+    g.font = "bold " + Math.round(fs * 1.5) + "px " + font();
+    g.fillText(TITLE, w / 2, top + fs * 3.5);
+
+    g.shadowBlur = 0;
+    g.globalAlpha = a * 0.72;
+    g.fillStyle = "#475569";
+    g.font = "600 " + Math.round(fs * 0.56) + "px " + font();
+    g.fillText(FOOT, w / 2, h - Math.max(14, h * 0.022));
     g.restore();
   }
 
-  /* t: 0→1 进度；area: 地图画布矩形（可省略） */
-  function draw(g, w, h, t, area) {
-    var pr = projection(w, h, area);
-    g.save();
+  /* 主绘制：t=0..1；order 是「按档位从低到高」排好的 ITEMS */
+  function draw(g, w, h, t, area, opts) {
+    opts = opts || {};
+    if (!cache) return;
     g.clearRect(0, 0, w, h);
-
-    // 背景：整片草地慢慢换成启真湖
-    drawLake(g, w, h, t, ease(clamp01(t / 0.78)));
-
-    // 六个地标从各自台基上长出来
-    var push = lerp(1, 1.06, ease(clamp01((t - 0.55) / 0.45)));
-    for (var i = 0; i < cache.items.length; i++) {
-      var slot = slotOf(cache.items[i].def, pr);
-      slot.cx = (slot.cx - w / 2) * push + w / 2;
-      slot.cy = (slot.cy - h / 2) * push + h / 2;
-      slot.baseY = (slot.baseY - h / 2) * push + h / 2;
-      slot.w *= push;
-      slot.h *= push;
-      var local = clamp01((t - (0.08 + i * 0.075)) / 0.42);
-      drawItem(g, cache.items[i], slot, local, w, 1);
-    }
-
-    drawText(g, w, h, t);
-    g.restore();
+    drawLakes(g, cache, w, h, area, t);
+    drawBuildings(g, cache, w, h, area, t, opts.order || ITEMS, opts.glow || null);
+    drawTitle(g, w, h, area, t);
   }
 
-  /* ---------- 播放 ---------- */
-
-  function play(opts) {
-    var o = opts || {};
+  /* 自己驱动 rAF 的便捷入口（正常模式）；headless 里可以用 ui.js 的 ?still= 定格 */
+  function play(o) {
+    o = o || {};
     var canvas = o.canvas;
-    if (!canvas) return Promise.reject(new Error("缺少 canvas"));
-    var dpr = o.dpr || (window.devicePixelRatio || 1);
-    var w = o.w || canvas.clientWidth || 480;
-    var h = o.h || canvas.clientHeight || 900;
+    var w = o.w, h = o.h, dpr = o.dpr || 1;
+    var duration = o.duration || 14000;
+    var g = canvas.getContext("2d");
+    var t0 = 0;
     canvas.width = Math.round(w * dpr);
     canvas.height = Math.round(h * dpr);
-    var g = canvas.getContext("2d");
-    g.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    var dur = o.duration || 3000;
-    var start = 0;
 
     return load(o.base).then(function () {
       return new Promise(function (resolve) {
-        function frame(ts) {
-          if (!start) start = ts;
-          var t = clamp01((ts - start) / dur);
-          draw(g, w, h, t, o.area);
-          if (t < 1) requestAnimationFrame(frame);
-          else { if (o.onDone) o.onDone(); resolve(); }
+        function frame(now) {
+          if (!t0) t0 = now;
+          var t = Math.min(1, (now - t0) / duration);
+          g.setTransform(dpr, 0, 0, dpr, 0, 0);
+          draw(g, w, h, t, o.area, o);
+          if (o.onFrame) o.onFrame(t);
+          if (t >= 1) return resolve(true);
+          requestAnimationFrame(frame);
         }
         requestAnimationFrame(frame);
       });
     });
   }
 
+  function stop() { /* 循环随 t=1 自行结束 */ }
+
+  // 供 scene 的两层钩子使用：backdrop 只画湖，front 只画建筑和标题
+  function backdrop(g, w, h, t, area) {
+    if (!cache) return;
+    drawLakes(g, cache, w, h, area, t);
+  }
+  function front(g, w, h, t, area, opts) {
+    if (!cache) return;
+    opts = opts || {};
+    drawBuildings(g, cache, w, h, area, t, opts.order || ITEMS, opts.glow || null);
+    drawTitle(g, w, h, area, t);
+  }
+
   return {
     ITEMS: ITEMS,
+    backdrop: backdrop,
+    front: front,
+    LAKES: LAKES,
+    TL: TL,
+    LAKE_TL: LAKE_TL,
     load: load,
-    draw: function (ctx, w, h, t, area) { return draw(ctx, w, h, t, area); },
-    projection: projection,
+    draw: draw,
     play: play,
-    clearCache: function () { cache = null; }
+    stop: stop,
+    localAt: localAt
   };
 });

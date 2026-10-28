@@ -1111,7 +1111,7 @@ button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit
   opacity:0; visibility:hidden;
 }
 #finale.on{ opacity:1; visibility:visible; }
-#finaleCanvas{display:block; width:100%; height:100%;}
+#finaleCanvas{display:none}   /* 彩蛋改画在游戏画布上（两层钩子），这个 canvas 不再用 */
 #finaleClose{
   position:absolute; top:14px; right:14px;
   width:36px; height:36px; line-height:1;
@@ -1123,3 +1123,25 @@ button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit
   cursor:pointer;
 }
 #finaleClose:hover{color:#0f172a; background:#fff;}
+
+/* 彩蛋播放时：只藏游戏 UI，不藏地图内容 */
+body.finale-on #hud,
+body.finale-on #roundBar,
+body.finale-on #itemBar,
+body.finale-on #strip,
+body.finale-on #toastWrap {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* 彩蛋：地图画布铺满整屏，照片才能盖住整个画面（HUD/回合条此时已隐藏） */
+body.finale-on #game,
+body.finale-on #mapWrap { background: transparent !important; }
+body.finale-on #map {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  z-index: 3;
+  border-radius: 0 !important;
+}

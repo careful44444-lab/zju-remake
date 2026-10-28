@@ -231,10 +231,28 @@
     this.drawRoads(pal);
     this.drawTrees(pal);
 
-    var order = this.dims.slice();
-    for (var i = 0; i < order.length; i++) this.drawZone(order[i], pal);
+    // 彩蛋：背景层（启真湖）画在游戏背景之上、地块之下
+    if (this.backdrop) {
+      ctx.save();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      this.backdrop(ctx, W, H);
+      ctx.restore();
+    }
 
+    var order = this.dims.slice();
+    ctx.save();
+    ctx.globalAlpha = (this.contentAlpha == null ? 1 : this.contentAlpha);
+    for (var i = 0; i < order.length; i++) this.drawZone(order[i], pal);
     this.drawSynergy(pal);
+    ctx.restore();
+
+    // 彩蛋：前景层（真实建筑 / 标题）画在地块之上
+    if (this.overlay) {
+      ctx.save();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      this.overlay(ctx, W, H);
+      ctx.restore();
+    }
     this.drawWeather(pal);
     this.drawBursts();
     this.drawVignette();
@@ -372,6 +390,9 @@
   // ---- 单个地块 ----
   Scene.prototype.drawZone = function (d, pal) {
     var ctx = this.ctx, self = this;
+    var zm = (this.zoneMap && this.zoneMap[d.id]) || null;
+    var zoneA = zm && zm.zone != null ? zm.zone : 1;   // 建筑本体的透明度（彩蛋里被真建筑替代时淡出）
+    if (zoneA <= 0.002) zoneA = 0;
     var t = this.anim[d.id];
     var p = this.zones[d.id];
     var tier = Math.max(1, Math.min(5, Math.round(t)));
@@ -416,6 +437,10 @@
       ctx.restore();
     }
 
+    // —— 以下（跑道/建筑/装饰/信物）属于「建筑本体」，彩蛋替换时单独淡出 ——
+    var g0 = ctx.globalAlpha;
+    ctx.globalAlpha = g0 * zoneA;
+    if (zoneA > 0.002) {
     // 场馆类：先画跑道
     if (d.motif === 'track') this.drawTrack(p, t);
 
@@ -433,6 +458,9 @@
     // 档位信物（config.RELICS = false 可关掉，回到纯建筑版）
     if (C.RELICS !== false && Z && Z.drawRelic) this.relic(d, p, t, tier);
 
+    }
+    ctx.globalAlpha = g0;
+
     // 档位徽章
     var bx = p.x + PAD_W / 2 - 6, by = p.y - PAD_H / 2 + 4;
     ctx.fillStyle = '#0f172a';
@@ -443,20 +471,45 @@
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(String(tier), bx, by + 1);
 
-    // 名称
+    // 名称（彩蛋里 name 会被换成真实建筑名）
     var ly = p.y + PAD_H / 2 + 38;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-    ctx.font = 'bold 34px ' + FONT;
-    ctx.fillText(d.name, p.x + 1, ly + 1);
-    ctx.fillStyle = '#0f172a';
-    ctx.fillText(d.name, p.x, ly);
-
     var ct = (this.contentLookup && this.contentLookup(d.id, tier)) || null;
+    var bigName = (zm && zm.name) ? zm.name : d.name;
+    var swapped = !!(zm && zm.name);
+    var glow = !!(zm && zm.glow);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+
+    if (glow) {
+      // 金色光晕：玩家最看重的那一维
+      var gg2 = ctx.createRadialGradient(p.x, ly - 8, 6, p.x, ly - 8, 96);
+      gg2.addColorStop(0, 'rgba(252, 211, 77, 0.75)');
+      gg2.addColorStop(0.45, 'rgba(251, 191, 36, 0.30)');
+      gg2.addColorStop(1, 'rgba(251, 191, 36, 0)');
+      ctx.fillStyle = gg2;
+      ctx.beginPath(); ctx.ellipse(p.x, ly - 6, 96, 54, 0, 0, 6.283); ctx.fill();
+    }
+
+    if (swapped) {
+      // 建筑名：不加白描边，用极淡的暗影保证在湖面上可读
+      ctx.font = 'bold 30px ' + FONT;
+      ctx.save();
+      ctx.shadowColor = 'rgba(255, 255, 255, 0.55)';
+      ctx.shadowBlur = 10;
+      ctx.fillStyle = glow ? '#b45309' : '#0f172a';
+      ctx.fillText(bigName, p.x, ly);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+      ctx.font = 'bold 34px ' + FONT;
+      ctx.fillText(bigName, p.x + 1, ly + 1);
+      ctx.fillStyle = '#0f172a';
+      ctx.fillText(bigName, p.x, ly);
+    }
+
     if (ct) {
       ctx.font = '700 19px ' + FONT;
-      ctx.fillStyle = '#2563eb';
-      ctx.fillText(ct.title, p.x, ly + 26);
+      ctx.fillStyle = glow ? '#b45309' : '#2563eb';
+      ctx.fillText(swapped ? (d.name + ' · ' + ct.title) : ct.title, p.x, ly + 26);
     }
     ctx.font = '600 14px ' + FONT;
     ctx.fillStyle = '#64748b';
