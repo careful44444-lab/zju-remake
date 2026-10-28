@@ -253,6 +253,7 @@
     // 最后一回合没有「结束回合」，直接提交
     if ((state.round || 1) >= (Z.MAX_ROUNDS || 4)) { endRun(); return; }
     var r = Z.endRound(state);
+    undoFloor = (state.history || []).length;   // 新回合从这里开始
     if (!r.ok) { toast(r.msg); return; }
     beep(620, 0.06, 'sine', 0.03);
     persist();
@@ -593,7 +594,6 @@
     $("svTitle").textContent = SURVEY.outro || "谢谢";
     $("svBody").innerHTML = "";
     $("svSkip").style.display = "none";
-    var q = $("svQuit"); if (q) q.style.display = "none";   // 结语界面不再显示「不答了」
     if (skipped > 0) {
       // 有跳过的题：不给彩蛋入口
       $("svNext").textContent = "回到结算";
@@ -691,10 +691,12 @@
   }
 
   /* ----------------------------- 撤销 ----------------------------- */
+  var undoFloor = 0;            // 本回合开始时的历史长度，撤回不得越过
+
   function undo() {
-    // 只允许撤销本回合内的操作
-    var h = (state.history && state.history[state.history.length - 1]) || null;
-    if (h && h.round !== undefined && state.round !== undefined && h.round !== state.round) {
+    // 只能撤销本回合内的操作：历史长度必须大于本回合起点
+    var hl = (state.history || []).length;
+    if (hl <= undoFloor) {
       toast('只能撤销本回合的操作');
       return;
     }
@@ -929,6 +931,7 @@
   }
 
   function beginRun(mode, grade) {
+    undoFloor = 0;   // 开局重置
     state = Z.createState();
     state.grade = grade || null;
     queue = [];   // 每回合按当时的局势现抽（见 openEvent）
@@ -1020,10 +1023,6 @@
     $('btnSurvey').addEventListener('click', function () { openSurvey(); });
     $('svNext').addEventListener('click', svNextHandler);
     $('svSkip').addEventListener('click', function () { nextSurvey(true); });
-    $('svQuit').addEventListener('click', function () {
-      if (Track && Track.action) Track.action({ type: 'survey_quit', answered: Object.keys(svAns).length });
-      show('result');
-    });
 
     $('grantOk').addEventListener('click', function () {
       $('grantModal').classList.add('hidden');
