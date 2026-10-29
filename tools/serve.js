@@ -328,6 +328,12 @@ http.createServer(function (req, res) {
   }
 
   // ---------- 门禁：非本机 + 非公开路径 + 未登录 → 去登录页 ----------
+  // 强制跳 https：Secure cookie 在 http 下会被浏览器丢掉，
+  // 表现就是「密码输对了又被弹回登录页」
+  if (isRemoteReq(req) && String(req.headers['x-forwarded-proto'] || '').toLowerCase() === 'http') {
+    var _h = req.headers['host'] || '';
+    if (_h) { res.writeHead(302, { Location: 'https://' + _h + (req.url || '/') }); return res.end(); }
+  }
   if (!isPublicPath(p) && (isRemoteReq(req) || AUTH.forceLocal()) && !AUTH.isAuthed(req) && p !== '/save-password') {
     if (p.indexOf('/api/') === 0) { res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' }); return res.end(JSON.stringify({ ok: false, msg: '需要登录' })); }
     res.writeHead(302, { Location: '/login?next=' + encodeURIComponent(req.url || '/') });
