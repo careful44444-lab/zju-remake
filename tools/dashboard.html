@@ -69,6 +69,12 @@ td.opts{max-width:420px;line-height:1.9}
 .tag.live{color:var(--teal);border-color:rgba(5,150,105,.35);background:rgba(5,150,105,.08)}
 .tag.off{color:#94a3b8}
 .hint{font-size:11px;color:var(--dim);margin-top:10px;line-height:1.7}
+.cfg-list{display:flex;flex-direction:column;gap:10px}
+.cfg-row{border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;background:#fff}
+.cfg-row .lbl{font-size:13px;font-weight:600;color:#111827;margin-bottom:6px}
+.cfg-row .nums{display:flex;flex-wrap:wrap;gap:16px;font-size:12px;color:#475569}
+.cfg-row .nums b{color:#b45309;font-size:14px;font-weight:700}
+.muted{color:#94a3b8;font-size:13px}
 </style>
 </head>
 <body>
@@ -127,6 +133,11 @@ td.opts{max-width:420px;line-height:1.9}
     <h2>称号分布</h2>
     <table id="titleTable"></table>
   </section>
+
+<section class="card" style="grid-column:1/-1" id="cfgCard">
+  <h2>按参数版本 <small>同一套数值设置下的对局表现</small></h2>
+  <div id="cfgGroups" class="cfg-list"><div class="muted">加载中…</div></div>
+</section>
 
   <section class="card" style="grid-column:1/-1" id="surveyCard">
     <h2>问卷 <small>选项分布 · 跳过率 · 原文</small></h2>
@@ -322,6 +333,67 @@ function start() { clearInterval(timer); timer = setInterval(load, 3000); }
 
 load();
 start();
+</script>
+<script>
+(function () {
+  function drawCfgGroups(d) {
+    var box = document.getElementById("cfgGroups");
+    if (!box) return;
+    var g = (d && d.cfgGroups) || [];
+    if (!g.length) {
+      box.innerHTML = "<div class=\"muted\">还没有带参数的局（4ed7791 之后开的局才会记录）</div>";
+      return;
+    }
+    box.innerHTML = g.map(function (x) {
+      return "<div class=\"cfg-row\"><div class=\"lbl\">" + x.label + "</div><div class=\"nums\">"
+        + "<span>局数 <b>" + x.runs + "</b></span>"
+        + "<span>完成 <b>" + x.finished + "</b></span>"
+        + "<span>完成率 <b>" + x.completionRate + "%</b></span>"
+        + "<span>平均档位和 <b>" + x.avgTiers + "</b></span>"
+        + "<span>平均花点 <b>" + x.avgSpent + "</b></span>"
+        + "</div></div>";
+    }).join("");
+  }
+  var f = window.fetch;
+  window.fetch = function (u) {
+    var url = String(u);
+    return f.apply(this, arguments).then(function (r) {
+      if (url.indexOf("/api/stats") >= 0) {
+        try { r.clone().json().then(drawCfgGroups).catch(function () {}); } catch (e) {}
+      }
+      return r;
+    });
+  };
+})();
+</script>
+<script>
+(function () {
+  function render(d) {
+    var box = document.getElementById("cfgGroups");
+    if (!box) return;
+    var g = (d && d.cfgGroups) || [];
+    if (!g.length) {
+      box.innerHTML = "<div class=\"muted\">还没有带参数的局（设置记录上线之后开的局才有）</div>";
+      return;
+    }
+    box.innerHTML = g.map(function (x) {
+      return "<div class=\"cfg-row\"><div class=\"lbl\">" + x.label + "</div><div class=\"nums\">"
+        + "<span>局数 <b>" + x.runs + "</b></span>"
+        + "<span>完成 <b>" + x.finished + "</b></span>"
+        + "<span>完成率 <b>" + x.completionRate + "%</b></span>"
+        + "<span>平均档位和 <b>" + x.avgTiers + "</b></span>"
+        + "<span>平均花点 <b>" + x.avgSpent + "</b></span>"
+        + "</div></div>";
+    }).join("");
+  }
+  window.__cfgPoll = setInterval(function () {
+    fetch("/api/stats", { cache: "no-store" }).then(function (r) { return r.json(); })
+      .then(render).catch(function () {});
+  }, 3000);
+  setTimeout(function () {
+    fetch("/api/stats", { cache: "no-store" }).then(function (r) { return r.json(); }).then(render).catch(function () {});
+  }, 300);
+})();
 </script>
 </body>
 </html>

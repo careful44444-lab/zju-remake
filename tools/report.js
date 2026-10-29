@@ -18,6 +18,7 @@ function buildMeta() {
   });
   var cards = {};
   EVENTS.forEach(function (e) { cards[e.id] = e.title; });
+
   return {
     dims: DIMS.map(function (d) { return { id: d.id, name: d.name, init: d.init }; }),
     caps: caps,
@@ -73,6 +74,7 @@ function aggregate(file) {
   // 先按 (局|回合|维度) 攒起来，最后只记净值
   var netActs = {}, noRoundSeq = 0;
   var survey = {};   // qid -> { title, type, total, skipped, choices, texts }
+  var byCfg = {};    // 参数版本 -> { key, label, cfg, runs }
 
   ev.forEach(function (e) {
     if (e.uid) users[e.uid] = 1;
@@ -80,6 +82,24 @@ function aggregate(file) {
     if (!r.year && e.prof && e.prof.year) r.year = e.prof.year;
     if (e.ev === 'run_start') {
       r.start = e;
+      var cf = e.props && e.props.cfg;
+      if (cf) {
+        var gtot = (cf.grants || []).reduce(function (a, b) { return a + (b || 0); }, 0);
+        var iniS = Object.keys(cf.inits || {}).reduce(function (a, k) { return a + (cf.inits[k] || 0); }, 0);
+        var ck = [gtot, (cf.grants || []).join('/'), cf.carry, cf.breadth, iniS, (cf.stepCost || []).join('/')].join('|');
+        r.cfgKey = ck;
+        if (!byCfg[ck]) byCfg[ck] = {
+          key: ck,
+          label: (cf.grants || []).join('/') + ' · 结转 ' + cf.carry + ' · 税 ' + cf.breadth + ' · 初始' + iniS,
+          grantTotal: gtot,
+          grants: cf.grants || [],
+          carry: cf.carry,
+          breadth: cf.breadth,
+          iniSum: iniS,
+          stepCost: cf.stepCost || [],
+          runs: 0, finished: 0, tiersSum: 0, spentSum: 0
+        };
+      }
       if (!r.year && e.props && e.props.year) r.year = e.props.year;
     }
     if (e.ev === 'run_end') {
@@ -231,6 +251,32 @@ function aggregate(file) {
     });
   } catch (e) { }
 
+  // 参数版本汇总
+  Object.keys(runs).forEach(function (k) {
+    var r = runs[k];
+    if (!r.cfgKey || !byCfg[r.cfgKey]) return;
+    var g = byCfg[r.cfgKey];
+    g.runs += 1;
+    if (r.end && r.end.props && r.end.props.finished) {
+      g.finished += 1;
+      var pr = r.end.props || {};
+      var tt = pr.tiers || {};
+      g.tiersSum += DIMS.reduce(function (a, d) { return a + (tt[d.id] || 0); }, 0);
+      g.spentSum += (pr.pointsSpent || 0);
+    }
+  });
+  var cfgGroups = Object.keys(byCfg).map(function (k) {
+    var g = byCfg[k];
+    return {
+      key: g.key, label: g.label, grants: g.grants, grantTotal: g.grantTotal,
+      carry: g.carry, breadth: g.breadth, iniSum: g.iniSum, stepCost: g.stepCost,
+      runs: g.runs, finished: g.finished,
+      completionRate: g.runs ? Math.round(g.finished / g.runs * 100) : 0,
+      avgTiers: g.finished ? Math.round(g.tiersSum / g.finished * 10) / 10 : 0,
+      avgSpent: g.finished ? Math.round(g.spentSum / g.finished * 10) / 10 : 0
+    };
+  }).sort(function (a, b) { return b.runs - a.runs; });
+
   return {
     generatedAt: new Date().toISOString(),
     totals: {
@@ -255,6 +301,7 @@ function aggregate(file) {
     byYear: byYear,
     recent: recent,
     excludedCount: excludedCount,
+    cfgGroups: cfgGroups,
     meta: buildMeta()
   };
 }
