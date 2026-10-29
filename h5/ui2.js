@@ -987,7 +987,7 @@
 
   // 预加载彩蛋素材：别等到点进彩蛋才开始加载，那样会先干等一两秒
   setTimeout(function () {
-    try { if (window.ZJUFinale && ZJUFinale.load) ZJUFinale.load("../assets/finale/"); } catch (e) {}
+    try { if (window.ZJUFinale && ZJUFinale.warm) ZJUFinale.warm("../assets/finale/"); } catch (e) {}
   }, 1200);
     window.__zjuScene = scene;
 

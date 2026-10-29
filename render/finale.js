@@ -97,6 +97,16 @@
     return { x: x0 * k, y: y0 * k, w: (x1 - x0 + 1) * k, h: (y1 - y0 + 1) * k };
   }
 
+  // 首屏预热：只拿最小的那张湖图，别在开局就拖 4MB
+  function warm(base) {
+    try {
+      if (cache) return;
+      var b2 = base || "../assets/finale/";
+      var img = new Image();
+      img.decoding = "async";
+      img.src = b2 + LAKES[0].file;
+    } catch (e) {}
+  }
   function load(base) {
     if (cache) return Promise.resolve(cache);
     var b = base || BASE;
@@ -395,7 +405,7 @@
     LAKES: LAKES,
     TL: TL,
     LAKE_TL: LAKE_TL,
-    load: load,
+    load: load, warm: warm,
     draw: draw,
     play: play,
     stop: stop,

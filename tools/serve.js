@@ -854,10 +854,29 @@ if (p === "/api/survey") {
   if (!okReal) { res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' }); return res.end('403 forbidden'); }
   fs.readFile(f, function (err, buf) {
     if (err) { res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }); return res.end('404 ' + p); }
-    res.writeHead(200, {
-      'Content-Type': mime[path.extname(f).toLowerCase()] || 'application/octet-stream',
-      'Cache-Control': 'no-store'
-    });
+    var ext = path.extname(f).toLowerCase();
+    var ctype = mime[ext] || 'application/octet-stream';
+    var isText = /\.(js|css|html|json|svg|txt)$/.test(ext);
+    // 图片等二进制：缓存一周；文本：缓存 5 分钟（改完刷新还能拿到新的）
+    var cc = isText ? 'public, max-age=300' : 'public, max-age=604800';
+    var et = '"' + buf.length.toString(16) + '-' + (buf[0] || 0).toString(16) + (buf[buf.length - 1] || 0).toString(16) + '"';
+    if (req.headers['if-none-match'] === et) {
+      res.writeHead(304, { ETag: et, 'Cache-Control': cc });
+      return res.end();
+    }
+    var headers = { 'Content-Type': ctype, 'Cache-Control': cc, ETag: et };
+    var ra = String(req.headers['accept-encoding'] || '');
+    if (isText && buf.length > 1024 && /\bgzip\b/.test(ra)) {
+      var zlib = require('zlib');
+      return zlib.gzip(buf, function (e2, z) {
+        if (e2) { res.writeHead(200, headers); return res.end(buf); }
+        headers['Content-Encoding'] = 'gzip';
+        headers['Vary'] = 'Accept-Encoding';
+        res.writeHead(200, headers);
+        res.end(z);
+      });
+    }
+    res.writeHead(200, headers);
     res.end(buf);
   });
 }).listen(port, function () {   // 不指定 host = 双栈（IPv4 + IPv6），隧道用 localhost 也能连上
