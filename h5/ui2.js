@@ -540,7 +540,7 @@
       });
       body.appendChild(wrap);
       if (q.allowText) {
-        var h = el("p", "sv-hint"); h.textContent = q.textHint || "补充说明（选填）";
+        var h = el("p", "sv-hint"); h.textContent = (q.textHint || "补充说明").replace("（选填）", "（必填）");
         body.appendChild(h);
       }
     }
@@ -548,7 +548,7 @@
     if (q.type === "text" || q.allowText) {
       var ta = document.createElement("textarea");
       ta.value = cur.text || "";
-      ta.placeholder = q.type === "text" ? (q.placeholder || "随便写一句也行") : "选填";
+      ta.placeholder = q.type === "text" ? (q.placeholder || "写一句吧，不能空着") : "必填，不想答请点「跳过这题」";
       ta.addEventListener("input", function () {
         svAns[q.id] = svAns[q.id] || {};
         svAns[q.id].text = ta.value;
@@ -573,6 +573,17 @@
   }
 
   function nextSurvey(skipped) {
+    if (!skipped) {
+      var q = SURVEY.questions[svIdx];
+      var needText = (q.type === "text") || q.allowText;
+      var txt = ((svAns[q.id] || {}).text || "").trim();
+      if (needText && !txt) {
+        var ta = document.querySelector("#svBody textarea");
+        if (ta) { ta.focus(); ta.classList.add("need"); }
+        if (typeof toast === "function") toast("这里不能空着，不想回答请点「跳过这题」");
+        return;
+      }
+    }
     saveAnswer(skipped);
     if (svIdx >= SURVEY.questions.length - 1) { finishSurvey(); return; }
     svIdx += 1;
