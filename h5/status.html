@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>紫金港改造计划 · 线路状态</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: #f7f8fa; color: #0f172a;
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .card {
+    width: min(420px, 92vw); background: #fff; padding: 28px 24px 24px;
+    border: 1px solid rgba(15,23,42,.08); border-radius: 18px;
+    box-shadow: 0 10px 30px rgba(15,23,42,.06);
+  }
+  h1 { margin: 0 0 4px; font-size: 19px; letter-spacing: .01em; }
+  .sub { margin: 0 0 20px; color: #64748b; font-size: 13px; }
+  .row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 0; border-top: 1px solid rgba(15,23,42,.06); font-size: 14px;
+  }
+  .row:first-of-type { border-top: 0; padding-top: 0; }
+  .k { color: #64748b; }
+  .v { font-weight: 600; display: flex; align-items: center; }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%; background: #16a34a; margin-right: 7px;
+    box-shadow: 0 0 0 3px rgba(22,163,74,.15);
+  }
+  .dot.bad { background: #dc2626; box-shadow: 0 0 0 3px rgba(220,38,38,.15); }
+  a.go {
+    display: block; margin-top: 20px; padding: 13px; border-radius: 12px;
+    background: #0f172a; color: #fff; text-align: center; text-decoration: none;
+    font-size: 15px; font-weight: 600;
+  }
+  a.go:active { transform: translateY(1px); }
+  button.refresh {
+    margin-top: 10px; width: 100%; padding: 11px; border-radius: 12px; cursor: pointer;
+    background: #fff; color: #334155; border: 1px solid rgba(15,23,42,.12);
+    font-size: 14px; font-family: inherit;
+  }
+  .tip { margin-top: 16px; font-size: 12px; line-height: 1.7; color: #94a3b8; }
+  .tip b { color: #64748b; font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>线路状态</h1>
+    <p class="sub">紫金港改造计划 · 内测</p>
+
+    <div class="row">
+      <span class="k">公网线路</span>
+      <span class="v" id="line"><span class="dot"></span>在线</span>
+    </div>
+    <div class="row">
+      <span class="k">服务器</span>
+      <span class="v" id="srv"><span class="dot"></span>在线</span>
+    </div>
+    <div class="row">
+      <span class="k">检查时间</span>
+      <span class="v" id="ts">—</span>
+    </div>
+
+    <a class="go" id="enter" href="/h5/">进入游戏</a>
+    <button class="refresh" onclick="location.reload()">重新检测</button>
+
+    <div class="tip">
+      <b>能打开这一页 = 线路是通的。</b><br>
+      如果打不开，说明内测机上的隧道已经断了，请找管理员重新运行
+      <b>内测启动.bat</b>，再回来看这里。
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var ts = document.getElementById('ts');
+      var d = new Date();
+      function p2(n) { return n < 10 ? '0' + n : '' + n; }
+      ts.textContent = p2(d.getHours()) + ':' + p2(d.getMinutes()) + ':' + p2(d.getSeconds());
+
+      // 再探一次游戏页面本身，确认后端也在（而不只是静态页能开）
+      var img = new Image();
+      var done = false;
+      var t = setTimeout(function () {
+        if (done) return;
+        done = true;
+        document.getElementById('srv').innerHTML = '<span class="dot bad"></span>无响应';
+      }, 6000);
+      img.onload = img.onerror = function () {
+        if (done) return;
+        done = true;
+        clearTimeout(t);
+        // onerror 也算“有响应”——服务器回了 404/资源不存在，说明后端活着
+        document.getElementById('srv').innerHTML = '<span class="dot"></span>在线';
+      };
+      img.src = '/api/status?ping=' + Date.now();
+    })();
+  </script>
+</body>
+</html>
