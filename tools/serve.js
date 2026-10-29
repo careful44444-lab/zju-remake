@@ -804,7 +804,35 @@ if (p === "/api/survey") {
   }
 
   // 保存固定隧道配置（后台「公网地址」页用）
-  if (p === "/api/tunnel") {
+      // 真实探测公网是否通（缓存 20 秒，避免每次刷新都打一次）
+    if (p === "/api/tunnel-state" && req.method === "GET") {
+      var nowT = Date.now();
+      if (global.__tsCache && nowT - global.__tsCache.at < 20000) {
+        return json(res, 200, global.__tsCache.data);
+      }
+      var tfx = path.join(root, "data", "tunnel.json");
+      var tcx = {};
+      try { tcx = JSON.parse(fs.readFileSync(tfx, "utf8")); } catch (e) { }
+      var probeUrl = tcx.hostname ? ("https://" + tcx.hostname + "/h5/status.html?probe=" + nowT) : (tcx.url || "");
+      var send2 = function (online) {
+        var data = { ok: true, online: !!online, url: probeUrl, checkedAt: nowT };
+        global.__tsCache = { at: nowT, data: data };
+        json(res, 200, data);
+      };
+      if (!probeUrl) return send2(false);
+      try {
+        var https2 = require("https");
+        var rq = https2.get(probeUrl, { timeout: 3500 }, function (rs) {
+          rs.resume();
+          send2(rs.statusCode > 0);           // 有响应就算通（哪怕 404）
+        });
+        rq.on("timeout", function () { try { rq.destroy(); } catch (e) { } send2(false); });
+        rq.on("error", function () { send2(false); });
+      } catch (e) { send2(false); }
+      return;
+    }
+
+if (p === "/api/tunnel") {
     if (req.method !== "POST") { res.writeHead(405); return res.end(); }
     var tb = "";
     req.on("data", function (c) { tb += c; if (tb.length > 65536) req.destroy(); });

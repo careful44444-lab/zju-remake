@@ -114,9 +114,9 @@ function toast(m){ var t=$('toast'); t.textContent=m; t.classList.add('show'); c
 function loadStatus(){
   Promise.all([
     fetch('/api/backups', {cache:'no-store'}).then(function(r){return r.json();}).catch(function(){return null;}),
-    fetch('/url', {cache:'no-store'}).then(function(r){return r.text();}).catch(function(){return '';})
+          fetch('/api/tunnel-state', {cache:'no-store'}).then(function(r){return r.json();}).catch(function(){return null;})
   ]).then(function(res){
-    var b = res[0], tunnelOnline = /在 线|在线/.test(res[1] || '');
+          var b = res[0], ts = res[1] || {}, tunnelOnline = !!ts.online;
     var c = (b && b.current) || {};
     $('status').innerHTML =
       '<span>对局 <b>' + (c.runs || 0) + '</b></span>' +
