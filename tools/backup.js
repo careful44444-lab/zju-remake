@@ -347,6 +347,57 @@ function setNote(file, note) {
   return true;
 }
 
+// 把多份备份合并成一份（按 eid 去重，按 ts 排序），结果写成新的一份备份
+function merge(files, opt) {
+  opt = opt || {};
+  ensure();
+  files = (files || []).filter(function (f) { return f && exists(f); });
+  if (files.length < 2) return { ok: false, msg: '至少选两份备份' };
+
+  var seen = {}, all = [], perFile = [];
+  files.forEach(function (f) {
+    var txt = fs.readFileSync(path.join(DIR, f), 'utf8');
+    var add = 0, dup = 0;
+    txt.split('\n').forEach(function (line) {
+      if (!line.trim()) return;
+      var e;
+      try { e = JSON.parse(line); } catch (err) { return; }
+      var key = e.eid || ([e.rid || '', e.ev || '', e.ts || ''].join('|'));
+      if (seen[key]) { dup += 1; return; }
+      seen[key] = 1;
+      all.push(e);
+      add += 1;
+    });
+    perFile.push({ file: f, add: add, dup: dup });
+  });
+
+  if (!all.length) return { ok: false, msg: '这几份备份里没有可合并的事件' };
+  all.sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
+  var text = all.map(function (e) { return JSON.stringify(e); }).join('\n') + '\n';
+
+  var st = stats(text);
+  var base = stamp() + '-merged-r' + st.runs + '-e' + st.events;
+  var name = base + '.jsonl', dup2 = 2;
+  while (fs.existsSync(path.join(DIR, name))) { name = base + '-' + dup2 + '.jsonl'; dup2 += 1; }
+  fs.writeFileSync(path.join(DIR, name), text, 'utf8');
+
+  var list = readIndex();
+  list.push({
+    file: name,
+    at: new Date().toISOString(),
+    events: st.events,
+    runs: st.runs,
+    finished: st.finished,
+    users: st.users,
+    bytes: Buffer.byteLength(text),
+    sha: require('crypto').createHash('sha256').update(text).digest('hex').slice(0, 16),
+    note: (opt.note || '合并 ' + files.length + ' 份（去重后 ' + st.events + ' 条事件）')
+  });
+  list.sort(function (a, b) { return a.at < b.at ? -1 : 1; });
+  writeIndex(list);
+
+  return { ok: true, file: name, events: st.events, runs: st.runs, finished: st.finished, perFile: perFile };
+}
 function exists(file) {
   if (!/^[A-Za-z0-9._-]+\.jsonl$/.test(file)) return false;
   return fs.existsSync(path.join(DIR, file));
@@ -375,6 +426,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  merge: merge,
   snapshot: snapshot, list: listSnapshots, restore: restore,
   autoSnapshot: autoSnapshot, csv: csv, csvOf: csvOf, stats: stats,
   items: items, currentStats: currentStats, remove: remove, setNote: setNote, exists: exists,

@@ -74,6 +74,7 @@ code{background:rgba(15,23,42,.05);padding:1px 6px;border-radius:5px;font-size:1
   <h2>所有备份 <span class="sub" id="cnt"></span></h2>
   <div id="bulkBar" class="bulkbar hidden">
     <span id="bulkCount">已选 0 份</span>
+    <button id="bulkMerge">合并选中</button>
     <button id="bulkDelete" class="danger">删除选中</button>
     <button id="bulkClear" class="ghost">取消选择</button>
   </div>
@@ -134,6 +135,8 @@ function syncPick() {
   }
 }
 
+var _bm = document.getElementById("bulkMerge");
+if (_bm) _bm.onclick = function () { bulkMerge(); };
 function bulkDelete() {
   var ids = pickedIds();
   if (!ids.length) return;
@@ -141,6 +144,19 @@ function bulkDelete() {
   api({ action: "delete", files: ids }).then(function () { picked = {}; syncPick(); });
 }
 
+function bulkMerge() {
+  var ids = pickedIds();
+  if (ids.length < 2) return alert("至少选两份备份才能合并");
+  if (!confirm("把选中的 " + ids.length + " 份备份合并成一份？\n\n" +
+      "· 重复的事件会按 id 去掉\n" +
+      "· 结果存成一份【新的】备份，不覆盖当前数据\n" +
+      "· 合并后可以再点「恢复到这份」用它")) return;
+  api({ action: "merge", files: ids }).then(function (r) {
+    if (!r) return;
+    alert(r.msg || (r.ok ? "合并完成" : "合并失败"));
+    if (r.ok) { picked = {}; syncPick(); load(); }
+  });
+}
 function render() {
   var c = DATA.current || { events: 0, runs: 0, finished: 0, users: 0, bytes: 0 };
   $('current').innerHTML =

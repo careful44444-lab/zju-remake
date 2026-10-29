@@ -368,7 +368,16 @@ http.createServer(function (req, res) {
         if (Array.isArray(o.files)) {
           var fs2 = o.files.filter(function (x) { return typeof x === 'string' && x; });
           if (!fs2.length) return json(res, 400, { ok: false, msg: '没选中任何备份' });
-          if (o.action !== 'delete') return json(res, 400, { ok: false, msg: '批量只支持删除' });
+          if (o.action === 'merge') {
+            var mr = backup.merge(fs2);
+            if (!mr.ok) return json(res, 400, { ok: false, msg: mr.msg || '合并失败' });
+            return json(res, 200, {
+              ok: true,
+              msg: '已合并 ' + fs2.length + ' 份 → ' + mr.events + ' 条事件 / ' + mr.runs + ' 局（新建备份，未覆盖当前数据）',
+              items: backup.items(), current: backup.currentStats()
+            });
+          }
+          if (o.action !== 'delete') return json(res, 400, { ok: false, msg: '批量只支持删除或合并' });
           var gone = 0;
           fs2.forEach(function (f) { if (backup.remove(f)) gone += 1; });
           return json(res, 200, { ok: true, msg: '已删除 ' + gone + ' 份备份', items: backup.items(), current: backup.currentStats() });
