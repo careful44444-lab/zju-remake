@@ -203,6 +203,26 @@ function yearName(e) {
   return y || '未选';
 }
 
+// 成就 id → 中文名（合并 game/config.js 与 data/content-edit.json）
+var _achMap = null;
+function achNameMap() {
+  if (_achMap) return _achMap;
+  var m = {};
+  try {
+    var C = require(path.join(__dirname, "..", "game", "config.js"));
+    (C.ACHIEVEMENTS || []).forEach(function (a) { if (a && a.id) m[a.id] = a.name || a.id; });
+  } catch (e) { }
+  try {
+    var cePath = path.join(__dirname, "..", "data", "content-edit.json");
+    if (fs.existsSync(cePath)) {
+      var ce = JSON.parse(fs.readFileSync(cePath, "utf8"));
+      var arr = ce.__achievements || (ce.content && ce.content.__achievements) || ce.achievements || [];
+      arr.forEach(function (a) { if (a && a.id && a.name) m[a.id] = a.name; });
+    }
+  } catch (e) { }
+  _achMap = m;
+  return m;
+}
 function csvText(text, outName) {
   if (!String(text || '').trim()) return null;
 
@@ -246,7 +266,7 @@ function csvText(text, outName) {
       yearName(e),
       p.finished ? '是' : '否',
       p.title || '',
-      (p.achievements || []).join(' / '),
+      (p.achievements || []).map(function (id) { var m = achNameMap(); return m[id] || id; }).join(' / '),
       p.pointsSpent != null ? p.pointsSpent : '',
       p.pointsLeft != null ? p.pointsLeft : '',
       p.ops != null ? p.ops : '',
