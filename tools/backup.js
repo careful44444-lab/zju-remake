@@ -208,11 +208,12 @@ function csvText(text, outName) {
 
   var C = require('../game/config.js');
   var dims = C.DIMS;
-  var runs = {}, ansMap = {};
+  var runs = {}, ansMap = {}, cfgMap = {};
   text.split('\n').forEach(function (line) {
     if (!line.trim()) return;
     var e; try { e = JSON.parse(line); } catch (err) { return; }
     if (e.ev === 'run_end') runs[e.rid] = e;
+    if (e.ev === 'run_start' && e.rid && e.props && e.props.cfg) cfgMap[e.rid] = e.props.cfg;
     if (e.ev === 'answer' && e.rid) {
       var qk = (e.props && e.props.qid) || 'q?';
       (ansMap[e.rid] = ansMap[e.rid] || {})[qk] = e.props || {};
@@ -231,6 +232,7 @@ function csvText(text, outName) {
   var head = ['时间', '年级', '是否完成', '称号', '成就', '净投入点数', '剩余点数', '操作次数', '时长秒']
     .concat(dims.map(function (d) { return d.name + '_档位'; }))
     .concat(dims.map(function (d) { return d.name + '_专精'; }))
+    .concat(['回合数', '发放合计', '每回合发放', '结转', '广度税', '价格', '初始合计'])
     .concat(qOrder.map(function (q) {
       var ttl = String(qTitle[q] || '').replace(/[,，]/g, ' ');
       return q + '_' + (ttl.length > 12 ? ttl.slice(0, 12) + '…' : ttl);
@@ -252,6 +254,22 @@ function csvText(text, outName) {
     ];
     dims.forEach(function (d) { row.push((p.tiers || {})[d.id] || ''); });
     dims.forEach(function (d) { row.push((p.caps || {})[d.id] || ''); });
+    var cf = cfgMap[rid];
+    if (cf) {
+      var gs = cf.grants || [];
+      var tot = gs.reduce(function (a, b) { return a + (b || 0); }, 0);
+      var ini = cf.inits || {};
+      var iniSum = Object.keys(ini).reduce(function (a, k) { return a + (ini[k] || 0); }, 0);
+      row.push(cf.rounds != null ? cf.rounds : '');
+      row.push(tot);
+      row.push(gs.join('/'));
+      row.push(cf.carry != null ? cf.carry : '');
+      row.push(cf.breadth != null ? cf.breadth : '');
+      row.push((cf.stepCost || []).join('/'));
+      row.push(iniSum);
+    } else {
+      row.push(''); row.push(''); row.push(''); row.push(''); row.push(''); row.push(''); row.push('');
+    }
     qOrder.forEach(function (q) {
       var a = (ansMap[rid] || {})[q];
       if (!a) { row.push(''); return; }
