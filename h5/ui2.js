@@ -488,7 +488,7 @@
   var pendingToast = '';
   var pendingItem = '';
   /* ----------------------------- 问卷 ----------------------------- */
-  var SURVEY = null, svIdx = 0, svAns = {};
+  var SURVEY = null, svIdx = 0, svAns = {}, svDone = false;
 
   var SURVEY_DEFAULT = {
     intro: "还有几个问题想问问你（都可以跳过）",
@@ -508,7 +508,7 @@
   function openSurvey() {
     loadSurvey().then(function () {
       if (!SURVEY || !SURVEY.questions.length) { toast("题库没加载出来，刷新一下试试"); return; }
-      svIdx = 0; svAns = {};
+      svIdx = 0; svAns = {}; svDone = false;
       show("survey");
       renderSurvey();
     });
@@ -573,6 +573,7 @@
   }
 
   function nextSurvey(skipped) {
+    if (svDone) return;                     // 结语页之后不再受理，防重复上报
     if (!skipped) {
       var q = SURVEY.questions[svIdx];
       var needText = (q.type === "text") || q.allowText;
@@ -598,6 +599,8 @@
   }
 
   function finishSurvey() {
+    if (svDone) return;                     // 同一次问卷只结算一次
+    svDone = true;
     var answered = 0, skipped = 0;
     SURVEY.questions.forEach(function (q) {
       var a = svAns[q.id];
