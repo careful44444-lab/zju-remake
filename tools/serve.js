@@ -265,7 +265,10 @@ http.createServer(function (req, res) {
   // ---------- 登录 / 登出 ----------
   if (p === '/login') {
     if (req.method === 'POST') {
-      var ip = (req.socket && req.socket.remoteAddress) || '?';
+      // 走 Cloudflare 隧道时 socket 永远是 127.0.0.1；若不用 CF-Connecting-IP,
+      // 所有组员会共用一个「失败次数」，一个人试错就把全员锁住。
+      var ip = String(req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for'] ||
+        (req.socket && req.socket.remoteAddress) || '?').split(',')[0].trim();
       var lock = AUTH.lockedFor(ip);
       if (lock) return sendLogin(res, '试错太多次，请 ' + lock + ' 秒后再试', 429, '/login');
       var body = '';

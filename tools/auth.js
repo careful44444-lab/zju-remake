@@ -130,7 +130,8 @@ function lockedFor(ip) {
 function noteFail(ip) {
   var f = fails[ip] || (fails[ip] = { n: 0, until: 0 });
   f.n += 1;
-  if (f.n >= 5) { f.until = Date.now() + 60 * 1000; f.n = 0; }
+  // 10 次才锁、只锁 30 秒（原来是 5 次 / 60 秒，太容易误伤）
+  if (f.n >= 10) { f.until = Date.now() + 30 * 1000; f.n = 0; }
 }
 
 function noteOk(ip) { delete fails[ip]; }
