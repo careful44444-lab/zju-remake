@@ -60,6 +60,13 @@ function flagsOf(r, prev) {
   return out;
 }
 
+// 把 run_start 里的 cfg 快照压成一行说明，和看板的分组口径一致
+function cfgLabelOf(cfg) {
+  if (!cfg) return '';
+  var g = (cfg.grants || []).reduce(function (a, b) { return a + (b || 0); }, 0);
+  var ini = Object.keys(cfg.inits || {}).reduce(function (a, k) { return a + (cfg.inits[k] || 0); }, 0);
+  return (cfg.grants || []).join('/') + ' · 结转 ' + cfg.carry + ' · 税 ' + cfg.breadth + ' · 初始' + ini;
+}
 function listRuns(file) {
   file = file || DATA;
   var meta = readMeta();
@@ -121,7 +128,8 @@ function listRuns(file) {
       cards: r.cards,
       events: r.events,
       excluded: !!m.excluded,
-      note: m.note || ''
+      note: m.note || '',
+      cfgLabel: cfgLabelOf(sp.cfg)
     };
   });
 
@@ -172,6 +180,7 @@ function excludedSet() {
 }
 
 module.exports = {
+  cfgLabelOf: cfgLabelOf,
   FLAGS: FLAGS, flagsOf: flagsOf,
   listRuns: listRuns, deleteRun: deleteRun, setExcluded: setExcluded,
   setNote: setNote, excludedSet: excludedSet, readMeta: readMeta, DATA: DATA, META: META

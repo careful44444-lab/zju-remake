@@ -113,6 +113,7 @@ tr.detail td{background:rgba(0,0,0,.28);padding:14px 16px}
         <th style="width:64px">年级</th>
         <th style="width:56px">成就</th>
         <th>称号</th>
+        <th style="white-space:nowrap">参数版本</th>
         <th style="width:150px">六维</th>
         <th style="width:60px">时长</th>
         <th style="width:190px">状态 / 异常</th>
@@ -179,6 +180,9 @@ function matches(r) {
   else if (filter.indexOf('flag:') === 0) {
     var fid = filter.slice(5);
     if (!(r.flags && r.flags.indexOf(fid) >= 0)) return false;
+  }
+  else if (filter.indexOf('cfg:') === 0) {
+    if ((r.cfgLabel || '') !== decodeURIComponent(filter.slice(4))) return false;
   }
   else if (filter === 'done' && !(r.finished)) return false;
   if (filter === 'left' && (r.finished || !r.settled)) return false;
@@ -296,6 +300,26 @@ function render() {
         esc(f.label) + ' <b>' + (counts[f.id] || 0) + '</b></button>';
     });
     bar.innerHTML = html;
+    // 参数版本下拉
+    var seen = {}, vers = [];
+    (DATA.runs || []).forEach(function (r) { if (r.cfgLabel && !seen[r.cfgLabel]) { seen[r.cfgLabel] = 1; vers.push(r.cfgLabel); } });
+    var old = document.getElementById('cfgSelect');
+    if (old) old.parentNode.removeChild(old);
+    if (vers.length) {
+      var sel = document.createElement('select');
+      sel.id = 'cfgSelect';
+      sel.style.cssText = 'margin-left:10px;padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;font-size:13px;color:#334155';
+      var opts = ['<option value="">全部参数版本</option>'].concat(vers.map(function (v) {
+        var on = filter === 'cfg:' + encodeURIComponent(v) ? ' selected' : '';
+        return '<option value="' + esc(v) + '"' + on + '>' + esc(v) + '</option>';
+      }));
+      sel.innerHTML = opts.join('');
+      sel.onchange = function () {
+        filter = this.value ? ('cfg:' + encodeURIComponent(this.value)) : 'all';
+        render();
+      };
+      bar.parentNode.insertBefore(sel, bar.nextSibling);
+    }
     bar.querySelectorAll('button.fl').forEach(function (b) {
       b.onclick = function () { filter = b.dataset.f; render(); };
     });
@@ -316,6 +340,7 @@ function render() {
       '<td>' + yearTag(r) + '</td>' +
       '<td class="num">' + ((r.achievements || []).length || '—') + '</td>' +
       '<td>' + esc(r.title || '—') + '</td>' +
+      '<td style="white-space:nowrap;color:#475569;font-size:12px">' + esc(r.cfgLabel || '—') + '</td>' +
       '<td><div class="tier">' + dimPips(r) + '</div></td>' +
       '<td class="num" style="color:#64748b">' + dur(r.durationMs) + '</td>' +
       '<td style="white-space:nowrap">' + statusTag(r) + flagTags(r) + '</td>' +
