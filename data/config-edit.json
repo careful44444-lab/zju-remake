@@ -32,50 +32,13 @@
     8,
     14
   ],
-  "stepCostDims": {
-    "food": [
-      4,
-      6,
-      10,
-      17
-    ],
-    "dorm": [
-      3,
-      5,
-      9,
-      15
-    ],
-    "study": [
-      5,
-      7,
-      12,
-      20
-    ],
-    "sport": [
-      4,
-      6,
-      10,
-      17
-    ],
-    "culture": [
-      4,
-      6,
-      10,
-      17
-    ],
-    "move": [
-      4,
-      6,
-      10,
-      17
-    ]
-  },
+  "stepCostDims": null,
   "inits": {
     "food": 3,
-    "dorm": 1,
+    "dorm": 2,
     "study": 3,
     "sport": 2,
-    "culture": 3,
+    "culture": 2,
     "move": 2
   }
 }

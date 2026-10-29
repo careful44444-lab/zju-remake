@@ -922,7 +922,7 @@
         {
           "label": "申请调换",
           "cost": 5,
-          "result": "换了宿舍，找到了作息相近的室友，睡得��香了。",
+          "result": "换了宿舍，找到了作息相近的室友，睡得更香了。",
           "altResult": "",
           "elseEffect": null,
           "cond": null,
