@@ -186,6 +186,19 @@ function aggregate(file) {
   // 成就解锁次数
   var achievements = {};
   (C.ACHIEVEMENTS || []).forEach(function (a) { achievements[a.id] = { id: a.id, name: a.name, desc: a.desc, count: 0 }; });
+  // 后台文案编辑器里新增的成就（id 形如 ach<时间戳>）也要能显示名字
+  try {
+    var cePath = require("path").join(__dirname, "..", "data", "content-edit.json");
+    if (require("fs").existsSync(cePath)) {
+      var ce = JSON.parse(require("fs").readFileSync(cePath, "utf8"));
+      var ceAch = ce.__achievements || (ce.content && ce.content.__achievements) || ce.achievements || [];
+      ceAch.forEach(function (a) {
+        if (!a || !a.id) return;
+        if (!achievements[a.id]) achievements[a.id] = { id: a.id, name: a.name || a.id, desc: a.desc || "", count: 0 };
+        else if (a.name) achievements[a.id].name = a.name;
+      });
+    }
+  } catch (e) { }
   finished.forEach(function (r) {
     ((r.end.props || {}).achievements || []).forEach(function (a) {
       if (!achievements[a]) achievements[a] = { id: a, name: a, desc: '', count: 0 };
