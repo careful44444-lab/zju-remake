@@ -83,7 +83,21 @@
       mode: mode,
       year: state.grade || null,
       points: state.points,
-      tiers: Z.clone(state.tiers)
+      tiers: Z.clone(state.tiers),
+      cfg: (function () {
+        var inits = {};
+        (Z.DIMS || []).forEach(function (d) { inits[d.id] = d.init; });
+        return {
+          rounds: Z.MAX_ROUNDS,
+          grants: (Z.ROUND_POINTS || []).slice(),
+          carry: Z.CARRY_RATIO,
+          stepCost: (Z.STEP_COST || []).slice(),
+          stepCostDims: Z.STEP_COST_DIMS || null,
+          breadth: Z.BREADTH_BASE,
+          inits: inits,
+          items: Z.ITEMS_ENABLED !== false
+        };
+      })()
     });
   }
 
