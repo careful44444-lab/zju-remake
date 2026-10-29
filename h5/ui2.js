@@ -981,6 +981,11 @@
     scene = new Z.Scene($('map'));
     scene.contentLookup = function (id, tier) { return CONTENT[id].tiers[tier - 1]; };
     scene.start();
+
+  // 预加载彩蛋素材：别等到点进彩蛋才开始加载，那样会先干等一两秒
+  setTimeout(function () {
+    try { if (window.ZJUFinale && ZJUFinale.load) ZJUFinale.load("../assets/finale/"); } catch (e) {}
+  }, 1200);
     window.__zjuScene = scene;
 
     window.addEventListener('resize', function () { scene.resize(); });
