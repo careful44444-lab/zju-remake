@@ -157,6 +157,25 @@ function el(id) { return document.getElementById(id); }
 function pct(n, d) { return d ? Math.round(n / d * 100) + '%' : '—'; }
 function esc(s) { return String(s == null ? '' : s).replace(/[<>&]/g, function (c) { return { '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]; }); }
 
+function renderCfg(d) {
+  var box = document.getElementById("cfgGroups");
+  if (!box) return;
+  var g = (d && d.cfgGroups) || [];
+  if (!g.length) {
+    box.innerHTML = '<div class="muted">还没有带参数的局（记录设置上线之后开的局才有）</div>';
+    return;
+  }
+  box.innerHTML = g.map(function (x) {
+    return '<div class="cfg-row"><div class="lbl">' + x.label + '</div><div class="nums">'
+      + '<span>局数 <b>' + x.runs + '</b></span>'
+      + '<span>完成 <b>' + x.finished + '</b></span>'
+      + '<span>完成率 <b>' + x.completionRate + '%</b></span>'
+      + '<span>平均档位和 <b>' + x.avgTiers + '</b></span>'
+      + '<span>平均花点 <b>' + x.avgSpent + '</b></span>'
+      + '</div></div>';
+  }).join("");
+}
+
 function renderSurvey(sv) {
   var box = document.getElementById("surveyBox");
   if (!box) return;
@@ -195,6 +214,7 @@ function renderSurvey(sv) {
 function render(d) {
   META = META || d.meta;
   renderSurvey(d.survey);
+  renderCfg(d);
   var t = d.totals;
 
   el('updated').textContent = '最后更新 ' + new Date(d.generatedAt).toLocaleTimeString('zh-CN');
