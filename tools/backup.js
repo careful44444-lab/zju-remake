@@ -208,16 +208,33 @@ function csvText(text, outName) {
 
   var C = require('../game/config.js');
   var dims = C.DIMS;
-  var runs = {};
+  var runs = {}, ansMap = {};
   text.split('\n').forEach(function (line) {
     if (!line.trim()) return;
     var e; try { e = JSON.parse(line); } catch (err) { return; }
     if (e.ev === 'run_end') runs[e.rid] = e;
+    if (e.ev === 'answer' && e.rid) {
+      var qk = (e.props && e.props.qid) || 'q?';
+      (ansMap[e.rid] = ansMap[e.rid] || {})[qk] = e.props || {};
+    }
+  });
+
+  var qOrder = [], qTitle = {};
+  Object.keys(ansMap).forEach(function (rid) {
+    Object.keys(ansMap[rid]).forEach(function (qid) {
+      if (qOrder.indexOf(qid) < 0) qOrder.push(qid);
+      var pt = ansMap[rid][qid].title;
+      if (!qTitle[qid] && pt) qTitle[qid] = pt;
+    });
   });
 
   var head = ['时间', '年级', '是否完成', '称号', '成就', '净投入点数', '剩余点数', '操作次数', '时长秒']
     .concat(dims.map(function (d) { return d.name + '_档位'; }))
-    .concat(dims.map(function (d) { return d.name + '_专精'; }));
+    .concat(dims.map(function (d) { return d.name + '_专精'; }))
+    .concat(qOrder.map(function (q) {
+      var ttl = String(qTitle[q] || '').replace(/[,，]/g, ' ');
+      return q + '_' + (ttl.length > 12 ? ttl.slice(0, 12) + '…' : ttl);
+    }));
   var rows = [head.join(',')];
 
   Object.keys(runs).forEach(function (rid) {
@@ -235,6 +252,15 @@ function csvText(text, outName) {
     ];
     dims.forEach(function (d) { row.push((p.tiers || {})[d.id] || ''); });
     dims.forEach(function (d) { row.push((p.caps || {})[d.id] || ''); });
+    qOrder.forEach(function (q) {
+      var a = (ansMap[rid] || {})[q];
+      if (!a) { row.push(''); return; }
+      if (a.skipped) { row.push('跳过'); return; }
+      var parts = [];
+      if (a.choice) parts.push(String(a.choice));
+      if (a.text) parts.push(String(a.text));
+      row.push(parts.join(' / '));
+    });
     rows.push(row.map(function (x) {
       var s = String(x);
       return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
