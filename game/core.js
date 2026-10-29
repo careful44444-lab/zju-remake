@@ -90,7 +90,15 @@
   }
 
   function roundDims(s) { return s.roundDims || []; }
-  function inRound(s, id) { return roundDims(s).indexOf(id) >= 0; }
+  // 本回合起点档位：优先用快照，没有就退回最初配置（首回合没快照）
+  function baseOf(s, id) {
+    if (s.roundBase && s.roundBase[id] !== undefined) return s.roundBase[id];
+    for (var i = 0; i < C.DIMS.length; i++) if (C.DIMS[i].id === id) return C.DIMS[i].init;
+    return 1;
+  }
+
+  // 「已动工」= 现在档位 ≠ 本回合起点档位（降回原点就不算）
+  function inRound(s, id) { return (s.tiers[id] || 1) !== baseOf(s, id); }
   function roundsLeft(s) { return (C.MAX_ROUNDS || 99) - (s.round || 1); }
   function isLocked(s) { return (s.round || 1) > (C.MAX_ROUNDS || 99); }
 
@@ -141,12 +149,19 @@
       s.roundDims = roundDims(s).concat([id]);
       s.breadthPaid = s.breadthPaid || {};
       s.roundBase = s.roundBase || {};
-      s.roundBase[id] = t;                       // 本回合从这个档位起跑
+      if (s.roundBase[id] === undefined) s.roundBase[id] = t;   // 首回合没快照时兜底
       s.breadthPaid[id] = breadthTax(roundDims(s).length - 1);
     }
     s.points -= c;
     s.spent = (s.spent || 0) + c;
     s.tiers[id] = t + 1;
+    // 升完之后如果正好回到本回合起点（先降后升），不算动工，广度税退回
+    if (s.roundBase && s.roundBase[id] !== undefined && s.tiers[id] === s.roundBase[id]) {
+      var back = (s.breadthPaid && s.breadthPaid[id]) || 0;
+      if (back) { s.points += back; s.spent = Math.max(0, (s.spent || 0) - back); }
+      s.roundDims = roundDims(s).filter(function (x) { return x !== id; });
+      if (s.breadthPaid) delete s.breadthPaid[id];
+    }
     if (s.tiers[id] === 5) s.caps[id] = capId || null;
     s.ops += 1;
     return { ok: true, cost: c, tier: s.tiers[id] };
@@ -159,7 +174,7 @@
     s.round = (s.round || 1) + 1;
     s.roundDims = [];
     s.breadthPaid = {};
-    s.roundBase = {};
+    s.roundBase = Object.assign({}, s.tiers);   // 本回合起点快照
     // 剩余点数按比例结转，再加上新回合的额度
     if (!isLocked(s)) {
       var ratio = (typeof C.CARRY_RATIO === "number") ? C.CARRY_RATIO : 1;
@@ -375,7 +390,7 @@
       if (typeof s.ops !== 'number') s.ops = 0;
       if (typeof s.events !== 'number') s.events = 0;
       if (!Array.isArray(s.history)) s.history = [];
-      return s;
+  return s;
     } catch (e) { return null; }
   }
 
