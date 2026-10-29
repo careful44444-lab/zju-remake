@@ -239,7 +239,7 @@ function isLocalReq(req) {
 }
 
 // 公网也能访问的路径（游戏本体 + 数据上报 + 文案/数值读取）
-var PUBLIC_EXACT = { '/': 1, '/login': 1, '/logout': 1, '/collect': 1, '/content-edit': 1, '/config-edit': 1, '/favicon.ico': 1, '/play': 1 };
+var PUBLIC_EXACT = { '/': 1, '/login': 1, '/logout': 1, '/collect': 1, '/content-edit': 1, '/config-edit': 1, '/api/survey': 1, '/api/config': 1, '/favicon.ico': 1, '/play': 1 };
 var PUBLIC_PREFIX = ['/h5/', '/game/', '/render/'];
 // 隧道过来的请求，socket 也是 127.0.0.1，所以必须结合 forwarded 头判断
 function isRemoteReq(req) {

@@ -507,7 +507,7 @@
 
   function openSurvey() {
     loadSurvey().then(function () {
-      if (!SURVEY || !SURVEY.questions.length) { toast("暂时没有问题"); return; }
+      if (!SURVEY || !SURVEY.questions.length) { toast("题库没加载出来，刷新一下试试"); return; }
       svIdx = 0; svAns = {};
       show("survey");
       renderSurvey();
