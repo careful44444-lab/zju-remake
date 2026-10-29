@@ -175,7 +175,7 @@ function render() {
         String(it.note || '').replace(/"/g, '&quot;') + '" placeholder="给这份起个名字，比如「内测第一轮」"></td>' +
       '<td><div class="acts">' +
         '<button data-act="restore" data-file="' + it.file + '">恢复到这份</button>' +
-        '<button data-act="download" data-file="' + it.file + '">下载</button>' +
+        '<button data-act="csv" data-file="' + it.file + '">表格</button><button data-act="download" data-file="' + it.file + '">下载</button>' +
         '<button class="danger" data-act="delete" data-file="' + it.file + '">删除</button>' +
       '</div></td>';
 
@@ -215,6 +215,8 @@ function act(what, file) {
   } else if (what === 'delete') {
     if (!confirm('删除这份备份？文件会被删掉，不能撤销。')) return;
     api({ action: 'delete', file: file });
+  } else if (what === 'csv') {
+    window.open('/api/export-one.csv?f=' + encodeURIComponent(file), '_blank');
   } else if (what === 'download') {
     location.href = '/download/' + encodeURIComponent(file);
   }

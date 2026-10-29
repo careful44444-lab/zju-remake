@@ -203,9 +203,8 @@ function yearName(e) {
   return y || '未选';
 }
 
-function csv(opt) {
-  var text = fs.existsSync(DATA) ? fs.readFileSync(DATA, 'utf8') : '';
-  if (!text.trim()) { console.log('没有数据可导出。'); return null; }
+function csvText(text, outName) {
+  if (!String(text || '').trim()) return null;
 
   var C = require('../game/config.js');
   var dims = C.DIMS;
@@ -243,10 +242,25 @@ function csv(opt) {
   });
 
   ensure();
-  var file = path.join(ROOT, 'backups', 'runs-' + stamp() + '.csv');
+  var file = path.join(ROOT, 'backups', (outName || ('runs-' + stamp())) + '.csv');
   fs.writeFileSync(file, '\ufeff' + rows.join('\r\n'), 'utf8');  // BOM 让 Excel 认中文
-  console.log('已导出 CSV：' + file + '  （' + (rows.length - 1) + ' 局，Excel 可直接打开）');
   return file;
+}
+
+function csv() {
+  var text = fs.existsSync(DATA) ? fs.readFileSync(DATA, 'utf8') : '';
+  var f = csvText(text);
+  if (!f) { console.log('没有数据可导出。'); return null; }
+  console.log('已导出 CSV：' + f);
+  return f;
+}
+
+// 单独导出某一份备份为 CSV
+function csvOf(file) {
+  var src = path.join(DIR, file);
+  if (!fs.existsSync(src)) return null;
+  var base = String(file).replace(/\.jsonl?$/i, '').replace(/[^\w\-]/g, '_');
+  return csvText(fs.readFileSync(src, 'utf8'), base);
 }
 
 // ---------------- 单份管理（给 /backups 页面用） ----------------
@@ -318,7 +332,7 @@ if (require.main === module) {
 
 module.exports = {
   snapshot: snapshot, list: listSnapshots, restore: restore,
-  autoSnapshot: autoSnapshot, csv: csv, stats: stats,
+  autoSnapshot: autoSnapshot, csv: csv, csvOf: csvOf, stats: stats,
   items: items, currentStats: currentStats, remove: remove, setNote: setNote, exists: exists,
   DIR: DIR
 };

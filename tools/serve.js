@@ -673,6 +673,25 @@ if (p === "/api/survey") {
     });
   }
 
+  // 单份备份导出 CSV
+  if (p === "/api/export-one.csv") {
+    var qq = require("url").parse(req.url, true).query || {};
+    var fname = String(qq.f || "");
+    if (!fname || fname.indexOf("..") >= 0 || /[\\/]/.test(fname)) {
+      res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" });
+      return res.end("bad file");
+    }
+    var oneCsv = backup.csvOf(fname);
+    if (!oneCsv) {
+      res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+      return res.end("这份备份里没有可导出的对局");
+    }
+    res.writeHead(200, {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": "attachment; filename=\"" + require("path").basename(oneCsv) + "\""
+    });
+    return fs.createReadStream(oneCsv).pipe(res);
+  }
   // 一键导出 CSV
   if (p === "/api/export.csv") {
     var csvFile = backup.csv();
