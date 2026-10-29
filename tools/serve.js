@@ -239,7 +239,7 @@ function isLocalReq(req) {
 }
 
 // 公网也能访问的路径（游戏本体 + 数据上报 + 文案/数值读取）
-var PUBLIC_EXACT = { '/': 1, '/login': 1, '/logout': 1, '/collect': 1, '/content-edit': 1, '/config-edit': 1, '/api/survey': 1, '/api/config': 1, '/favicon.ico': 1, '/play': 1 };
+var PUBLIC_EXACT = { '/0954d8bbf557911a51288b572c0dad77.txt': 1, '/': 1, '/login': 1, '/logout': 1, '/collect': 1, '/content-edit': 1, '/config-edit': 1, '/api/survey': 1, '/api/config': 1, '/favicon.ico': 1, '/play': 1 };
 var PUBLIC_PREFIX = ['/h5/', '/game/', '/render/'];
 // 隧道过来的请求，socket 也是 127.0.0.1，所以必须结合 forwarded 头判断
 function isRemoteReq(req) {
@@ -501,7 +501,12 @@ http.createServer(function (req, res) {
   }
 
   // 问卷题库：读 / 存
-  if (p === "/api/survey") {
+  if (p === '/0954d8bbf557911a51288b572c0dad77.txt') {
+  res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' });
+  res.end('ee935a33160b603d252ba882145ad6f55aaa91d1');
+  return true;
+}
+if (p === "/api/survey") {
     var SURVEY_FILE = path.join(root, "data", "survey.json");
     if (req.method === "GET") {
       var sv = null;
