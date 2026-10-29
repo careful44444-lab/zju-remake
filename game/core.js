@@ -97,8 +97,8 @@
     return 1;
   }
 
-  // 「已动工」= 现在档位 ≠ 本回合起点档位（降回原点就不算）
-  function inRound(s, id) { return (s.tiers[id] || 1) !== baseOf(s, id); }
+  // 「已动工」= 本回合把这一维**升**过了起点（降档不算开工，降回原点更不算）
+  function inRound(s, id) { return (s.tiers[id] || 1) > baseOf(s, id); }
   function roundsLeft(s) { return (C.MAX_ROUNDS || 99) - (s.round || 1); }
   function isLocked(s) { return (s.round || 1) > (C.MAX_ROUNDS || 99); }
 
@@ -145,7 +145,7 @@
     if (t === 4 && !capId) return { ok: false, msg: 'need-cap' };
     push(s);
     // 本回合第一次开这个维度：收广度税，记下来（降档时原样退）
-    if (!inRound(s, id)) {
+    if (!inRound(s, id) && (t + 1) > baseOf(s, id)) {
       s.roundDims = roundDims(s).concat([id]);
       s.breadthPaid = s.breadthPaid || {};
       s.roundBase = s.roundBase || {};
@@ -156,7 +156,7 @@
     s.spent = (s.spent || 0) + c;
     s.tiers[id] = t + 1;
     // 升完之后如果正好回到本回合起点（先降后升），不算动工，广度税退回
-    if (s.roundBase && s.roundBase[id] !== undefined && s.tiers[id] === s.roundBase[id]) {
+    if (s.tiers[id] === baseOf(s, id)) {
       var back = (s.breadthPaid && s.breadthPaid[id]) || 0;
       if (back) { s.points += back; s.spent = Math.max(0, (s.spent || 0) - back); }
       s.roundDims = roundDims(s).filter(function (x) { return x !== id; });
