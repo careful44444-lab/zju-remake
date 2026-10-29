@@ -681,7 +681,7 @@ if (p === "/api/survey") {
       res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" });
       return res.end("bad file");
     }
-    var oneCsv = backup.csvOf(fname);
+    var oneCsv = freshBackup().csvOf(fname);
     if (!oneCsv) {
       res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
       return res.end("这份备份里没有可导出的对局");
@@ -692,9 +692,18 @@ if (p === "/api/survey") {
     });
     return fs.createReadStream(oneCsv).pipe(res);
   }
+  // 导出前强制重载 backup.js：改完代码不用重启服务也能生效
+  function freshBackup() {
+    try {
+      var bp = require.resolve('./backup.js');
+      delete require.cache[bp];
+      return require('./backup.js');
+    } catch (e) { return backup; }
+  }
+
   // 一键导出 CSV
   if (p === "/api/export.csv") {
-    var csvFile = backup.csv();
+    var csvFile = freshBackup().csv();
     if (!csvFile) { res.writeHead(404, {"Content-Type":"text/plain; charset=utf-8"}); return res.end("还没有数据"); }
     res.writeHead(200, {
       "Content-Type": "text/csv; charset=utf-8",
