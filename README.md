@@ -9,8 +9,6 @@
 >
 > 每个地块底边还挂着一个**档位信物**徽章（馒头→八宝鸭 / 步行→高铁 / 铅笔→竺可桢像…），T5 有金环光晕；不想要可以在后台「数值设置 → 显示档位信物」一键关掉。
 
-![游戏主界面](shots/map.png)
-
 ---
 
 ## 现在怎么玩
@@ -333,8 +331,7 @@ zju-remake/
 │  ├─ tunnel.js     一键 cloudflared 公网隧道
 │  └─ build-single.js 打包单文件 HTML（可写死上报地址）
 ├─ data/            收集到的原始事件（events.jsonl）
-├─ dist/            打包产物：单文件 html 与 dist/site/
-└─ shots/           截图
+└─ dist/            打包产物：单文件 html 与 dist/site/
 ```
 
 `game/` 和 `render/scene.js` 是纯 JS（UMD 包装），没有 DOM 依赖，可以直接搬进小程序。
