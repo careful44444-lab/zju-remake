@@ -203,6 +203,15 @@ function yearName(e) {
   return y || '未选';
 }
 
+function areaName(e) {
+  var C2 = require('../game/config.js');
+  var a = (e.prof && e.prof.area) || (e.props && e.props.area) || '';
+  for (var i = 0; i < (C2.AREAS || []).length; i++) {
+    if (C2.AREAS[i].id === a) return C2.AREAS[i].name;
+  }
+  return a || '';
+}
+
 // 成就 id → 中文名（合并 game/config.js 与 data/content-edit.json）
 var _achMap = null;
 function achNameMap() {
@@ -249,7 +258,7 @@ function csvText(text, outName) {
     });
   });
 
-  var head = ['时间', '年级', '是否完成', '称号', '成就', '净投入点数', '剩余点数', '操作次数', '时长秒']
+  var head = ['时间', '年级', '生活区', '是否完成', '称号', '成就', '净投入点数', '剩余点数', '操作次数', '时长秒']
     .concat(dims.map(function (d) { return d.name + '_档位'; }))
     .concat(dims.map(function (d) { return d.name + '_专精'; }))
     .concat(['回合数', '发放合计', '每回合发放', '结转', '广度税', '价格', '初始合计'])
@@ -264,6 +273,7 @@ function csvText(text, outName) {
     var row = [
       new Date(e.ts).toLocaleString('zh-CN', { hour12: false }),
       yearName(e),
+      areaName(e),
       p.finished ? '是' : '否',
       p.title || '',
       (p.achievements || []).map(function (id) { var m = achNameMap(); return m[id] || id; }).join(' / '),

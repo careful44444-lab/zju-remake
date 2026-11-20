@@ -142,5 +142,60 @@ ok(!Core.useFreeUp(it2, 'food').ok, '已封神的维度不能再升');
 it2.tiers.study = 4;
 eq(Core.useFreeUp(it2, 'study').msg, 'need-cap', 'T4→T5 要先选专精');
 
+console.log('\n[14] 回归：广度税防刷点 / 跨回合降档 / 导出与事件开关');
+eq(typeof Core.stepPrice, 'function', 'Core.stepPrice 已导出');
+var g1 = Core.createState();
+g1.points = 30;
+Core.upgrade(g1, 'food');           // 1st dim: -8 -> 22
+Core.upgrade(g1, 'dorm');           // 2nd dim: -(3+2) -> 17, breadthPaid.dorm=2
+Core.upgrade(g1, 'dorm');           // same dim: -5 -> 12
+Core.downgrade(g1, 'dorm');         // T3->T2: +5 -> 17 (NOT +7!)
+eq(g1.points, 17, '同回合连升两档后降一档，不提前退广度税');
+Core.upgrade(g1, 'dorm');           // T2->T3: -5 -> 12
+Core.downgrade(g1, 'dorm');         // T3->T2: +5 -> 17
+eq(g1.points, 17, '反复升降不能刷点数');
+Core.downgrade(g1, 'dorm');         // T2->T1: +(3+2) -> 22
+eq(g1.points, 22, '降回本回合起点后完整退回广度税');
+
+var g2 = Core.createState();
+g2.points = 40;
+Core.upgrade(g2, 'dorm');           // R1: dorm 1->2
+Core.upgrade(g2, 'dorm');           // R1: dorm 2->3
+Core.endRound(g2);                  // R2: roundBase.dorm = 3
+Core.upgrade(g2, 'food');           // R2 1st dim
+var pBeforeDown = g2.points;
+Core.downgrade(g2, 'dorm');         // R2: dorm 3->2 (+5), roundBase.dorm 仍应为 3
+eq(g2.roundBase.dorm, 3, '降档不删 roundBase');
+ok(!Core.inRound(g2, 'dorm'), '降档后不算本回合已动工');
+eq(Core.taxInfo(g2, 'dorm').breadth, 0, '从降档恢复到本回合起点不收广度税');
+Core.upgrade(g2, 'dorm');           // R2: dorm 2->3 (-5)
+eq(g2.points, pBeforeDown, '先降后升回到起点净花 0 点');
+eq(Core.taxInfo(g2, 'dorm').breadth, 2, '超过本回合起点仍正常收广度税');
+Core.undo(g2);
+eq(g2.roundBase.dorm, 3, 'undo 后保留 roundBase');
+
+var allT5 = {};
+C.DIMS.forEach(function (d) { allT5[d.id] = 5; });
+var expectedT5 = 0;
+C.DIMS.forEach(function (d) {
+  for (var t = d.init + 1; t <= 5; t++) expectedT5 += Core.stepPrice(d.id, t);
+});
+expectedT5 += 2 + 3; // 第5、6维各收一次广度税
+eq(Core.costOfTiers(allT5), expectedT5, 'costOfTiers 广度税按维度收一次（不按每档重复加）');
+
+var prevItemsOn = C.ITEMS_ENABLED;
+C.ITEMS_ENABLED = false;
+var evSt = Core.createState();
+evSt.points = 20;
+var evRes = Ev.applyResult(evSt, { label: 'test', cost: 2, item: 'up', result: 'ok' });
+eq(Core.itemCount(evSt, 'up'), 0, 'ITEMS_ENABLED=false 时事件不发放道具');
+ok(evRes.delta.indexOf('获得') < 0, 'ITEMS_ENABLED=false 时结果文案不提示获得道具');
+C.ITEMS_ENABLED = prevItemsOn;
+
+var evCapSt = Core.createState();
+evCapSt.tiers.culture = 4;
+Ev.applyResult(evCapSt, { label: 'cap', effect: { tiers: { culture: 1 } }, cap: 4, result: 'ok' });
+eq(evCapSt.tiers.culture, 4, '事件兼容顶层 cap 上限');
+
 console.log('\n' + (fails ? '共 ' + fails + ' 项失败' : '全部通过 ✓') + '\n');
 process.exit(fails ? 1 : 0);

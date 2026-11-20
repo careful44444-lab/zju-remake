@@ -37,6 +37,15 @@
     { id: 'y4', name: '大四', desc: '要走了，只想留下点东西' }
   ];
 
+  // 开局可选的宿区/学园（选填，不强制）
+  var AREAS = [
+    { id: 'lantian', name: '蓝田' },
+    { id: 'danqing', name: '丹青' },
+    { id: 'yunfeng', name: '云峰' },
+    { id: 'baisha',  name: '白沙/翠柏' },
+    { id: 'east',    name: '东区/其他' }
+  ];
+
   // 每一档的价钱。
   // 原来是「基础价 + 深度税」两段相加，现在合并成一个数，可在后台直接改：
   //   STEP_COST[0] = 升到 T2 要多少点
@@ -77,8 +86,8 @@
 
   // 成就与称号：都是「规则数据」，可在后台增删改。
   // 条件 cond 是一组子句，必须全部成立：
-NaN
-NaN
+  //   { t:'every', of:['food','dorm'], min:4 }       指定维度全部满足 min/max（of:'*' 表示全部六维）
+  //   { t:'count', of:'*', n:1, min:5 }              至少 n 个维度满足 min/max
   //   { t:'top',   of:['food'] }                      这个维度是唯一最高的
   // 档位信物：每个维度每一档在楼前摆一个小物件（馒头 / 八宝鸭 / 自行车…）
   // 设成 false 就回到「只有建筑」的旧版
@@ -126,6 +135,7 @@ NaN
   return {
     TIERS: TIERS,
     GRADES: GRADES,
+    AREAS: AREAS,
     DIMS: DIMS,
 
     INIT_POINTS: INIT_POINTS,

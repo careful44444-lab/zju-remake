@@ -1147,3 +1147,33 @@ body.finale-on #map {
 }
 
 textarea.need{border-color:#f87171 !important;box-shadow:0 0 0 3px rgba(248,113,113,.18)}
+
+/* ---------------- v1.4 新增：0 拨款降档引导 / 宿区胶囊 / 微信长按战绩图 ---------------- */
+.sheet-actions .btn-down.suggest{
+  border-color:#f59e0b;background:#fffbeb;color:#b45309;
+  animation:tipPulse 2s ease-out infinite;
+}
+.area-pick{margin:0 0 14px}
+.area-lbl{display:block;font-size:11.5px;color:#64748b;margin-bottom:7px;font-weight:600}
+.area-opts{display:flex;flex-wrap:wrap;gap:6px}
+.area-pill{
+  font:inherit;font-size:12px;padding:5px 11px;border-radius:999px;cursor:pointer;
+  background:rgba(255,255,255,0.88);border:1px solid #cbd5e1;color:#334155;
+  transition:all .16s ease;
+}
+.area-pill:hover{border-color:#94a3b8}
+.area-pill.on{background:#fffbeb;border-color:#f59e0b;color:#b45309;font-weight:700;box-shadow:0 0 0 2px rgba(245,158,11,.15)}
+
+#shareWrap .share-card{max-height:94%;gap:10px}
+#shareWrap #shareCanvas{display:none}
+#shareWrap #shareImg{
+  width:min(330px,74vw);max-height:70vh;object-fit:contain;
+  border-radius:16px;box-shadow:0 20px 60px rgba(15,23,42,.22);
+  background:#f8fafc;display:block;
+  -webkit-touch-callout:default;user-select:auto;
+}
+#shareWrap .share-tip{
+  margin:0;font-size:11.5px;color:#f8fafc;background:rgba(15,23,42,.62);
+  padding:4px 12px;border-radius:999px;letter-spacing:.02em;
+}
+#shareWrap .share-actions{width:min(330px,74vw)}

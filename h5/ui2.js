@@ -82,6 +82,7 @@
     Track.startRun({
       mode: mode,
       year: state.grade || null,
+      area: state.area || null,
       points: state.points,
       tiers: Z.clone(state.tiers),
       cfg: (function () {
@@ -186,6 +187,16 @@
   }
 
   /* ----------------------------- 渲染 ----------------------------- */
+  function tierTitleOf(dimId, tier, capId) {
+    var c = CONTENT[dimId];
+    if (!c) return '';
+    if (tier === 5 && capId && c.caps) {
+      var cp = c.caps.filter(function (x) { return x.id === capId; })[0];
+      if (cp && cp.name) return cp.name;
+    }
+    return (c.tiers[tier - 1] && c.tiers[tier - 1].title) || '';
+  }
+
   function refresh() {
     var sm = Z.summary(state);
     $('pts').textContent = state.points;
@@ -202,9 +213,16 @@
     renderItems();
     $('btnUndo').style.opacity = state.history.length ? 1 : 0.35;
 
-    if (state.points < 2 && !sel) {
+    if (state.round === 1 && state.points === 0 && state.ops === 0 && !sel) {
+      var h0 = $('hint');
+      h0.textContent = '本学年拨款为 0 · 点任意地块「降一档」腾出经费，或点下方直接结束本回合';
+      h0.style.opacity = 1;
+    } else if (state.points < 2 && !sel) {
       var h = $('hint');
-      h.textContent = '点数用完了 · 点右上角「提交」看结果';
+      var isLastOrLocked = (Z.isLocked && Z.isLocked(state)) || (state.round || 1) >= (Z.MAX_ROUNDS || 4);
+      h.textContent = isLastOrLocked
+        ? '点数用完了 · 点下方「提交方案」看结果'
+        : '点数不够了 · 可点下方「结束本回合」或降档换点';
       h.style.opacity = 1;
     }
   }
@@ -338,7 +356,7 @@
     $('shTag').textContent = d.name;
     $('shTier').textContent = 'T' + t + ' · ' + tier.name;
     $('shPeer').textContent = '横向对比：' + tier.peer;
-    $('shTitle').textContent = info.title;
+    $('shTitle').textContent = tierTitleOf(sel, t, state.caps[sel]);
 
     var desc = info.desc;
     if (t === 5 && state.caps[sel]) {
@@ -391,7 +409,7 @@
     act.className = 'sheet-actions' + (t === 4 ? ' col' : '');
 
     // 降档
-    var down = el('button', 'btn-down');
+    var down = el('button', 'btn-down' + (state.points === 0 && t > 1 && !locked ? ' suggest' : ''));
     var rf = Z.refund(state, sel);
     down.innerHTML = t > 1 ? ('降一档 <small>返还 ' + rf + ' 点</small>') : ('已到底 <small>—</small>');
     if (t <= 1) down.disabled = true;
@@ -502,11 +520,12 @@
   var pendingToast = '';
   var pendingItem = '';
   /* ----------------------------- 问卷 ----------------------------- */
-  var SURVEY = null, svIdx = 0, svAns = {}, svDone = false;
+  var SURVEY = null, svQuestions = [], svIdx = 0, svAns = {}, svDone = false;
 
   var SURVEY_DEFAULT = {
     intro: "还有几个问题想问问你（都可以跳过）",
     outro: "谢谢。你的想法会和这一局的数据一起，被收进统计里。",
+    dynamicFirst: true,
     questions: []
   };
 
@@ -519,17 +538,69 @@
     } catch (e) { SURVEY = SURVEY || SURVEY_DEFAULT; return Promise.resolve(); }
   }
 
+  // 根据玩家本局实际升降档操作，动态生成第 1 道个性化追问题
+  function buildDynamicQuestion() {
+    if (!state || !state.tiers) return null;
+    var downList = [], upList = [];
+    DIMS.forEach(function (d) {
+      var cur = state.tiers[d.id] || d.init;
+      var diff = cur - d.init;
+      if (diff < 0) downList.push({ d: d, cur: cur, drop: -diff });
+      else if (diff > 0) upList.push({ d: d, cur: cur, gain: diff });
+    });
+    downList.sort(function (a, b) { return b.drop - a.drop; });
+    upList.sort(function (a, b) { return (b.cur - a.cur) || (b.gain - a.gain); });
+
+    if (downList.length && upList.length) {
+      var dn = downList[0], up = upList[0];
+      return {
+        id: "q_dyn",
+        type: "choice",
+        title: "这一局你把「" + dn.d.name + "」降到了 T" + dn.cur + "，优先把预算投给了「" + up.d.name + "」（T" + up.cur + "）。你当时是怎么想的？",
+        options: [
+          "现实里「" + up.d.name + "」最让我头疼，最急需改",
+          "现在的「" + dn.d.name + "」还行，降一档也不心疼",
+          "主要为了凑成就 / 称号，或者试试玩法"
+        ],
+        allowText: true,
+        requireText: false,
+        textHint: "顺便吐个槽或展开说说（选填）"
+      };
+    }
+    if (upList.length) {
+      var top = upList[0];
+      return {
+        id: "q_dyn",
+        type: "choice",
+        title: "这一局你重点改造了「" + top.d.name + "」（升到 T" + top.cur + "）。关于紫金港的「" + top.d.name + "」，你最共鸣的是？",
+        options: [
+          "日常体验痛点最多，改好了幸福感提升最大",
+          "底子本来不错，很想看它冲到全国第一",
+          "单纯觉得这个维度的封神流派更有意思"
+        ],
+        allowText: true,
+        requireText: false,
+        textHint: "最希望学校在「" + top.d.name + "」上先改哪件具体小事？（选填）"
+      };
+    }
+    return null;
+  }
+
   function openSurvey() {
     loadSurvey().then(function () {
       if (!SURVEY || !SURVEY.questions.length) { toast("题库没加载出来，刷新一下试试"); return; }
+      var dyn = (SURVEY.dynamicFirst !== false) ? buildDynamicQuestion() : null;
+      svQuestions = (dyn ? [dyn] : []).concat(SURVEY.questions);
       svIdx = 0; svAns = {}; svDone = false;
+      $("svSkip").style.display = "";
+      $("svNext").onclick = null;
       show("survey");
       renderSurvey();
     });
   }
 
   function renderSurvey() {
-    var qs = SURVEY.questions, q = qs[svIdx];
+    var qs = svQuestions, q = qs[svIdx];
     $("svProgress").textContent = (svIdx + 1) + " / " + qs.length;
     $("svIntro").textContent = svIdx === 0 ? (SURVEY.intro || "") : "";
     $("svIntro").style.display = svIdx === 0 ? "" : "none";
@@ -554,7 +625,9 @@
       });
       body.appendChild(wrap);
       if (q.allowText) {
-        var h = el("p", "sv-hint"); h.textContent = (q.textHint || "补充说明").replace("（选填）", "（必填）");
+        var h = el("p", "sv-hint");
+        var hintRaw = q.textHint || "补充说明（选填）";
+        h.textContent = q.requireText ? hintRaw.replace("（选填）", "（必填）") : hintRaw;
         body.appendChild(h);
       }
     }
@@ -562,7 +635,13 @@
     if (q.type === "text" || q.allowText) {
       var ta = document.createElement("textarea");
       ta.value = cur.text || "";
-      ta.placeholder = q.type === "text" ? (q.placeholder || "写一句吧，不能空着") : "必填，不想答请点「跳过这题」";
+      if (q.type === "text") {
+        ta.placeholder = q.placeholder || "写一句吧，不想答可点「跳过这题」";
+      } else {
+        ta.placeholder = q.requireText
+          ? "必填，不想答请点「跳过这题」"
+          : (q.placeholder || "选填，不填也可以直接点「下一题」");
+      }
       ta.addEventListener("input", function () {
         svAns[q.id] = svAns[q.id] || {};
         svAns[q.id].text = ta.value;
@@ -572,7 +651,7 @@
   }
 
   function saveAnswer(skipped) {
-    var q = SURVEY.questions[svIdx];
+    var q = svQuestions[svIdx];
     var a = svAns[q.id] || {};
     var rec = {
       qid: q.id,
@@ -589,8 +668,12 @@
   function nextSurvey(skipped) {
     if (svDone) return;                     // 结语页之后不再受理，防重复上报
     if (!skipped) {
-      var q = SURVEY.questions[svIdx];
-      var needText = (q.type === "text") || q.allowText;
+      var q = svQuestions[svIdx];
+      if (q.type === "choice" && !(svAns[q.id] && svAns[q.id].choice)) {
+        if (typeof toast === "function") toast("请先选一个选项，不想回答请点「跳过这题」");
+        return;
+      }
+      var needText = (q.type === "text") || (q.allowText && q.requireText === true);
       var txt = ((svAns[q.id] || {}).text || "").trim();
       if (needText && !txt) {
         var ta = document.querySelector("#svBody textarea");
@@ -600,23 +683,27 @@
       }
     }
     saveAnswer(skipped);
-    if (svIdx >= SURVEY.questions.length - 1) { finishSurvey(); return; }
+    if (svIdx >= svQuestions.length - 1) { finishSurvey(); return; }
     svIdx += 1;
     renderSurvey();
     beep(600, 0.05, "sine", 0.02);
   }
 
-  // 问卷一旦点过「回到结算」或进了彩蛋，就不要再出现「还有几个问题想问问你」的入口
+  // 问卷一旦点过「回到结算」或进了彩蛋，就不要再出现「还有几个问题想问问你」的入口；开新局时恢复
   function hideSurveyEntry() {
     var b = $("btnSurvey"); if (b) b.style.display = "none";
     var box = document.querySelector(".ask-box"); if (box) box.style.display = "none";
+  }
+  function showSurveyEntry() {
+    var b = $("btnSurvey"); if (b) b.style.display = "";
+    var box = document.querySelector(".ask-box"); if (box) box.style.display = "";
   }
 
   function finishSurvey() {
     if (svDone) return;                     // 同一次问卷只结算一次
     svDone = true;
     var answered = 0, skipped = 0;
-    SURVEY.questions.forEach(function (q) {
+    svQuestions.forEach(function (q) {
       var a = svAns[q.id];
       if (!a || a.skipped) skipped += 1; else answered += 1;
     });
@@ -629,15 +716,17 @@
     $("svTitle").textContent = SURVEY.outro || "谢谢";
     $("svBody").innerHTML = "";
     $("svSkip").style.display = "none";
-    if (skipped > 0) {
-      // 有跳过的题：不给彩蛋入口
+    if (answered <= 0) {
+      // 全部跳过：不给彩蛋入口
       $("svNext").textContent = "回到结算";
       $("svNext").onclick = function () {
-        if (Track && Track.action) Track.action({ type: "survey_quit", answered: Object.keys(svAns).length });
+        $("svNext").onclick = null;
+        if (Track && Track.action) Track.action({ type: "survey_quit", answered: 0 });
         hideSurveyEntry();
         show("result");
       };
     } else {
+      // 只要有效回答了至少 1 题，即解锁彩蛋
       $("svNext").textContent = "看一眼真实的紫金港";
       $("svNext").onclick = function () {
         $("svNext").onclick = null;
@@ -752,6 +841,32 @@
   }
 
   /* ----------------------------- 结算 ----------------------------- */
+  var peerInsightText = '';
+  function fetchPeerInsight() {
+    peerInsightText = '';
+    try {
+      fetch('/stats', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+        if (!d || !d.tiers) return;
+        var bestId = null, bestMean = -1;
+        DIMS.forEach(function (dm) {
+          var m = d.tiers[dm.id] && d.tiers[dm.id].mean;
+          if (typeof m === 'number' && m > bestMean) { bestMean = m; bestId = dm.id; }
+        });
+        if (!bestId || bestMean <= 0) return;
+        var bestDim = Z.dim(bestId);
+        var yn = '';
+        if (state && state.grade && Z.GRADES) {
+          var g = Z.GRADES.filter(function (x) { return x.id === state.grade; })[0];
+          if (g) yn = g.name;
+        }
+        var totalRuns = (d.totals && d.totals.finished) || 0;
+        if (totalRuns >= 2 && bestDim) {
+          peerInsightText = (yn ? ('包括' + yn + '在内的 ') : '已收集的 ') + totalRuns + ' 局方案里，大家最舍得投入的是「' + bestDim.name + '」（均档 T' + bestMean.toFixed(1) + '）';
+        }
+      }).catch(function () { });
+    } catch (e) { }
+  }
+
   function endRun() {
     // 回合用完后必须能提交，否则「一步没改 + 空过四个回合」会卡死
     var locked = Z.isLocked && Z.isLocked(state);
@@ -762,12 +877,14 @@
       title: sm.title.name,
       achievements: sm.achievements.map(function (a) { return a.id; }),
       year: state.grade || null,
+      area: state.area || null,
       pointsLeft: state.points, pointsSpent: Z.budget(state), round: state.round,
       ops: state.ops, durationMs: runStartTs ? Date.now() - runStartTs : 0,
       tiers: Z.clone(state.tiers),
       caps: Z.clone(state.caps),
       cards: cardsUsed.slice()
     });
+    fetchPeerInsight();
 
     $('resTitle').textContent = sm.title.name;
     $('resLine').textContent = sm.title.line;
@@ -785,101 +902,240 @@
     var rows = $('resDims');
     rows.innerHTML = '';
     DIMS.forEach(function (d) {
-      var t = state.tiers[d.id], info = CONTENT[d.id].tiers[t - 1];
+      var t = state.tiers[d.id], ttl = tierTitleOf(d.id, t, state.caps[d.id]);
       var row = el('div', 'res-row');
       var bar = '';
       for (var k = 1; k <= 5; k++) bar += '<i class="' + (k <= t ? 'on' : '') + '"></i>';
+      var deltaTxt = t > d.init ? ('+' + (t - d.init)) : (t < d.init ? ('−' + (d.init - t)) : '—');
       row.innerHTML = '<div class="rn">' + d.name + '</div>' +
-        '<div class="rt">T' + t + ' ' + info.title + '</div>' +
+        '<div class="rt">T' + t + ' ' + ttl + '</div>' +
         '<div class="rbar">' + bar + '</div>' +
-        '<div class="rp">' + (t > d.init ? '+' + (t - d.init) : '—') + '</div>';
+        '<div class="rp">' + deltaTxt + '</div>';
       rows.appendChild(row);
     });
 
     state.finished = true;
     try { localStorage.removeItem(KEY); } catch (e) { }
+    showSurveyEntry();
     show('result');
     sfxUp();
   }
 
-  /* ----------------------------- 分享图 ----------------------------- */
+  /* ----------------------------- 分享图（浅色纸感 + 档位信物） ----------------------------- */
+  function rrPath(ctx, x, y, w, h, r) {
+    var k = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + k, y);
+    ctx.lineTo(x + w - k, y); ctx.quadraticCurveTo(x + w, y, x + w, y + k);
+    ctx.lineTo(x + w, y + h - k); ctx.quadraticCurveTo(x + w, y + h, x + w - k, y + h);
+    ctx.lineTo(x + k, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - k);
+    ctx.lineTo(x, y + k); ctx.quadraticCurveTo(x, y, x + k, y);
+    ctx.closePath();
+  }
+
   function drawShare() {
     var sm = Z.summary(state);
     var cv = $('shareCanvas'), ctx = cv.getContext('2d');
     var W = 750, H = 1180;
-    var g = ctx.createLinearGradient(0, 0, W, H);
-    g.addColorStop(0, '#141b22');
-    g.addColorStop(0.5, '#0f151b');
-    g.addColorStop(1, '#1a222b');
+    var F = '"PingFang SC","Microsoft YaHei",sans-serif';
+
+    // 1. 浅色纸感背景 + 网格
+    var g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#fffbeb');
+    g.addColorStop(0.28, '#f8fafc');
+    g.addColorStop(1, '#f1f5f9');
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
 
-    var rg = ctx.createRadialGradient(W * 0.5, 180, 40, W * 0.5, 200, 520);
-    rg.addColorStop(0, 'rgba(255,190,90,.20)');
-    rg.addColorStop(1, 'rgba(255,190,90,0)');
-    ctx.fillStyle = rg; ctx.fillRect(0, 0, W, 600);
+    ctx.strokeStyle = 'rgba(15, 23, 42, 0.032)';
+    ctx.lineWidth = 1;
+    for (var gx = 30; gx < W; gx += 30) { ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, H); ctx.stroke(); }
+    for (var gy = 30; gy < H; gy += 30) { ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke(); }
 
+    var rg = ctx.createRadialGradient(W * 0.5, 140, 20, W * 0.5, 160, 460);
+    rg.addColorStop(0, 'rgba(245, 158, 11, 0.16)');
+    rg.addColorStop(1, 'rgba(245, 158, 11, 0)');
+    ctx.fillStyle = rg; ctx.fillRect(0, 0, W, 520);
+
+    // 2. 主白卡片外框
+    ctx.save();
+    ctx.shadowColor = 'rgba(15, 23, 42, 0.06)';
+    ctx.shadowBlur = 28;
+    ctx.shadowOffsetY = 10;
+    rrPath(ctx, 36, 36, W - 72, H - 72, 28);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.restore();
+    rrPath(ctx, 36, 36, W - 72, H - 72, 28);
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 3. 顶部标签 + 年级/宿区胶囊
     ctx.textAlign = 'left';
-    ctx.fillStyle = 'rgba(255,215,106,.85)';
-    ctx.font = '500 22px "PingFang SC","Microsoft YaHei",sans-serif';
-    ctx.fillText('紫 金 港 改 造 计 划 · 第 1 学 期', 64, 96);
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = '#b45309';
+    ctx.font = '700 20px ' + F;
+    ctx.fillText('ZJU · 紫金港改造计划', 72, 92);
 
-    ctx.fillStyle = '#f2f7fb';
-    ctx.font = 'bold 46px "PingFang SC","Microsoft YaHei",sans-serif';
-    ctx.fillText('我把浙大改成了', 64, 168);
-
-    ctx.font = 'bold 54px "PingFang SC","Microsoft YaHei",sans-serif';
-    ctx.fillStyle = '#ffe08a';
-    ctx.fillText('「' + sm.title.name + '」', 64, 238);
-
-    // 成就
-    ctx.textAlign = 'left';
-    if (sm.achievements.length) {
-      ctx.fillStyle = '#6fe0bd';
-      ctx.font = '500 24px "PingFang SC",sans-serif';
-      var names = sm.achievements.map(function (a) { return a.name; }).join('   ');
-      ctx.fillText(names, 64, 300);
+    var badgeParts = [];
+    if (state.grade && Z.GRADES) {
+      var gObj = Z.GRADES.filter(function (x) { return x.id === state.grade; })[0];
+      if (gObj) badgeParts.push(gObj.name);
+    }
+    if (state.area && Z.AREAS) {
+      var aObj = Z.AREAS.filter(function (x) { return x.id === state.area; })[0];
+      if (aObj) badgeParts.push(aObj.name);
+    }
+    if (badgeParts.length) {
+      var bTxt = badgeParts.join(' · ');
+      ctx.font = '600 18px ' + F;
+      var bw = ctx.measureText(bTxt).width + 28;
+      rrPath(ctx, W - 72 - bw, 68, bw, 32, 16);
+      ctx.fillStyle = '#fef3c7'; ctx.fill();
+      ctx.strokeStyle = '#fcd34d'; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = '#b45309';
+      ctx.textAlign = 'center';
+      ctx.fillText(bTxt, W - 72 - bw / 2, 90);
+      ctx.textAlign = 'left';
     }
 
-    // 六维
-    var y0 = 380;
+    // 4. 称号与评语
+    ctx.fillStyle = '#64748b';
+    ctx.font = '600 22px ' + F;
+    ctx.fillText('我心中的理想紫金港方案：', 72, 142);
+
+    ctx.fillStyle = '#0f172a';
+    ctx.font = '800 50px ' + F;
+    ctx.fillText('「' + sm.title.name + '」', 58, 204);
+
+    ctx.fillStyle = '#475569';
+    ctx.font = '500 21px ' + F;
+    var lineTxt = sm.title.line || '';
+    if (lineTxt.length > 28) {
+      ctx.fillText(lineTxt.slice(0, 28), 72, 244);
+      ctx.fillText(lineTxt.slice(28, 56), 72, 272);
+    } else {
+      ctx.fillText(lineTxt, 72, 246);
+    }
+
+    // 5. 成就徽章条
+    var achY = 294;
+    if (sm.achievements.length) {
+      var ax = 72;
+      sm.achievements.forEach(function (a) {
+        var txt = '🏆 ' + a.name;
+        ctx.font = '600 19px ' + F;
+        var aw = ctx.measureText(txt).width + 26;
+        rrPath(ctx, ax, achY, aw, 36, 18);
+        ctx.fillStyle = '#ecfdf5'; ctx.fill();
+        ctx.strokeStyle = '#a7f3d0'; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.fillStyle = '#047857';
+        ctx.fillText(txt, ax + 13, achY + 25);
+        ax += aw + 10;
+      });
+    } else {
+      rrPath(ctx, 72, achY, 270, 34, 17);
+      ctx.fillStyle = '#f1f5f9'; ctx.fill();
+      ctx.fillStyle = '#64748b';
+      ctx.font = '500 18px ' + F;
+      ctx.fillText('独立路线 · 未触发固定联动', 88, achY + 23);
+    }
+
+    // 6. 六维成绩单（含档位信物徽章 + 专精名 + 档位格）
+    var y0 = 362;
     DIMS.forEach(function (d, i) {
-      var t = state.tiers[d.id], info = CONTENT[d.id].tiers[t - 1];
-      var y = y0 + i * 82;
-      ctx.fillStyle = 'rgba(255,255,255,.04)';
-      ctx.beginPath();
-      ctx.roundRect ? ctx.roundRect(64, y - 34, 622, 66, 16) : ctx.rect(64, y - 34, 622, 66);
+      var t = state.tiers[d.id];
+      var ttl = tierTitleOf(d.id, t, state.caps[d.id]);
+      var tierLabel = TIERS[t - 1] ? TIERS[t - 1].name : ('T' + t);
+      var y = y0 + i * 104;
+
+      rrPath(ctx, 68, y, W - 136, 90, 18);
+      ctx.fillStyle = t >= 5 ? '#fffbeb' : '#f8fafc';
       ctx.fill();
+      ctx.strokeStyle = t >= 5 ? '#fcd34d' : '#e2e8f0';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
 
-      ctx.fillStyle = '#ffe08a';
-      ctx.font = 'bold 30px "PingFang SC",sans-serif';
-      ctx.fillText(d.name, 92, y + 10);
+      // 信物圆底与图标
+      var rcx = 116, rcy = y + 45;
+      ctx.beginPath(); ctx.arc(rcx, rcy, 28, 0, 6.283);
+      ctx.fillStyle = '#ffffff'; ctx.fill();
+      ctx.strokeStyle = t >= 5 ? '#f59e0b' : '#cbd5e1';
+      ctx.lineWidth = 2; ctx.stroke();
+      if (Z.drawRelic && Z.RELICS !== false) {
+        Z.drawRelic(ctx, d.motif, t, rcx, rcy, 44, {});
+      } else {
+        ctx.fillStyle = '#0f172a';
+        ctx.font = '800 24px ' + F;
+        ctx.textAlign = 'center';
+        ctx.fillText(d.name, rcx, rcy + 8);
+      }
 
-      ctx.fillStyle = '#cfdae4';
-      ctx.font = '500 24px "PingFang SC",sans-serif';
-      ctx.fillText('T' + t + ' ' + info.title, 140, y + 9);
+      // 维度名 + 档位/专精标题
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#0f172a';
+      ctx.font = '800 26px ' + F;
+      ctx.fillText(d.name + ' · ' + ttl, 162, y + 41);
 
+      var diff = t - d.init;
+      var diffStr = diff > 0 ? ('（+' + diff + ' 档）') : (diff < 0 ? ('（−' + (-diff) + ' 档）') : '（维持原档）');
+      ctx.fillStyle = diff > 0 ? '#d97706' : (diff < 0 ? '#e11d48' : '#64748b');
+      ctx.font = '600 18px ' + F;
+      ctx.fillText('T' + t + ' ' + tierLabel + ' ' + diffStr, 162, y + 70);
+
+      // 右侧 5 格档位条
       for (var k = 0; k < 5; k++) {
-        ctx.fillStyle = k < t ? '#ffd76a' : '#2c3742';
-        ctx.fillRect(540 + k * 26, y - 6, 18, 12);
+        rrPath(ctx, W - 216 + k * 26, y + 37, 20, 14, 4);
+        ctx.fillStyle = k < t ? (t >= 5 ? '#f59e0b' : '#d97706') : '#e2e8f0';
+        ctx.fill();
       }
     });
 
-    ctx.fillStyle = '#5d6a77';
-    ctx.font = '500 20px "PingFang SC",sans-serif';
-    ctx.fillText('同人创作 · 与浙江大学官方无关', 64, H - 54);
+    // 7. 底部群体共鸣或本局摘要条
+    var footBoxY = 1004;
+    rrPath(ctx, 68, footBoxY, W - 136, 62, 14);
+    ctx.fillStyle = '#fffbeb'; ctx.fill();
+    ctx.strokeStyle = '#fde68a'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = '#92400e';
+    ctx.font = '600 19px ' + F;
+    ctx.textAlign = 'center';
+    var summaryLine = peerInsightText;
+    if (!summaryLine) {
+      var topDims = DIMS.filter(function (d) { return state.tiers[d.id] > d.init; })
+        .sort(function (a, b) { return state.tiers[b.id] - state.tiers[a.id]; })
+        .map(function (d) { return '「' + d.name + '」'; });
+      summaryLine = topDims.length
+        ? ('本局共推进 +' + sm.steps + ' 档 · 重点改造了 ' + topDims.slice(0, 3).join(' '))
+        : '本局未做升档改造 · 保持了原汁原味的紫金港';
+    }
+    ctx.fillText(summaryLine, W / 2, footBoxY + 38);
 
-    ctx.fillStyle = '#ffd76a';
-    ctx.font = '500 20px "PingFang SC",sans-serif';
+    // 8. 页脚
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '500 18px ' + F;
+    ctx.fillText('同人创作 · 与浙江大学官方无关', 72, H - 62);
+
+    ctx.fillStyle = '#d97706';
+    ctx.font = '600 18px ' + F;
     ctx.textAlign = 'right';
-    ctx.fillText('第 ' + (state.round || 1) + '/' + (Z.MAX_ROUNDS || 4) + ' 回合结束', W - 64, H - 54);
+    ctx.fillText('4 学年改造完成 · 你的理想紫金港是什么样？', W - 72, H - 62);
 
-    $('shareDl').href = cv.toDataURL('image/png');
+    var dataUrl = cv.toDataURL('image/png');
+    $('shareDl').href = dataUrl;
+    if ($('shareImg')) $('shareImg').src = dataUrl;
     $('shareWrap').classList.remove('hidden');
   }
 
   /* ----------------------------- 存档 ----------------------------- */
   function persist() {
-    try { localStorage.setItem(KEY, Z.save(state)); } catch (e) { }
+    try {
+      if (state) {
+        state.undoFloor = undoFloor;
+        state.cardsUsed = cardsUsed.slice();
+      }
+      localStorage.setItem(KEY, Z.save(state));
+    } catch (e) { }
   }
   function readSave() {
     try {
@@ -950,7 +1206,25 @@
     openGradePicker();
   }
 
+  var pickedArea = null;
   function openGradePicker() {
+    var abox = $('areaOpts');
+    if (abox) {
+      abox.innerHTML = '';
+      (Z.AREAS || []).forEach(function (a) {
+        var ab = document.createElement('button');
+        ab.type = 'button';
+        ab.className = 'area-pill' + (pickedArea === a.id ? ' on' : '');
+        ab.textContent = a.name;
+        ab.addEventListener('click', function () {
+          pickedArea = (pickedArea === a.id) ? null : a.id;
+          var pills = abox.querySelectorAll('.area-pill');
+          for (var i = 0; i < pills.length; i++) pills[i].classList.toggle('on', (Z.AREAS[i] && Z.AREAS[i].id) === pickedArea);
+          sfxTap();
+        });
+        abox.appendChild(ab);
+      });
+    }
     var box = $('gradeOpts');
     box.innerHTML = '';
     (Z.GRADES || []).forEach(function (g) {
@@ -960,23 +1234,33 @@
       b.addEventListener('click', function () {
         $('gradeModal').classList.add('hidden');
         beep(520, 0.1, 'triangle', 0.04);
-        beginRun('new', g.id);
+        beginRun('new', g.id, pickedArea);
       });
       box.appendChild(b);
     });
     $('gradeModal').classList.remove('hidden');
   }
 
-  function beginRun(mode, grade) {
+  function beginRun(mode, grade, area) {
     undoFloor = 0;   // 开局重置
+    finaleBusy = false;
+    finaleState = null;
+    var fbox = $('finale');
+    if (fbox) { fbox.classList.remove('on'); fbox.style.opacity = ''; fbox.setAttribute('aria-hidden', 'true'); }
+    document.body.classList.remove('finale-on');
+    hideGameUI(false);
+    resetFinaleScene();
+    if (scene) { scene.backdrop = null; scene.overlay = null; }
     state = Z.createState();
     state.grade = grade || null;
+    state.area = area || null;
     queue = [];   // 每回合按当时的局势现抽（见 openEvent）
     sel = null;
-    if (Track) Track.setProfile({ year: state.grade });
+    showSurveyEntry();
+    if (Track) Track.setProfile({ year: state.grade, area: state.area });
     trackStart(mode);
-    if (window.ZJUAudio) ZJUAudio.startBgm();
-  show('game');
+    if (window.ZJUAudio) { ZJUAudio.setMuted(muted); ZJUAudio.startBgm(); }
+    show('game');
     scene.resize();
     refresh();
     setTimeout(function () { $('hint').style.opacity = 1; }, 100);
@@ -996,7 +1280,13 @@
   function startUI() {
     initTrack();
     scene = new Z.Scene($('map'));
-    scene.contentLookup = function (id, tier) { return CONTENT[id].tiers[tier - 1]; };
+    scene.contentLookup = function (id, tier) {
+      var base = CONTENT[id].tiers[tier - 1];
+      if (!base) return null;
+      var capId = state && state.caps ? state.caps[id] : null;
+      var ttl = tierTitleOf(id, tier, capId);
+      return ttl ? { title: ttl, desc: base.desc, tags: base.tags } : base;
+    };
     scene.start();
 
   // 预加载彩蛋素材：别等到点进彩蛋才开始加载，那样会先干等一两秒
@@ -1033,19 +1323,22 @@
       var s = readSave();
       if (!s) return;
       state = s;
-      if (Track) Track.setProfile({ year: s.grade || null });
+      undoFloor = (typeof s.undoFloor === 'number') ? s.undoFloor : (s.history || []).length;
+      if (Track) Track.setProfile({ year: s.grade || null, area: s.area || null });
       queue = [];   // 每回合按当时的局势现抽（见 openEvent）
       trackStart('resume');
+      if (Array.isArray(s.cardsUsed)) cardsUsed = s.cardsUsed.slice();
+      if (window.ZJUAudio) { ZJUAudio.setMuted(muted); ZJUAudio.startBgm(); }
       show('game');
       scene.resize();
       refresh();
       toast('已恢复上次进度');
-      });
+    });
 
     $('btnUndo').addEventListener('click', undo);
     $('btnRound').addEventListener('click', function () { triggerFlash(this, nextRound, 340); });
     $('btnAgain').addEventListener('click', function () {
-      beginRun('again', state ? state.grade : null);
+      beginRun('again', state ? state.grade : null, state ? state.area : null);
     });
     $('btnShare').addEventListener('click', function () { triggerFlash(this, drawShare, 340); });
     $('shareClose').addEventListener('click', function () { $('shareWrap').classList.add('hidden'); });
@@ -1072,13 +1365,18 @@
       if (f) f();
     });
 
+    try { muted = localStorage.getItem('zju.muted') === '1'; } catch (e) { muted = false; }
+    if (window.ZJUAudio) ZJUAudio.setMuted(muted);
+    $('btnSound').classList.toggle('on', !muted);
+    $('btnSound').textContent = muted ? '✕' : '♪';
     $('btnSound').addEventListener('click', function () {
       muted = !muted;
+      try { localStorage.setItem('zju.muted', muted ? '1' : '0'); } catch (e) { }
+      if (window.ZJUAudio) ZJUAudio.setMuted(muted);
       this.classList.toggle('on', !muted);
       this.textContent = muted ? '✕' : '♪';
       if (!muted) beep(700, 0.08, 'sine', 0.04);
     });
-    $('btnSound').classList.add('on');
 
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') {
@@ -1192,9 +1490,11 @@
     ca = 1 - Math.pow(1 - ca, 3);
     scene.hideAllZones = true;   // 彩蛋自己画，已知可用
     scene.contentAlpha = ca;
+    var cw = ZJUFinale.CW || ['move', 'food', 'dorm', 'study', 'sport', 'culture'];
     var zm = {};
     finaleState.order.forEach(function (it, i) {
-      var e = ZJUFinale.localAt(t, i);
+      var rank = cw.indexOf(it.id);
+      var e = ZJUFinale.localAt(t, rank >= 0 ? rank : i);
       zm[it.id] = {
         zone: 1 - Math.min(1, Math.max(0, (e - 0.42)) / 0.4),   // 真建筑升到一半，矢量建筑才淡出
         name: e > 0.55 ? it.name : null,          // 文字换成建筑名
@@ -1210,11 +1510,10 @@
       var el = $(id);
       if (!el) return;
       if (on) {
-        el.setAttribute('data-fx-op', el.style.opacity || '');
         el.style.opacity = '0';
         el.style.pointerEvents = 'none';
       } else {
-        el.style.opacity = el.getAttribute('data-fx-op') || '';
+        el.style.opacity = '';
         el.style.pointerEvents = '';
         el.removeAttribute('data-fx-op');
       }
@@ -1254,25 +1553,17 @@
     finaleState = null;
   }
 
-  window.addEventListener('error', function (ev) {
-    try {
-      var d = document.getElementById('__FIN_ERRBAR');
-      if (!d) { d = document.createElement('div'); d.id = '__FIN_ERRBAR';
-        d.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:99999;background:#b91c1c;color:#fff;font:12px/1.5 monospace;padding:6px 8px;white-space:pre-wrap';
-        document.body.appendChild(d); }
-      d.textContent = 'JS ERROR: ' + (ev.message || ev.error) + ' @ ' + (ev.filename||'').split('/').pop() + ':' + (ev.lineno||'');
-    } catch (e) {}
-  });
   function playFinale() {
-    // __FIN_SAFE：先让遮罩出现，任何后续异常都不至于卡在上一屏
-    try { var fb = $('finale');
-          if (fb && fb.parentNode !== document.body) document.body.appendChild(fb);   // 提到 body 下，避免被 #stage 压住
-          if (fb) fb.classList.add('on');
-          if (scene && scene.start) scene.start();   // 结算后渲染循环可能已停
-          document.body.classList.add('finale-on');
-          ['hud','roundBar','itemBar','strip'].forEach(function(id){ var el=$(id); if(el) el.style.opacity='0'; });
-    } catch (e) {}
     if (finaleBusy || !window.ZJUFinale) return;
+    // __FIN_SAFE：先让遮罩出现，任何后续异常都不至于卡在上一屏
+    try {
+      var fb = $('finale');
+      if (fb && fb.parentNode !== document.body) document.body.appendChild(fb);   // 提到 body 下，避免被 #stage 压住
+      if (fb) fb.classList.add('on');
+      if (scene && scene.start) scene.start();   // 结算后渲染循环可能已停
+      document.body.classList.add('finale-on');
+      hideGameUI(true);
+    } catch (e) {}
     var box = $('finale');
     if (!box) return;
     finaleBusy = true;
@@ -1305,7 +1596,11 @@
     });
     // 净投入 = 从开局档位走到现在档位之间的净花费（升降都按同一张价格表）
     var __sp = (typeof ZJU.stepPrice === 'function') ? ZJU.stepPrice
-      : function (id, to) { var d = (tiers[id] || 1); return Math.max(1, to - d) * 3; };
+      : function (id, to) {
+          var byDim = ZJU.STEP_COST_DIMS && ZJU.STEP_COST_DIMS[id];
+          var arr = (byDim && byDim.length) ? byDim : (ZJU.STEP_COST || [3, 5, 8, 14]);
+          return arr[to - 2] || arr[arr.length - 1] || 3;
+        };
     var spend = {};
     var dimsCfg = (window.ZJU && ZJU.DIMS) || [];
     for (var di = 0; di < dimsCfg.length; di++) {
@@ -1322,11 +1617,13 @@
       if (spend[sid] > best) { best = spend[sid]; glow = sid; }
     }
     if (window.__FIN_DBG) console.log("glow", String(glow), "best", String(best));
-    finaleState = { order: order, glow: glow, tiers: tiers, spend: spend, t: 0 };
+    var synIds = (Z.achievements ? Z.achievements(state) : []).map(function (a) { return a.id; });
+    finaleState = { order: order, glow: glow, tiers: tiers, spend: spend, synergy: synIds, t: 0 };
 
     var D = 14000;                               // 总时长：14 秒
 
     ZJUFinale.load('../assets/finale/').then(function () {
+      if (!finaleBusy || !finaleState) return;
       // 两层都画在游戏画布上：湖在地块之下，真建筑在地块之上
       scene.backdrop = function (g, W, H) {
         ZJUFinale.backdrop(g, W, H, finaleState ? finaleState.t : 0, mapRect());

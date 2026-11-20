@@ -128,7 +128,13 @@ function group() {
     .map(function (g) {
       var done = g.runs.filter(function (r) { return r.finished && !r.excluded; });
       var stepsList = done.map(function (r) {
-        var n = 0; (DATA.meta.dims || []).forEach(function (d) { n += Math.max(0, ((r.tiers || {})[d.id] || 0) - (d.init || 0)); }); return n;
+        var n = 0;
+        var inits = r.cfgInits || {};
+        (DATA.meta.dims || []).forEach(function (d) {
+          var base = (typeof inits[d.id] === 'number') ? inits[d.id] : (d.init || 0);
+          n += Math.max(0, ((r.tiers || {})[d.id] || 0) - base);
+        });
+        return n;
       });
       var avg = stepsList.length ? Math.round(stepsList.reduce(function (a, b) { return a + b; }, 0) / stepsList.length * 10) / 10 : 0;
       var best = done.reduce(function (m, r) { return Math.max(m, (r.achievements || []).length); }, 0);
@@ -136,7 +142,7 @@ function group() {
       var avgTiers = {};
       (DATA.meta.dims || []).forEach(function (d) {
         var s = 0, n = 0;
-        g.runs.forEach(function (r) { var v = (r.tiers || {})[d.id]; if (v) { s += v; n++; } });
+        done.forEach(function (r) { var v = (r.tiers || {})[d.id]; if (v) { s += v; n++; } });
         avgTiers[d.id] = n ? Math.round(s / n * 100) / 100 : 0;
       });
       var sorted = (DATA.meta.dims || []).slice().sort(function (a, b) { return avgTiers[b.id] - avgTiers[a.id]; });
@@ -159,6 +165,8 @@ function group() {
   groups.sort(function (a, b) {
     var ia = years.findIndex ? years.findIndex(function (y) { return y.id === a.id; }) : 0;
     var ib = years.findIndex ? years.findIndex(function (y) { return y.id === b.id; }) : 0;
+    if (ia < 0) ia = 999;
+    if (ib < 0) ib = 999;
     return ia - ib;
   });
 }

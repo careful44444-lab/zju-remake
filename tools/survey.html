@@ -70,6 +70,10 @@
     <input type="text" id="intro" placeholder="还有几个问题想问问你（都可以跳过）">
     <label>提交后显示</label>
     <input type="text" id="outro" placeholder="谢谢，你的想法会被收进统计。">
+    <label class="chk" style="margin-top:14px;font-weight:600;color:#0f172a">
+      <input type="checkbox" id="dynamicFirst">
+      <span>启用「动态首题」（根据玩家本局先砍谁 / 重点升谁自动生成第 1 道个性化追问题）</span>
+    </label>
   </div>
 
   <div id="list"></div>
@@ -99,6 +103,7 @@ function toast(msg){
 function render(){
   $('intro').value = DATA.intro || '';
   $('outro').value = DATA.outro || '';
+  if ($('dynamicFirst')) $('dynamicFirst').checked = DATA.dynamicFirst !== false;
   $('list').innerHTML = DATA.questions.map(function(q, i){
     var isChoice = q.type !== 'text';
     return '<div class="card" data-i="' + i + '">' +
@@ -118,8 +123,12 @@ function render(){
       (isChoice ? (
         '<label>选项（一行一个，或用逗号分隔）</label>' +
         '<textarea data-f="options" data-i="' + i + '" rows="3">' + esc((q.options || []).join('\n')) + '</textarea>' +
-        '<div class="chk"><input type="checkbox" data-f="allowText" data-i="' + i + '"' + (q.allowText ? ' checked' : '') + '>' +
-          '<span>允许补充一句（选填）</span></div>' +
+        '<div style="display:flex;gap:18px;flex-wrap:wrap">' +
+          '<label class="chk"><input type="checkbox" data-f="allowText" data-i="' + i + '"' + (q.allowText ? ' checked' : '') + '>' +
+            '<span>允许补充说明（默认选填）</span></label>' +
+          '<label class="chk"><input type="checkbox" data-f="requireText" data-i="' + i + '"' + (q.requireText ? ' checked' : '') + '>' +
+            '<span>补充文字设为必填</span></label>' +
+        '</div>' +
         '<label>补充框的提示语</label>' +
         '<input type="text" data-f="textHint" data-i="' + i + '" value="' + esc(q.textHint || '') + '" placeholder="说说为什么（选填）">'
       ) : (
@@ -129,13 +138,16 @@ function render(){
     '</div>';
   }).join('');
 
+  if ($('dynamicFirst')) {
+    $('dynamicFirst').onchange = function(){ DATA.dynamicFirst = this.checked; };
+  }
   document.querySelectorAll('[data-f]').forEach(function(el){
     var h = (el.type === 'checkbox' || el.tagName === 'SELECT') ? 'onchange' : 'oninput';
     el[h] = function(){
       var i = +el.dataset.i, f = el.dataset.f, q = DATA.questions[i];
       if (!q) return;
       if (f === 'options') { q.options = el.value.split(/[\n,，、]/).map(function(s){ return s.trim(); }).filter(Boolean); return; }
-      if (f === 'allowText') { q.allowText = el.checked; return; }
+      if (f === 'allowText' || f === 'requireText') { q[f] = el.checked; return; }
       if (f === 'type') { q.type = el.value; render(); return; }
       q[f] = el.value;
     };
@@ -173,6 +185,7 @@ $('btnAdd').onclick = function(){
 function save(){
   DATA.intro = $('intro').value;
   DATA.outro = $('outro').value;
+  if ($('dynamicFirst')) DATA.dynamicFirst = $('dynamicFirst').checked;
   // 补 id
   DATA.questions.forEach(function(q, i){ if (!q.id) q.id = 'q' + (i + 1); });
   fetch('/api/survey', {

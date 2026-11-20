@@ -129,6 +129,7 @@ var DATA = null, inits = {}, roundPts = [14,14,15,15], items = [], itemsOn = tru
 var stepDims = null;   // null = 所有维度共用一套价格
 
 function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
 function toast(m){ var t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(function(){t.classList.remove('show');},2200); }
 
 function renderItemsSettings(){
@@ -137,10 +138,10 @@ function renderItemsSettings(){
   box.innerHTML = items.map(function(it, i){
     return '<div style="border-top:1px solid #e2e8f0;padding-top:10px;margin-bottom:10px">' +
       '<div style="display:flex;gap:10px;align-items:center">' +
-        '<input type="text" data-item="' + i + '" data-f="name" value="' + it.name + '" style="flex:1">' +
+        '<input type="text" data-item="' + i + '" data-f="name" value="' + esc(it.name) + '" style="flex:1">' +
         (it.type === "multiply" ? '<span style="font-size:11.5px;color:#64748b">倍数</span><input type="number" min="1" max="5" step="0.1" data-item="' + i + '" data-f="factor" value="' + (it.factor||1.5) + '" style="width:78px">' : '') +
       '</div>' +
-      '<label>说明</label><input type="text" data-item="' + i + '" data-f="desc" value="' + (it.desc||'') + '">' +
+      '<label>说明</label><input type="text" data-item="' + i + '" data-f="desc" value="' + esc(it.desc||'') + '">' +
     '</div>';
   }).join("");
   box.querySelectorAll("input[data-item]").forEach(function(el){
@@ -218,15 +219,11 @@ function renderStepGrid(){
 
 function render(){
   if (!DATA) return;
-  renderInits();
   var points = roundPts.reduce(function(a,b){return a+b;}, 0);
   var rounds = +$('rounds').value || 1;
   var bb = +$('breadthBase').value || 0;
 
-
-  renderRoundPts();
-  renderItemsSettings();
-  $('pointsBig').textContent = roundPts.reduce(function(a,b){return a+b;}, 0);
+  $('pointsBig').textContent = points;
 
   var rows = ['<tr><th>维度</th><th>当前</th><th>→T2</th><th>→T3</th><th>→T4</th><th>→T5</th><th class="num">到 T4 累计</th></tr>'];
   var allT4 = 0;
@@ -274,6 +271,9 @@ function fill(cur){
   $('stepGrid').classList.toggle('hidden', !cur.stepCostDims);
   if (cur.stepCostDims) renderStepGrid();
   $('breadthBase').value = cur.breadthBase;
+  renderInits();
+  renderRoundPts();
+  renderItemsSettings();
   render();
 }
 
@@ -300,6 +300,7 @@ $("rounds").addEventListener("input", function(){
   var n = Math.max(1, Math.min(8, Math.round(+$("rounds").value || 4)));
   while (roundPts.length < n) roundPts.push(roundPts.length ? roundPts[roundPts.length-1] : 14);
   roundPts.length = n;
+  renderRoundPts();
   render();
 });
 

@@ -46,12 +46,16 @@ html = html.replace(/<script src="([^"]+)"><\/script>/g, function (m, src) {
   return '<script>\n/* ' + path.relative(root, f).split(path.sep).join('/') + ' */\n' + js + '\n</script>';
 });
 
+function safeJson(o) {
+  return JSON.stringify(o).replace(/</g, '\\u003c');
+}
+
 // 把问卷题库也内联进来（data/survey.json）
 var surveyPath = path.join(root, "data", "survey.json");
 var surveyJson = null;
 try { surveyJson = JSON.parse(fs.readFileSync(surveyPath, "utf8")); } catch (e) { }
 if (surveyJson && surveyJson.questions && surveyJson.questions.length) {
-  html = html.replace("</head>", "<script>window.__ZJU_SURVEY__ = " + JSON.stringify(surveyJson) + ";<\/script>\n</head>");
+  html = html.replace("</head>", "<script>window.__ZJU_SURVEY__ = " + safeJson(surveyJson) + ";<\/script>\n</head>");
   console.log("已内联问卷题库（" + surveyJson.questions.length + " 题）");
 }
 
@@ -65,37 +69,67 @@ var cfgPath = path.join(root, "data", "config-edit.json");
 var cfgJson = null;
 try { cfgJson = JSON.parse(fs.readFileSync(cfgPath, "utf8")); } catch (e) { }
 if (cfgJson) {
-  var cfgTag = "<script>window.__ZJU_CONFIG__ = " + JSON.stringify(cfgJson) + ";<\/script>";
+  var cfgTag = "<script>window.__ZJU_CONFIG__ = " + safeJson(cfgJson) + ";<\/script>";
   var fi = html.indexOf("<script>");
   html = html.slice(0, fi) + cfgTag + "\n" + html.slice(fi);
   console.log("已内联数值设置（data/config-edit.json）");
-
-// 把音乐模块也打进单文件（game/song.js 与 game/audio.js）
-["game/song.js", "game/audio.js"].forEach(function (rel) {
-  var fp = path.join(root, rel);
-  if (!fs.existsSync(fp)) return;
-  var code = fs.readFileSync(fp, "utf8");
-  html = html.replace("</head>", "<script>\n" + code + "\n<\/script>\n</head>");
-  console.log("已内联 " + rel);
-});
-
 }
-// 彩蛋素材：单文件版没有 assets 目录，直接把图内联成 data URL
+// 彩蛋素材：单文件版没有 assets 目录，直接把图内联成 data URL（优先用 Python Pillow 压缩成高画质 WebP 瘦身）
 (function () {
   var dir = path.join(root, 'assets', 'finale');
   if (!fs.existsSync(dir)) { console.log('（没有 assets/finale，跳过彩蛋素材）'); return; }
   var mime = { '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp' };
-  var map = {}, total = 0;
+  var files = [];
   fs.readdirSync(dir).forEach(function (f) {
     var ext = path.extname(f).toLowerCase();
-    if (!mime[ext]) return;
-    var buf = fs.readFileSync(path.join(dir, f));
-    total += buf.length;
-    map[f] = 'data:' + mime[ext] + ';base64,' + buf.toString('base64');
+    if (mime[ext]) files.push(f);
   });
-  var tag = '<script>window.__ZJU_FINALE_ASSETS__ = ' + JSON.stringify(map) + ';<\/script>';
+  var bridgeRel = 'roads/bridge_arch.png';
+  if (fs.existsSync(path.join(dir, bridgeRel))) files.push(bridgeRel);
+
+  var map = null, rawTotal = 0, outTotal = 0;
+  files.forEach(function (f) { rawTotal += fs.statSync(path.join(dir, f)).size; });
+
+  try {
+    var cp = require('child_process');
+    var pyCode = [
+      'import sys, os, json, io, base64',
+      'from PIL import Image',
+      'base = sys.argv[1]',
+      'files = json.loads(sys.argv[2])',
+      'out = {}',
+      'for f in files:',
+      '    p = os.path.join(base, f)',
+      '    im = Image.open(p)',
+      '    if f.startswith("lake") and im.width > 920:',
+      '        h = int(round(im.height * 920.0 / im.width))',
+      '        im = im.resize((920, h), Image.Resampling.LANCZOS)',
+      '    buf = io.BytesIO()',
+      '    q = 78 if f.startswith("lake") else 84',
+      '    im.save(buf, format="WEBP", quality=q, method=4)',
+      '    out[f] = "data:image/webp;base64," + base64.b64encode(buf.getvalue()).decode("ascii")',
+      'sys.stdout.write(json.dumps(out))'
+    ].join('\n');
+    var stdout = cp.execFileSync('python', ['-c', pyCode, dir, JSON.stringify(files)], {
+      encoding: 'utf8',
+      maxBuffer: 32 * 1024 * 1024,
+      stdio: ['ignore', 'pipe', 'ignore']
+    });
+    map = JSON.parse(stdout);
+    Object.keys(map).forEach(function (k) { outTotal += Math.round((map[k].length - 23) * 0.75); });
+  } catch (e) {
+    map = {};
+    files.forEach(function (f) {
+      var ext = path.extname(f).toLowerCase();
+      var buf = fs.readFileSync(path.join(dir, f));
+      outTotal += buf.length;
+      map[f] = 'data:' + mime[ext] + ';base64,' + buf.toString('base64');
+    });
+  }
+
+  var tag = '<script>window.__ZJU_FINALE_ASSETS__ = ' + safeJson(map) + ';<\/script>';
   html = html.replace('</head>', tag + '\n</head>');
-  console.log('已内联彩蛋素材 ' + Object.keys(map).length + ' 张（原图 ' + Math.round(total / 1024) + ' KB）');
+  console.log('已内联彩蛋素材 ' + Object.keys(map).length + ' 张（原图 ' + Math.round(rawTotal / 1024) + ' KB → 压缩后 ' + Math.round(outTotal / 1024) + ' KB）');
 })();
 
 // 把文案编辑器的改动也打进单文件（data/content-edit.json）
@@ -103,7 +137,7 @@ var overridePath = path.join(root, 'data', 'content-edit.json');
 var overrideJson = null;
 try { overrideJson = JSON.parse(fs.readFileSync(overridePath, 'utf8')); } catch (e) { }
 if (overrideJson) {
-  var tag = '<script>window.__ZJU_CONTENT__ = ' + JSON.stringify({ content: overrideJson, events: overrideJson.__events || [], achievements: overrideJson.__achievements, titles: overrideJson.__titles }) + ';<\/script>';
+  var tag = '<script>window.__ZJU_CONTENT__ = ' + safeJson({ content: overrideJson, events: overrideJson.__events || [], achievements: overrideJson.__achievements, titles: overrideJson.__titles }) + ';<\/script>';
   var firstScript = html.indexOf('<script>');
   html = html.slice(0, firstScript) + tag + '\n' + html.slice(firstScript);
   console.log('已内联文案修改（data/content-edit.json）');

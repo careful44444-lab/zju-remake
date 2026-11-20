@@ -29,7 +29,7 @@ var FLAGS = [
   { id: 'empty',    label: '空过四轮', desc: '一步没改就提交（ops = 0）' },
   { id: 'left',     label: '中途离开', desc: '有开始没有结束，或结束时未完成' },
   { id: 'overflow', label: '数值溢出', desc: '档位不在 1-5、点数/操作数/时长超范围' },
-  { id: 'neg',      label: '负数点数', desc: '剩余点数或净投入小于 0' },
+  { id: 'neg',      label: '负数点数', desc: '剩余点数小于 0' },
   { id: 'fast',     label: '秒交',     desc: '不到 5 秒就结束' },
   { id: 'noyear',   label: '年级缺失', desc: '没有记录年级' },
   { id: 'dup',      label: '疑似重复', desc: '同一设备 3 秒内交了两局' }
@@ -53,7 +53,7 @@ function flagsOf(r, prev) {
   if (r.durationMs != null && (!num(r.durationMs) || r.durationMs > 4 * 3600 * 1000)) bad = true;
   if (bad) out.push('overflow');
 
-  if ((r.pointsLeft != null && r.pointsLeft < 0) || (r.pointsSpent != null && r.pointsSpent < 0)) out.push('neg');
+  if (r.pointsLeft != null && r.pointsLeft < 0) out.push('neg');
   if (r.settled && num(r.durationMs) && r.durationMs >= 0 && r.durationMs < 5000) out.push('fast');
   if (!r.year) out.push('noyear');
   if (prev && r.uid && prev.uid === r.uid && Math.abs((prev.ts || 0) - (r.ts || 0)) < 3000) out.push('dup');
@@ -70,12 +70,13 @@ function cfgLabelOf(cfg) {
 function listRuns(file) {
   file = file || DATA;
   var meta = readMeta();
-  var map = {}, order = [];
+  var map = {}, order = [], seen = {};
 
   readLines(file).forEach(function (line) {
     var e;
     try { e = JSON.parse(line); } catch (err) { return; }
     if (!e || !e.rid) return;
+    if (e.eid) { if (seen[e.eid]) return; seen[e.eid] = 1; }
     var r = map[e.rid];
     if (!r) {
       r = map[e.rid] = {
@@ -129,7 +130,8 @@ function listRuns(file) {
       events: r.events,
       excluded: !!m.excluded,
       note: m.note || '',
-      cfgLabel: cfgLabelOf(sp.cfg)
+      cfgLabel: cfgLabelOf(sp.cfg),
+      cfgInits: (sp.cfg && sp.cfg.inits) || null
     };
   });
 

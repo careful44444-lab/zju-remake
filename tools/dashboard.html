@@ -120,6 +120,11 @@ td.opts{max-width:420px;line-height:1.9}
   </section>
 
   <section class="card">
+    <h2>首回合取舍 <small>首步先升谁（刚需） vs 首回合先砍谁（血包）</small></h2>
+    <table id="r1Table"></table>
+  </section>
+
+  <section class="card">
     <h2>封神专精 <small>谁选了哪条流派</small></h2>
     <table id="capTable"></table>
   </section>
@@ -155,7 +160,7 @@ var META = null, auto = true, timer = null;
 
 function el(id) { return document.getElementById(id); }
 function pct(n, d) { return d ? Math.round(n / d * 100) + '%' : '—'; }
-function esc(s) { return String(s == null ? '' : s).replace(/[<>&]/g, function (c) { return { '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]; }); }
+function esc(s) { return String(s == null ? '' : s).replace(/[<>&"]/g, function (c) { return { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]; }); }
 
 function renderCfg(d) {
   var box = document.getElementById("cfgGroups");
@@ -166,7 +171,7 @@ function renderCfg(d) {
     return;
   }
   box.innerHTML = g.map(function (x) {
-    return '<div class="cfg-row"><div class="lbl">' + x.label + '</div><div class="nums">'
+    return '<div class="cfg-row"><div class="lbl">' + esc(x.label) + '</div><div class="nums">'
       + '<span>局数 <b>' + x.runs + '</b></span>'
       + '<span>完成 <b>' + x.finished + '</b></span>'
       + '<span>完成率 <b>' + x.completionRate + '%</b></span>'
@@ -187,14 +192,14 @@ function renderSurvey(sv) {
     var answered = q.total - q.skipped;
     var rate = q.total ? Math.round(answered / q.total * 100) : 0;
     html += '<div style="padding:10px 0;border-top:1px solid rgba(15,23,42,.06)">';
-    html += '<div style="font-weight:600;font-size:13px;margin-bottom:6px">' + (q.title || qid) +
+    html += '<div style="font-weight:600;font-size:13px;margin-bottom:6px">' + esc(q.title || qid) +
       ' <span style="color:#94a3b8;font-weight:400;font-size:11.5px">答 ' + answered + ' / 跳过 ' + q.skipped + '（' + rate + '% 作答）</span></div>';
     var ks = Object.keys(q.choices);
     if (ks.length) {
       ks.sort(function (a, b) { return q.choices[b] - q.choices[a]; });
       html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">';
       ks.forEach(function (k) {
-        html += '<span class="chip" style="font-size:11.5px">' + k + ' <b>' + q.choices[k] + '</b></span>';
+        html += '<span class="chip" style="font-size:11.5px">' + esc(k) + ' <b>' + q.choices[k] + '</b></span>';
       });
       html += '</div>';
     }
@@ -202,7 +207,7 @@ function renderSurvey(sv) {
       html += '<details><summary style="cursor:pointer;font-size:11.5px;color:#64748b">原文 ' + q.texts.length + ' 条</summary>';
       html += '<div style="margin-top:6px;max-height:180px;overflow:auto">';
       q.texts.slice(0, 30).forEach(function (x) {
-        html += '<div style="font-size:12px;color:#475569;padding:5px 0;border-bottom:1px dashed rgba(15,23,42,.06)">' + x.replace(/[<>&]/g, function (c) { return { "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]; }) + '</div>';
+        html += '<div style="font-size:12px;color:#475569;padding:5px 0;border-bottom:1px dashed rgba(15,23,42,.06)">' + esc(x) + '</div>';
       });
       html += '</div></details>';
     }
@@ -279,6 +284,26 @@ function render(d) {
       '<td class="num" style="width:40px">−' + dn + '</td></tr>';
   }).join('');
 
+  // 首回合取舍（刚需 vs 血包）
+  if (el('r1Table')) {
+    var fr = d.firstRound || { firstUp: {}, r1Up: {}, r1Down: {} };
+    var maxR1 = 1;
+    dims.forEach(function (dm) {
+      maxR1 = Math.max(maxR1, (fr.firstUp && fr.firstUp[dm.id]) || 0, (fr.r1Down && fr.r1Down[dm.id]) || 0);
+    });
+    var r1Head = '<tr><th>维度</th><th>首步先升（刚需）</th><th class="num">局</th><th>首回合先砍（血包）</th><th class="num">档</th></tr>';
+    el('r1Table').innerHTML = r1Head + dims.map(function (dm) {
+      var fu = (fr.firstUp && fr.firstUp[dm.id]) || 0;
+      var fd = (fr.r1Down && fr.r1Down[dm.id]) || 0;
+      var fuw = Math.round(fu / maxR1 * 100), fdw = Math.round(fd / maxR1 * 100);
+      return '<tr><td class="d" style="width:34px">' + dm.name + '</td>' +
+        '<td><div class="acts"><div class="u" style="width:' + fuw + '%"></div></div></td>' +
+        '<td class="num" style="width:42px">' + fu + '</td>' +
+        '<td><div class="acts"><div class="d" style="width:' + fdw + '%"></div></div></td>' +
+        '<td class="num" style="width:42px">−' + fd + '</td></tr>';
+    }).join('');
+  }
+
   // 专精
   var capRows = [];
   dims.forEach(function (dm) {
@@ -304,7 +329,7 @@ function render(d) {
       }).join('');
       var name = c.title || META.cards[id] || id;
       return '<tr><td style="width:150px;vertical-align:top">' + esc(name) +
-        '<span class="tag">' + id + '</span></td>' +
+        '<span class="tag">' + esc(id) + '</span></td>' +
         '<td class="num" style="width:48px;vertical-align:top">' + c.total + '</td>' +
         '<td class="opts">' + opts + '</td></tr>';
     });
@@ -353,67 +378,6 @@ function start() { clearInterval(timer); timer = setInterval(load, 3000); }
 
 load();
 start();
-</script>
-<script>
-(function () {
-  function drawCfgGroups(d) {
-    var box = document.getElementById("cfgGroups");
-    if (!box) return;
-    var g = (d && d.cfgGroups) || [];
-    if (!g.length) {
-      box.innerHTML = "<div class=\"muted\">还没有带参数的局（4ed7791 之后开的局才会记录）</div>";
-      return;
-    }
-    box.innerHTML = g.map(function (x) {
-      return "<div class=\"cfg-row\"><div class=\"lbl\">" + x.label + "</div><div class=\"nums\">"
-        + "<span>局数 <b>" + x.runs + "</b></span>"
-        + "<span>完成 <b>" + x.finished + "</b></span>"
-        + "<span>完成率 <b>" + x.completionRate + "%</b></span>"
-        + "<span>平均档位和 <b>" + x.avgTiers + "</b></span>"
-        + "<span>平均花点 <b>" + x.avgSpent + "</b></span>"
-        + "</div></div>";
-    }).join("");
-  }
-  var f = window.fetch;
-  window.fetch = function (u) {
-    var url = String(u);
-    return f.apply(this, arguments).then(function (r) {
-      if (url.indexOf("/api/stats") >= 0) {
-        try { r.clone().json().then(drawCfgGroups).catch(function () {}); } catch (e) {}
-      }
-      return r;
-    });
-  };
-})();
-</script>
-<script>
-(function () {
-  function render(d) {
-    var box = document.getElementById("cfgGroups");
-    if (!box) return;
-    var g = (d && d.cfgGroups) || [];
-    if (!g.length) {
-      box.innerHTML = "<div class=\"muted\">还没有带参数的局（设置记录上线之后开的局才有）</div>";
-      return;
-    }
-    box.innerHTML = g.map(function (x) {
-      return "<div class=\"cfg-row\"><div class=\"lbl\">" + x.label + "</div><div class=\"nums\">"
-        + "<span>局数 <b>" + x.runs + "</b></span>"
-        + "<span>完成 <b>" + x.finished + "</b></span>"
-        + "<span>完成率 <b>" + x.completionRate + "%</b></span>"
-        + "<span>平均档位和 <b>" + x.avgTiers + "</b></span>"
-        + "<span>平均花点 <b>" + x.avgSpent + "</b></span>"
-        + "</div></div>";
-    }).join("");
-  }
-  window.__cfgPoll = setInterval(function () {
-    fetch("/api/stats", { cache: "no-store" }).then(function (r) { return r.json(); })
-      .then(render).catch(function () {});
-  }, 3000);
-  setTimeout(function () {
-    fetch("/api/stats", { cache: "no-store" }).then(function (r) { return r.json(); }).then(render).catch(function () {});
-  }, 300);
-})();
 </script>
 </body>
 </html>

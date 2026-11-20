@@ -90,7 +90,10 @@ function verifyToken(tok) {
   var parts = String(tok).split('.');
   if (parts.length !== 2) return false;
   var exp = parts[0];
-  if (sign(exp) !== parts[1]) return false;
+  var got = Buffer.from(parts[1], 'utf8');
+  var want = Buffer.from(sign(exp), 'utf8');
+  if (got.length !== want.length) return false;
+  try { if (!crypto.timingSafeEqual(got, want)) return false; } catch (e) { return false; }
   return Number(exp) > Date.now();
 }
 
@@ -99,7 +102,8 @@ function parseCookies(req) {
   String(req.headers.cookie || '').split(';').forEach(function (kv) {
     var i = kv.indexOf('=');
     if (i < 0) return;
-    out[kv.slice(0, i).trim()] = decodeURIComponent(kv.slice(i + 1).trim());
+    var k = kv.slice(0, i).trim(), v = kv.slice(i + 1).trim();
+    try { out[k] = decodeURIComponent(v); } catch (e) { out[k] = v; }
   });
   return out;
 }
@@ -115,11 +119,20 @@ function cookieFor(req) {
     (secure ? '; Secure' : '');
 }
 
-function clearCookie() {
-  return COOKIE + '=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0';
+function clearCookie(req) {
+  var secure = req && String((req.headers || {})['x-forwarded-proto'] || '').toLowerCase() === 'https';
+  return COOKIE + '=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0' + (secure ? '; Secure' : '');
 }
 
 // ---- 失败次数限制 ----
+function pruneFails() {
+  var now = Date.now(), keys = Object.keys(fails);
+  if (keys.length < 200) return;
+  keys.forEach(function (k) {
+    if ((fails[k].until || 0) < now && (fails[k].last || 0) < now - 10 * 60 * 1000) delete fails[k];
+  });
+}
+
 function lockedFor(ip) {
   var f = fails[ip];
   if (!f) return 0;
@@ -128,7 +141,9 @@ function lockedFor(ip) {
 }
 
 function noteFail(ip) {
-  var f = fails[ip] || (fails[ip] = { n: 0, until: 0 });
+  pruneFails();
+  var f = fails[ip] || (fails[ip] = { n: 0, until: 0, last: 0 });
+  f.last = Date.now();
   f.n += 1;
   // 10 次才锁、只锁 30 秒（原来是 5 次 / 60 秒，太容易误伤）
   if (f.n >= 10) { f.until = Date.now() + 30 * 1000; f.n = 0; }

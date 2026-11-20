@@ -24,9 +24,19 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function (Core) {
 
   var DIMS = (Core && Core.DIMS) || [];
-  // Node 下 events.js 单独 require 时拿不到 DIMS，从 config 兜底
-  if (!DIMS.length && typeof require === 'function') {
-    try { DIMS = require('../game/config.js').DIMS; } catch (e) { }
+  var CFG = Core || {};
+  // Node 下 events.js 单独 require 时拿不到 DIMS / ITEMS_ENABLED，从 config 兜底
+  if (typeof require === 'function') {
+    try {
+      var _cfg = require('./config.js');
+      if (!DIMS.length) DIMS = _cfg.DIMS || [];
+      CFG = _cfg;
+    } catch (e) { }
+  }
+  function itemsEnabled() {
+    if (Core && typeof Core.ITEMS_ENABLED === 'boolean') return Core.ITEMS_ENABLED;
+    if (CFG && typeof CFG.ITEMS_ENABLED === 'boolean') return CFG.ITEMS_ENABLED;
+    return true;
   }
 
   function bump(s, id, delta, max) {
@@ -235,13 +245,14 @@
     return true;
   }
 
-  function applyEffect(s, e) {
+  function applyEffect(s, e, fallbackCap) {
     if (!e) return;
     if (e.points) Core.addPoints(s, e.points);
     if (e.tiers) {
+      var cap = e.cap || fallbackCap || 5;
       Object.keys(e.tiers).forEach(function (id) {
         if (s.tiers[id] == null) return;
-        bump(s, id, e.tiers[id], e.cap || 5);
+        bump(s, id, e.tiers[id], cap);
       });
     }
   }
@@ -270,19 +281,21 @@
     DIMS.forEach(function (d) { before.t[d.id] = s.tiers[d.id]; });
     if (opt.cost) Core.addPoints(s, -opt.cost);
 
-    if (opt.item && Core.addItem) Core.addItem(s, opt.item, 1);
+    var giveItem = !!(opt.item && itemsEnabled());
+    if (giveItem && Core.addItem) Core.addItem(s, opt.item, 1);
 
     var branch = rollRandom(opt);
-    var met = true, eff, text;
+    var met = true, eff, text, fallbackCap = null;
     if (branch === 'b') {
       eff = opt.random.effectB;
       text = opt.random.resultB || '';
     } else {
       met = condMet(s, opt.cond);
       eff = met ? opt.effect : opt.elseEffect;
+      if (met) fallbackCap = opt.cap || null;
       text = met ? (opt.result || '') : (opt.altResult || opt.result || '');
     }
-    applyEffect(s, eff);
+    applyEffect(s, eff, fallbackCap);
 
     var bits = [];
     var dp = s.points - before.p;
@@ -292,7 +305,7 @@
       if (dt) bits.push(d.name + ' ' + (dt > 0 ? '+' : '') + dt + ' 档');
     });
 
-    if (opt.item) {
+    if (giveItem) {
       var idef = Core.itemDef ? Core.itemDef(opt.item) : null;
       bits.push('获得「' + (idef ? idef.name : opt.item) + '」');
     }

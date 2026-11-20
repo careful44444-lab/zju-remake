@@ -478,7 +478,7 @@ function renderEvents(main){
           '<div><label style="margin-top:0">点数增减</label><input type="number" min="-20" max="20" style="width:86px" data-ev="' + i + '" data-opt="' + k + '" data-f="points" value="' + (o.effect.points || 0) + '"></div>' +
           '<div><label style="margin-top:0">档位</label><select data-ev="' + i + '" data-opt="' + k + '" data-f="dim" style="width:110px">' + dimOpts + '</select></div>' +
           '<div><label style="margin-top:0">增减</label><select data-ev="' + i + '" data-opt="' + k + '" data-f="delta" style="width:76px">' + deltaOpts + '</select></div>' +
-          '<div><label style="margin-top:0">最高到</label><input type="number" min="1" max="5" style="width:76px" data-ev="' + i + '" data-opt="' + k + '" data-f="cap" value="' + (o.cap || 5) + '"></div>' +
+          '<div><label style="margin-top:0">最高到</label><input type="number" min="1" max="5" style="width:76px" data-ev="' + i + '" data-opt="' + k + '" data-f="cap" value="' + ((o.effect && o.effect.cap) || o.cap || 5) + '"></div>' +
         '</div>' +
         '<div style="margin-top:10px"><label style="margin-top:0">赠送道具（选它时发放）</label>' +
           '<select data-ev="' + i + '" data-opt="' + k + '" data-f="item" style="width:160px">' +
@@ -588,7 +588,13 @@ function renderEvents(main){
       if (f === 'cost') { opt.cost = Math.max(0, +el.value || 0); return; }
       if (f === 'item') { opt.item = el.value || null; return; }
       if (f === 'points') { opt.effect.points = +el.value || 0; return; }
-      if (f === 'cap') { opt.cap = Math.min(5, Math.max(1, +el.value || 5)); return; }
+      if (f === 'cap') {
+        var cv = Math.min(5, Math.max(1, +el.value || 5));
+        opt.cap = cv;
+        if (!opt.effect) opt.effect = { points: 0, tiers: {} };
+        opt.effect.cap = cv;
+        return;
+      }
       if (f === 'dim') {
         var delta = Object.keys(opt.effect.tiers)[0];
         var dv = delta ? opt.effect.tiers[delta] : -1;
@@ -660,8 +666,8 @@ function buildPayload(){
             : null,
           cond: o.cond || null,
           effect: (o.effect && (o.effect.points || Object.keys(o.effect.tiers || {}).length))
-            ? o.effect : null,
-          cap: o.cap || 5,
+            ? { points: o.effect.points || 0, tiers: o.effect.tiers || {}, cap: (o.effect.cap || o.cap || 5) } : null,
+          cap: (o.effect && o.effect.cap) || o.cap || 5,
           item: o.item || null,
           random: o.random ? {
             p: Math.max(0, Math.min(1, o.random.p != null ? o.random.p : 0.5)),

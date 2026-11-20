@@ -1,6 +1,7 @@
 {
   "intro": "还有几个问题想问问你",
   "outro": "谢谢。你的想法很重要！",
+  "dynamicFirst": true,
   "questions": [
     {
       "id": "q2",

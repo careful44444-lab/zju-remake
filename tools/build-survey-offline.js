@@ -23,7 +23,7 @@ var html = fs.readFileSync(path.join(__dirname, 'survey.html'), 'utf8');
 var boot = [
   '<script>',
   'window.__IS_OFFLINE_SURVEY__ = true;',
-  'window.__SURVEY_BASE__ = ' + JSON.stringify(SURVEY) + ';',
+  'window.__SURVEY_BASE__ = ' + JSON.stringify(SURVEY).replace(/</g, '\\u003c') + ';',
   '',
   '// 离线时把「保存」变成「导出」：所有网络请求都拦下来',
   'window.fetch = function (url, opts) {',

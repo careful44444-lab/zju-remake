@@ -79,7 +79,7 @@
       eid: uuid(),
       sid: st.sid,
       uid: st.uid,
-      prof: { year: PROFILE.year || null },
+      prof: { year: PROFILE.year || null, area: PROFILE.area || null },
       ts: now(),
       app: CFG.app,
       ver: CFG.version,

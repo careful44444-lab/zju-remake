@@ -101,10 +101,12 @@
   function warm(base) {
     try {
       if (cache) return;
+      var inline = (typeof window !== "undefined" && window.__ZJU_FINALE_ASSETS__) || null;
+      if (inline && inline[LAKES[0]]) return;
       var b2 = base || "../assets/finale/";
       var img = new Image();
       img.decoding = "async";
-      img.src = b2 + LAKES[0].file;
+      img.src = b2 + LAKES[0];
     } catch (e) {}
   }
   function load(base) {
@@ -112,23 +114,21 @@
     var b = base || BASE;
     var jobs = LAKES.map(function (f) { return loadImage(b + f, f); })
       .concat(ITEMS.map(function (it) { return loadImage(b + it.file, it.file); }))
+      .concat([loadImage(b + "roads/bridge_arch.png", "roads/bridge_arch.png").catch(function () { return null; })]);
     return Promise.all(jobs).then(function (imgs) {
       var lakes = imgs.slice(0, LAKES.length);
-      var rest = imgs.slice(LAKES.length);
+      var rest = imgs.slice(LAKES.length, LAKES.length + ITEMS.length);
+      var bridgeImg = imgs[LAKES.length + ITEMS.length] || null;
       var dims = {}, box = {};
       ITEMS.forEach(function (it, i) {
         dims[it.id] = rest[i];
         box[it.id] = alphaBox(rest[i]) || { x: 0, y: 0, w: rest[i].width, h: rest[i].height };
       });
-      var rimg = {};
-      var rs = LAKES.length + ITEMS.length;
-      Object.keys(ROAD_IMG).forEach(function (k, i) {
-        var im = imgs[rs + i];
-        rimg[k] = im ? { img: im, box: alphaBox(im) || { x: 0, y: 0, w: im.width, h: im.height } } : null;
-      });
       var water = lakes.map(function (im) { return waterCenter(im); });
       cache = {
-        roads: rimg,
+        roads: {
+          bridge: bridgeImg ? { img: bridgeImg, box: alphaBox(bridgeImg) || { x: 0, y: 0, w: bridgeImg.width, h: bridgeImg.height } } : null
+        },
         lakes: lakes,
         water: water,
         dims: dims,
@@ -349,12 +349,84 @@
     g.restore();
   }
 
+  /* 联动成就桥路与金线：建筑落位后（t=0.80~0.93），在已解锁联动或相邻 T4+ 地标之间点亮金线与拱桥 */
+  var SYN_PAIRS = {
+    life: ["food", "dorm"],
+    edu: ["study", "sport"],
+    city: ["move", "culture"]
+  };
+  function drawSynergyBridges(g, c, w, h, area, t, opts) {
+    var a = ramp(t, 0.80, 0.11);
+    if (a <= 0.002) return;
+    opts = opts || {};
+    var p = projection(w, h, area);
+    var R = MAP_R * p.scale * 1.02;
+    var byId = {};
+    ITEMS.forEach(function (it) {
+      var rad = it.angle * Math.PI / 180;
+      byId[it.id] = {
+        x: p.ox + (MAP_CX + Math.cos(rad) * R / p.scale) * p.scale,
+        y: p.oy + (MAP_CY + Math.sin(rad) * R / p.scale) * p.scale
+      };
+    });
+    var pairs = [], seen = {};
+    var syn = opts.synergy || [];
+    syn.forEach(function (sid) {
+      var pr = SYN_PAIRS[sid];
+      if (pr) { pairs.push(pr); seen[pr.join("|")] = 1; }
+    });
+    var tiers = opts.tiers || {};
+    if (!pairs.length) {
+      Object.keys(SYN_PAIRS).forEach(function (sid) {
+        var pr = SYN_PAIRS[sid];
+        if ((tiers[pr[0]] || 0) >= 4 && (tiers[pr[1]] || 0) >= 4 && !seen[pr.join("|")]) {
+          pairs.push(pr); seen[pr.join("|")] = 1;
+        }
+      });
+    }
+    if (!pairs.length) return;
+
+    var br = c.roads && c.roads.bridge;
+    g.save();
+    pairs.forEach(function (pr) {
+      var p1 = byId[pr[0]], p2 = byId[pr[1]];
+      if (!p1 || !p2) return;
+      var mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2;
+
+      // 柔和金色光轨
+      g.save();
+      g.globalAlpha = a * 0.65;
+      g.strokeStyle = "rgba(245, 158, 11, 0.85)";
+      g.shadowColor = "rgba(251, 191, 36, 0.7)";
+      g.shadowBlur = 10;
+      g.lineWidth = Math.max(2, 3.2 * p.scale);
+      g.setLineDash([8, 8]);
+      g.beginPath();
+      g.moveTo(p1.x, p1.y);
+      g.lineTo(p2.x, p2.y);
+      g.stroke();
+      g.restore();
+
+      // 中点拱桥素材（assets/finale/roads/bridge_arch.png）
+      if (br && br.img) {
+        var bw = 66 * p.scale, bh = bw * (br.box.h / Math.max(1, br.box.w));
+        g.save();
+        g.globalAlpha = a * 0.92;
+        g.drawImage(br.img, br.box.x, br.box.y, br.box.w, br.box.h, mx - bw / 2, my - bh / 2, bw, bh);
+        g.restore();
+      }
+    });
+    g.restore();
+  }
+
   /* 主绘制：t=0..1；order 是「按档位从低到高」排好的 ITEMS */
   function draw(g, w, h, t, area, opts) {
     opts = opts || {};
     if (!cache) return;
     g.clearRect(0, 0, w, h);
-    drawLakes(g, cache, w, h, area, t);    drawBuildings(g, cache, w, h, area, t, spatialOrder(opts.order || ITEMS), opts.glow || null);
+    drawLakes(g, cache, w, h, area, t);
+    drawSynergyBridges(g, cache, w, h, area, t, opts);
+    drawBuildings(g, cache, w, h, area, t, spatialOrder(opts.order || ITEMS), opts.glow || null);
     drawTitle(g, w, h, area, t);
   }
 
@@ -394,12 +466,15 @@
   }
   function front(g, w, h, t, area, opts) {
     if (!cache) return;
-    opts = opts || {};    drawBuildings(g, cache, w, h, area, t, spatialOrder(opts.order || ITEMS), opts.glow || null);
+    opts = opts || {};
+    drawSynergyBridges(g, cache, w, h, area, t, opts);
+    drawBuildings(g, cache, w, h, area, t, spatialOrder(opts.order || ITEMS), opts.glow || null);
     drawTitle(g, w, h, area, t);
   }
 
   return {
     ITEMS: ITEMS,
+    CW: CW,
     backdrop: backdrop,
     front: front,
     LAKES: LAKES,

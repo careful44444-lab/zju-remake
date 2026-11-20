@@ -205,7 +205,11 @@ if (/debug=1/.test(location.search)) {
     <div class="grade-card">
       <div class="ev-kicker">第 1 步 · 先说说你</div>
       <h3>你现在大几？</h3>
-      <p class="grade-lead">不同年级看到的浙大不一样。统计只按年级分组，不收集任何个人信息。</p>
+      <p class="grade-lead">不同年级与宿区看到的浙大不一样。统计只做匿名分组，不收集任何个人信息。</p>
+      <div class="area-pick">
+        <span class="area-lbl">所在生活区（选填）：</span>
+        <div class="area-opts" id="areaOpts"></div>
+      </div>
       <div class="grade-opts" id="gradeOpts"></div>
     </div>
   </div>
@@ -243,7 +247,7 @@ if (/debug=1/.test(location.search)) {
       <div class="res-dims" id="resDims"></div>
       <button class="ask-box" id="btnSurvey">
         <span class="ask-k">还有几个问题想问你</span>
-        <span class="ask-d">聊聊你的想法 →</span>
+        <span class="ask-d">聊聊你的想法（答完解锁紫金港实景彩蛋）→</span>
       </button>
       <div class="res-actions">
         <button class="primary" id="btnShare">保存战绩图</button>
@@ -272,6 +276,8 @@ if (/debug=1/.test(location.search)) {
   <div id="shareWrap" class="modal hidden">
     <div class="share-card">
       <canvas id="shareCanvas" width="750" height="1180"></canvas>
+      <img id="shareImg" alt="紫金港改造计划战绩图">
+      <p class="share-tip">手机 / 微信内可长按上方图片直接保存或转发</p>
       <div class="share-actions">
         <a id="shareDl" class="primary" download="紫金港改造计划.png">下载图片</a>
         <button class="ghost" id="shareClose">关闭</button>

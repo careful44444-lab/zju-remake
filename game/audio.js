@@ -2,6 +2,7 @@
 (function (root) {
   var ctx = null, master = null, bgmGain = null, songGain = null;
   var bgmTimer = null, songTimer = null, muted = false;
+  var songNodes = [], curSongGain = null;
 
   function ensure() {
     if (ctx) return ctx;
@@ -15,7 +16,7 @@
   }
 
   // 音乐盒音色：正弦 + 快速衰减 + 轻微泛音
-  function pluck(freq, when, dur, gainNode, vol) {
+  function pluck(freq, when, dur, gainNode, vol, trackArr) {
     if (!ctx) return;
     var o = ctx.createOscillator(), g = ctx.createGain();
     o.type = 'sine'; o.frequency.value = freq;
@@ -32,6 +33,8 @@
     g2.gain.exponentialRampToValueAtTime(0.0001, when + 0.3);
     o2.connect(g2); g2.connect(gainNode);
     o2.start(when); o2.stop(when + 0.35);
+
+    if (trackArr) trackArr.push(o, o2);
   }
 
   var midiToFreq = function (m) { return 440 * Math.pow(2, (m - 69) / 12); };
@@ -45,7 +48,7 @@
   ];
   var step = 0;
   function bgmTick() {
-    if (!ctx || muted) return;
+    if (!ctx || muted || (typeof document !== 'undefined' && document.hidden)) return;
     var bar = Math.floor(step / 8) % CH.length, k = step % 8;
     var chord = CH[bar];
     var t = ctx.currentTime + 0.05;
@@ -70,22 +73,53 @@
     if (ctx.state === 'suspended') ctx.resume();
     stopSong();
     var data = root.ZJU_SONG;
-    if (!data || !data.notes) return;
+    if (!data || !data.notes || !data.notes.length) return;
     var notes = data.notes.slice(0, limit || 96);   // 默认只放前 96 个音
+    curSongGain = ctx.createGain();
+    curSongGain.gain.value = 1;
+    curSongGain.connect(songGain);
+    songNodes = [];
     var t0 = ctx.currentTime + 0.15;
     notes.forEach(function (n) {
       var when = t0 + n[1] * 0.5;                    // 0.5 = 放慢一半，留出余韵
-      pluck(midiToFreq(n[0]), when, n[2] * 0.5, songGain, 0.26);
-      pluck(midiToFreq(n[0] - 12), when, n[2] * 0.5, songGain, 0.10);
+      pluck(midiToFreq(n[0]), when, n[2] * 0.5, curSongGain, 0.26, songNodes);
+      pluck(midiToFreq(n[0] - 12), when, n[2] * 0.5, curSongGain, 0.10, songNodes);
     });
     var dur = (notes[notes.length - 1][1] + notes[notes.length - 1][2]) * 0.5 + 2;
     songTimer = setTimeout(stopSong, dur * 1000);
   }
-  function stopSong() { if (songTimer) { clearTimeout(songTimer); songTimer = null; } }
+  function stopSong() {
+    if (songTimer) { clearTimeout(songTimer); songTimer = null; }
+    if (curSongGain) {
+      try {
+        curSongGain.gain.cancelScheduledValues(ctx.currentTime);
+        curSongGain.gain.setValueAtTime(0, ctx.currentTime);
+        curSongGain.disconnect();
+      } catch (e) { }
+      curSongGain = null;
+    }
+    if (songNodes.length) {
+      songNodes.forEach(function (o) {
+        try { o.stop(); } catch (e) { }
+        try { o.disconnect(); } catch (e) { }
+      });
+      songNodes = [];
+    }
+  }
 
   function setMuted(v) {
     muted = !!v;
     if (master) master.gain.value = muted ? 0 : 0.22;
+  }
+
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', function () {
+      if (!ctx) return;
+      try {
+        if (document.hidden) ctx.suspend();
+        else if (!muted && (bgmTimer || songTimer)) ctx.resume();
+      } catch (e) { }
+    });
   }
 
   root.ZJUAudio = {

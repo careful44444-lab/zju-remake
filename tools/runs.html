@@ -333,8 +333,9 @@ function render() {
   list.forEach(function (r, i) {
     var tr = document.createElement('tr');
     tr.className = 'run' + (r.excluded ? ' excluded' : '');
+    var ridEsc = esc(r.rid);
     tr.innerHTML =
-      '<td class="pick"><input type="checkbox" data-pick="' + r.rid + '"' + (picked[r.rid] ? ' checked' : '') + '></td>' +
+      '<td class="pick"><input type="checkbox" data-pick="' + ridEsc + '"' + (picked[r.rid] ? ' checked' : '') + '></td>' +
       '<td class="num" style="color:#64748b">' + (i + 1) + '</td>' +
       '<td style="color:#475569;white-space:nowrap">' + fmt(r.ts) + '</td>' +
       '<td>' + yearTag(r) + '</td>' +
@@ -344,12 +345,12 @@ function render() {
       '<td><div class="tier">' + dimPips(r) + '</div></td>' +
       '<td class="num" style="color:#64748b">' + dur(r.durationMs) + '</td>' +
       '<td style="white-space:nowrap">' + statusTag(r) + flagTags(r) + '</td>' +
-      '<td><input class="note" data-rid="' + r.rid + '" value="' + esc(r.note) + '" placeholder="备注"></td>' +
+      '<td><input class="note" data-rid="' + ridEsc + '" value="' + esc(r.note) + '" placeholder="备注"></td>' +
       '<td><div class="acts">' +
-        '<button data-a="detail" data-rid="' + r.rid + '">详情</button>' +
-        '<button data-a="' + (r.excluded ? 'include' : 'exclude') + '" data-rid="' + r.rid + '">' +
+        '<button data-a="detail" data-rid="' + ridEsc + '">详情</button>' +
+        '<button data-a="' + (r.excluded ? 'include' : 'exclude') + '" data-rid="' + ridEsc + '">' +
           (r.excluded ? '恢复' : '排除') + '</button>' +
-        '<button class="danger" data-a="delete" data-rid="' + r.rid + '">删除</button>' +
+        '<button class="danger" data-a="delete" data-rid="' + ridEsc + '">删除</button>' +
       '</div></td>';
 
     var dtr = document.createElement('tr');
@@ -379,7 +380,7 @@ function render() {
       syncPick();
     };
     var inp = tr.querySelector('.note');
-    inp.onchange = function () { api({ action: 'note', rid: rid, note: inp.value }); };
+    inp.onchange = function () { api({ action: 'note', rid: r.rid, note: inp.value }); };
 
     rows.appendChild(tr);
     rows.appendChild(dtr);

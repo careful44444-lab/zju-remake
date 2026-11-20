@@ -156,7 +156,7 @@ function pwSection(savedMsg) {
   h += '<form method="POST" action="/save-password" style="display:flex;gap:8px;flex-wrap:wrap">';
   h += '<input type="password" name="password" placeholder="新密码（至少 4 位）" style="flex:1;min-width:150px;padding:9px 11px;border:1px solid #e2e8f0;border-radius:10px;font:inherit">';
   h += '<button class="btn" type="submit" style="padding:9px 14px">设置 / 修改</button>';
-  if (has) h += '<button class="btn" type="submit" name="act" value="clear" style="padding:9px 14px;color:#e11d48" onclick="return confirm(\'关闭密码后，任何人都能看到后台数据。确定？\')">关闭密码</button>';
+  if (has) h += '<button class="btn" type="submit" name="act" value="clear" style="padding:9px 14px;color:#e11d48" onclick="return confirm(\'关闭密码后，公网将无法访问后台（仅本机可用）。确定？\')">关闭密码</button>';
   h += '</form>';
   h += '<form method="POST" action="/save-password" style="margin-top:10px;font-size:12px;color:#475569">';
   h += '<input type="hidden" name="act" value="force">';
@@ -238,29 +238,47 @@ function isLocalReq(req) {
   return !!LOOPBACK[ip];
 }
 
-// 公网也能访问的路径（游戏本体 + 数据上报 + 文案/数值读取）
-var PUBLIC_EXACT = { '/0954d8bbf557911a51288b572c0dad77.txt': 1, '/': 1, '/login': 1, '/logout': 1, '/collect': 1, '/content-edit': 1, '/config-edit': 1, '/api/survey': 1, '/api/config': 1, '/favicon.ico': 1, '/play': 1 };
-var PUBLIC_PREFIX = ['/h5/', '/game/', '/render/'];
+// 公网也能访问的路径（按方法精细放行：前端资源 + 数据上报 + 只读文案/数值/问卷）
+var PUBLIC_GET_EXACT = {
+  '/0954d8bbf557911a51288b572c0dad77.txt': 1,
+  '/': 1, '/login': 1, '/logout': 1,
+  '/content-edit': 1, '/config-edit': 1, '/api/survey': 1,
+  '/favicon.ico': 1, '/play': 1
+};
+var PUBLIC_PREFIX = ['/h5/', '/game/', '/render/', '/assets/'];
 // 隧道过来的请求，socket 也是 127.0.0.1，所以必须结合 forwarded 头判断
 function isRemoteReq(req) {
   var proxied = !!(req.headers['x-forwarded-for'] || req.headers['cf-connecting-ip']);
   return proxied || !isLocalReq(req);
 }
 
-function isPublicPath(p) {
-  if (PUBLIC_EXACT[p]) return true;
+function safeDecode(s) {
+  try { return decodeURIComponent(s); } catch (e) { return null; }
+}
+
+function isPublicPath(p, method) {
+  var m = String(method || 'GET').toUpperCase();
+  if (p === '/collect') return m === 'POST' || m === 'OPTIONS';
+  if (p === '/login') return m === 'GET' || m === 'POST';
+  if (p === '/logout') return m === 'GET' || m === 'POST';
+  if (PUBLIC_DASH && (p === '/dashboard' || p === '/stats')) return m === 'GET';
+  if (m !== 'GET' && m !== 'HEAD') return false;
+  if (PUBLIC_GET_EXACT[p]) return true;
   for (var i = 0; i < PUBLIC_PREFIX.length; i++) if (p.indexOf(PUBLIC_PREFIX[i]) === 0) return true;
   return false;
 }
 
 http.createServer(function (req, res) {
-  var p = decodeURIComponent((req.url || '/').split('?')[0]);
-  // 任何穿越尝试直接拒绝（/h5/../tools/xxx、/game/..\data\xxx 这类）
-  if (p.indexOf('..') >= 0 || p.indexOf('\\') >= 0) {
+  var rawUrl = req.url || '/';
+  var qIdx = rawUrl.indexOf('?');
+  var rawPath = qIdx >= 0 ? rawUrl.slice(0, qIdx) : rawUrl;
+  var p = safeDecode(rawPath);
+  // 畸形编码或任何穿越尝试直接拒绝（/h5/../tools/xxx、/game/..\data\xxx 这类）
+  if (p === null || p.indexOf('..') >= 0 || p.indexOf('\\') >= 0) {
     res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
     return res.end('400 bad path');
   }
-  var qs = (req.url || '').split('?')[1] || '';
+  var qs = qIdx >= 0 ? rawUrl.slice(qIdx + 1) : '';
 
   // ---------- 登录 / 登出 ----------
   if (p === '/login') {
@@ -296,12 +314,12 @@ http.createServer(function (req, res) {
       return;
     }
     var nx = /(^|&)next=([^&]*)/.exec(qs);
-    var nextUrl = nx ? decodeURIComponent(nx[2]) : '/admin';
+    var nextUrl = (nx && safeDecode(nx[2])) || '/admin';
     return sendLogin(res, /(^|&)err=1(&|$)/.test(qs) ? '密码不对' : '', 200, nextUrl);
   }
 
   if (p === '/logout') {
-    res.writeHead(302, { 'Set-Cookie': AUTH.clearCookie(), Location: '/login' });
+    res.writeHead(302, { 'Set-Cookie': AUTH.clearCookie(req), Location: '/login' });
     return res.end();
   }
 
@@ -334,7 +352,7 @@ http.createServer(function (req, res) {
     var _h = req.headers['host'] || '';
     if (_h) { res.writeHead(302, { Location: 'https://' + _h + (req.url || '/') }); return res.end(); }
   }
-  if (!isPublicPath(p) && (isRemoteReq(req) || AUTH.forceLocal()) && !AUTH.isAuthed(req) && p !== '/save-password') {
+  if (!isPublicPath(p, req.method) && (isRemoteReq(req) || AUTH.forceLocal()) && !AUTH.isAuthed(req) && p !== '/save-password') {
     if (p.indexOf('/api/') === 0) { res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' }); return res.end(JSON.stringify({ ok: false, msg: '需要登录' })); }
     res.writeHead(302, { Location: '/login?next=' + encodeURIComponent(req.url || '/') });
     return res.end();
@@ -344,14 +362,14 @@ http.createServer(function (req, res) {
 
   // 查当前公网地址（只给本机看）
   if (p === '/url') {
-    if (proxied) { res.writeHead(404); return res.end(); }
+    if (isRemoteReq(req)) { res.writeHead(404); return res.end(); }
     var rec = null;
     try { rec = JSON.parse(fs.readFileSync(path.join(root, 'data', 'tunnel.json'), 'utf8')); } catch (e) { }
     var alive = false;
     if (rec) { try { process.kill(rec.pid, 0); alive = true; } catch (e) { } }
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
-    var m = /[?&]msg=([^&]*)/.exec(qs);
-    return res.end(urlPage(rec, alive, /(^|&)saved=1(&|$)/.test(qs), m ? decodeURIComponent(m[1]) : ''));
+    var m = /(^|&)msg=([^&]*)/.exec(qs);
+    return res.end(urlPage(rec, alive, /(^|&)saved=1(&|$)/.test(qs), (m && safeDecode(m[2])) || ''));
   }
 
   // 备份管理（只给本机看）
@@ -413,8 +431,8 @@ http.createServer(function (req, res) {
   }
 
   if (p.indexOf('/download/') === 0) {
-    var name2 = decodeURIComponent(p.slice('/download/'.length));
-    if (!backup.exists(name2)) { res.writeHead(404); return res.end('404'); }
+    var name2 = safeDecode(p.slice('/download/'.length));
+    if (!name2 || !backup.exists(name2)) { res.writeHead(404); return res.end('404'); }
     res.writeHead(200, {
       'Content-Type': 'application/x-ndjson; charset=utf-8',
       'Content-Disposition': 'attachment; filename="' + name2 + '"'
@@ -542,6 +560,7 @@ if (p === "/api/survey") {
         var out = {
           intro: String(o.intro || ""),
           outro: String(o.outro || ""),
+          dynamicFirst: o.dynamicFirst !== false,
           questions: o.questions.slice(0, 20).map(function (q, i) {
             return {
               id: String(q.id || ("q" + (i + 1))),
@@ -549,6 +568,7 @@ if (p === "/api/survey") {
               title: String(q.title || ""),
               options: Array.isArray(q.options) ? q.options.slice(0, 12).map(String) : [],
               allowText: !!q.allowText,
+              requireText: !!q.requireText,
               textHint: String(q.textHint || ""),
               placeholder: String(q.placeholder || "")
             };
@@ -814,7 +834,10 @@ if (p === "/api/survey") {
       var tcx = {};
       try { tcx = JSON.parse(fs.readFileSync(tfx, "utf8")); } catch (e) { }
       var probeUrl = tcx.hostname ? ("https://" + tcx.hostname + "/h5/status.html?probe=" + nowT) : (tcx.url || "");
+      var sent = false;
       var send2 = function (online) {
+        if (sent) return;
+        sent = true;
         var data = { ok: true, online: !!online, url: probeUrl, checkedAt: nowT };
         global.__tsCache = { at: nowT, data: data };
         json(res, 200, data);

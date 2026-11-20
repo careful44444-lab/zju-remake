@@ -28,7 +28,7 @@
       items: {},
       roundDims: [],
       breadthPaid: {},
-      roundBase: {},          // 本回合开始时这个维度是几档（用来判断「降回原点」）
+      roundBase: Object.assign({}, tiers),  // 本回合开始时这个维度是几档（用来判断「降回原点」）
       tiers: tiers,
       caps: caps,
       relief: relief,
@@ -102,9 +102,10 @@
   function roundsLeft(s) { return (C.MAX_ROUNDS || 99) - (s.round || 1); }
   function isLocked(s) { return (s.round || 1) > (C.MAX_ROUNDS || 99); }
 
-  // 这一档的广度税：本回合第一次开这个维度才收
+  // 这一档的广度税：本回合第一次把该维度推高到超过本回合起点时才收
   function breadthFor(s, id) {
     if (inRound(s, id)) return 0;
+    if ((s.tiers[id] || 1) + 1 <= baseOf(s, id)) return 0;
     return breadthTax(roundDims(s).length);
   }
 
@@ -115,16 +116,12 @@
     return stepPrice(id, t + 1) + breadthFor(s, id);
   }
 
-  // 降档退还这一步当初付的钱（广度税按本回合实际付过的退）
+  // 降档退还这一步当初付的钱（广度税仅在降回本回合起点、撤回本次开工时退还）
   function refund(s, id) {
     var t = s.tiers[id];
     if (t <= 1) return 0;
-    var paid = (s.breadthPaid && s.breadthPaid[id]) || 0;
+    var paid = ((t - 1) <= baseOf(s, id) && s.breadthPaid && s.breadthPaid[id]) ? s.breadthPaid[id] : 0;
     return stepPrice(id, t) + paid;
-    // 降回本回合起点 → 不再算「已动工」
-    if (s.roundBase && s.tiers[id] === s.roundBase[id]) {
-      s.roundDims = (s.roundDims || []).filter(function (x) { return x !== id; });
-    }
   }
 
   // 当前状态里两种税各占多少（给界面显示用）
@@ -195,11 +192,10 @@
     s.spent = (s.spent || 0) - r;
     s.tiers[id] = t - 1;
     if (t === 5) s.caps[id] = null;
-    // 降回本回合开始时的档位 = 这个维度在本回合「没动过」：移出已开工列表，广度税作废
-    if (s.roundBase && s.roundBase[id] != null && s.tiers[id] <= s.roundBase[id]) {
+    // 降回本回合开始时的档位或更低 = 这个维度在本回合「没动过」：移出已开工列表，广度税作废（保留 roundBase 供本回合后续判断是否超起点）
+    if (s.tiers[id] <= baseOf(s, id)) {
       s.roundDims = roundDims(s).filter(function (x) { return x !== id; });
       if (s.breadthPaid) delete s.breadthPaid[id];
-      delete s.roundBase[id];
     }
     // 阵痛补偿（默认关闭，见 config）
     if (C.RELIEF > 0 && !s.relief[id] && s.tiers[id] < dim(id).init) {
@@ -217,7 +213,9 @@
     if (!s.history.length) return { ok: false, msg: '没有可撤销的操作' };
     var prev = JSON.parse(s.history.pop());
     s.points = prev.points; s.spent = prev.spent || 0;
-    s.round = prev.round || 1; s.items = prev.items || {}; s.roundDims = prev.roundDims || []; s.breadthPaid = prev.breadthPaid || {};
+    s.round = prev.round || 1; s.items = prev.items || {}; s.roundDims = prev.roundDims || [];
+    s.breadthPaid = prev.breadthPaid || {};
+    s.roundBase = prev.roundBase || {};
     s.tiers = prev.tiers; s.caps = prev.caps;
     s.relief = prev.relief; s.bonus = prev.bonus; s.ops = prev.ops;
     return { ok: true };
@@ -310,10 +308,11 @@
     work.sort(function (a, b) { return b.steps - a.steps; });
     var total = 0;
     work.forEach(function (w, i) {
-      // i < 4：独占一个回合，不罚；i >= 4：挤进同一个回合，第 5 个 +breadth(1)，第 6 个 +breadth(2)
+      // i < 4：独占一个回合，不罚；i >= 4：挤进同一个回合，第 5 个 +breadth(1)，第 6 个 +breadth(2)（每个维度只收一次）
       var br = i < (C.MAX_ROUNDS || 4) ? 0 : breadthTax(i - (C.MAX_ROUNDS || 4) + 1);
+      total += br;
       for (var t = w.d.init + 1; t <= tiers[w.d.id]; t++) {
-        total += stepPrice(w.d.id, t) + br;
+        total += stepPrice(w.d.id, t);
       }
     });
     return total;
@@ -377,12 +376,14 @@
       if (!o || !o.s || !o.s.tiers) return null;
       var s = o.s;
       // 兼容性修补
+      if (typeof s.spent !== 'number') s.spent = 0;
+      if (typeof s.round !== 'number') s.round = 1;
+      if (!Array.isArray(s.roundDims)) s.roundDims = [];
+      if (!s.breadthPaid) s.breadthPaid = {};
+      if (!s.roundBase) s.roundBase = {};
+      if (!s.items) s.items = {};
       DIMS.forEach(function (d) {
         if (typeof s.tiers[d.id] !== 'number') s.tiers[d.id] = d.init;
-        if (typeof s.spent !== 'number') s.spent = 0;
-        if (typeof s.round !== 'number') s.round = 1;
-        if (!Array.isArray(s.roundDims)) s.roundDims = [];
-        if (!s.breadthPaid) s.breadthPaid = {};
         if (!(d.id in s.caps)) s.caps[d.id] = null;
         if (!(d.id in s.relief)) s.relief[d.id] = false;
       });
@@ -398,6 +399,7 @@
     clone: clone,
     createState: createState,
     dim: dim,
+    stepPrice: stepPrice,
     cost: cost,
     refund: refund,
     taxInfo: taxInfo,

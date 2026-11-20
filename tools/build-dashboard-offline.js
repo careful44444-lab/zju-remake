@@ -71,13 +71,13 @@ function condText(cond) {
     }
     if (c.t === 'count') {
       var n = c.n || 1;
-      if (c.min != null && c.max != null) return who + ' 中恰好 ' + n + ' 项在 ' + tierName(c.min) + ' ~ ' + tierName(c.max);
-      if (c.min != null) return who + ' 中有 ' + n + ' 项 ≥ ' + tierName(c.min);
-      if (c.max != null) return who + ' 中有 ' + n + ' 项 ≤ ' + tierName(c.max);
-      return who + ' 中有 ' + n + ' 项满足条件';
+      if (c.min != null && c.max != null) return who + ' 中至少 ' + n + ' 项在 ' + tierName(c.min) + ' ~ ' + tierName(c.max);
+      if (c.min != null) return who + ' 中至少 ' + n + ' 项 ≥ ' + tierName(c.min);
+      if (c.max != null) return who + ' 中至少 ' + n + ' 项 ≤ ' + tierName(c.max);
+      return who + ' 中至少 ' + n + ' 项满足条件';
     }
     if (c.t === 'top') {
-      return who + ' 中最高的一项 ≥ ' + tierName(c.min || 5);
+      return who + ' 是所有维度中唯一最高的';
     }
     return JSON.stringify(c);
   }).join('，且 ');

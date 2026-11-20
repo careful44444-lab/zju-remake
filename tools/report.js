@@ -9,24 +9,55 @@ var DIMS = C.DIMS;
 var CONTENT = require('../game/content.js').CONTENT;
 var EVENTS = require('../game/events.js').EVENTS;
 
-// 给看板用的字典：维度名、专精名、事件卡名
+// 给看板用的字典：维度名、专精名、事件卡名（合并 data/content-edit.json 与 data/config-edit.json）
+function loadJsonSafe(p) {
+  try { return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : null; } catch (e) { return null; }
+}
+
 function buildMeta() {
+  var ce = loadJsonSafe(path.join(__dirname, '..', 'data', 'content-edit.json')) || {};
+  var cfgEdit = loadJsonSafe(path.join(__dirname, '..', 'data', 'config-edit.json')) || {};
+  var flat = ce.content || ce;
   var caps = {}, tierTitles = {};
   DIMS.forEach(function (d) {
-    caps[d.id] = CONTENT[d.id].caps.map(function (c) { return { id: c.id, name: c.name }; });
-    tierTitles[d.id] = CONTENT[d.id].tiers.map(function (t) { return t.title; });
+    var ov = flat[d.id] || {};
+    caps[d.id] = CONTENT[d.id].caps.map(function (c, i) {
+      var o2 = (ov.caps || [])[i];
+      return { id: c.id, name: (o2 && o2.name) || c.name };
+    });
+    tierTitles[d.id] = CONTENT[d.id].tiers.map(function (t, i) {
+      var o2 = (ov.tiers || [])[i];
+      return (o2 && o2.title) || t.title;
+    });
   });
   var cards = {};
   EVENTS.forEach(function (e) { cards[e.id] = e.title; });
+  (ce.__events || ce.events || []).forEach(function (e) {
+    if (e && e.id && e.title) cards[e.id] = e.title;
+  });
+  var achs = (C.ACHIEVEMENTS || []).map(function (a) { return Object.assign({}, a); });
+  var ceAch = ce.__achievements || (ce.content && ce.content.__achievements) || ce.achievements || [];
+  if (Array.isArray(ceAch)) {
+    ceAch.forEach(function (a) {
+      if (!a || !a.id) return;
+      var hit = achs.filter(function (x) { return x.id === a.id; })[0];
+      if (hit) { if (a.name) hit.name = a.name; if (a.desc) hit.desc = a.desc; }
+      else achs.push({ id: a.id, name: a.name || a.id, desc: a.desc || '' });
+    });
+  }
 
   return {
-    dims: DIMS.map(function (d) { return { id: d.id, name: d.name, init: d.init }; }),
+    dims: DIMS.map(function (d) {
+      var init = (cfgEdit.inits && typeof cfgEdit.inits[d.id] === 'number') ? cfgEdit.inits[d.id] : d.init;
+      return { id: d.id, name: d.name, init: init };
+    }),
     caps: caps,
     tierTitles: tierTitles,
     cards: cards,
     years: C.GRADES,
-    achievements: C.ACHIEVEMENTS,
-    upTotal: C.INIT_POINTS
+    areas: C.AREAS || [],
+    achievements: achs,
+    upTotal: (typeof cfgEdit.points === 'number') ? cfgEdit.points : C.INIT_POINTS
   };
 }
 
@@ -69,7 +100,11 @@ function aggregate(file) {
 
   var users = {}, runs = {};
   var upgrades = {}, downgrades = {}, ends = [], cards = {}, caps = {};
-  DIMS.forEach(function (d) { upgrades[d.id] = 0; downgrades[d.id] = 0; caps[d.id] = {}; });
+  var firstRound = { firstUp: {}, r1Up: {}, r1Down: {} };
+  DIMS.forEach(function (d) {
+    upgrades[d.id] = 0; downgrades[d.id] = 0; caps[d.id] = {};
+    firstRound.firstUp[d.id] = 0; firstRound.r1Up[d.id] = 0; firstRound.r1Down[d.id] = 0;
+  });
   // 同一回合里同一个维度「升了又降」= 白折腾，不算进统计
   // 先按 (局|回合|维度) 攒起来，最后只记净值
   var netActs = {}, noRoundSeq = 0;
@@ -78,8 +113,9 @@ function aggregate(file) {
 
   ev.forEach(function (e) {
     if (e.uid) users[e.uid] = 1;
-    var r = runs[e.rid] || (runs[e.rid] = { rid: e.rid, uid: e.uid, start: null, end: null, ts0: e.ts, year: '' });
+    var r = runs[e.rid] || (runs[e.rid] = { rid: e.rid, uid: e.uid, start: null, end: null, ts0: e.ts, year: '', area: '', firstUpDim: null });
     if (!r.year && e.prof && e.prof.year) r.year = e.prof.year;
+    if (!r.area && e.prof && e.prof.area) r.area = e.prof.area;
     if (e.ev === 'run_start') {
       r.start = e;
       var cf = e.props && e.props.cfg;
@@ -101,23 +137,38 @@ function aggregate(file) {
         };
       }
       if (!r.year && e.props && e.props.year) r.year = e.props.year;
+      if (!r.area && e.props && e.props.area) r.area = e.props.area;
     }
     if (e.ev === 'run_end') {
       r.end = e;
       if (!r.year && e.props && e.props.year) r.year = e.props.year;
+      if (!r.area && e.props && e.props.area) r.area = e.props.area;
       ends.push(e);
     }
     if (e.ev === 'action') {
       var p = e.props || {};
-      if (p.type === 'upgrade' || p.type === 'downgrade') {
+      if (p.type === 'upgrade' || p.type === 'downgrade' || (p.type === 'item' && p.item === 'up' && p.dim)) {
         // 老数据可能没有 round 字段：那就按「每次单独算」，不做抵消
         var rk = (p.round != null) ? p.round : ('x' + (noRoundSeq++));
         var key = (e.rid || '') + '|' + rk + '|' + p.dim;
         var cell = netActs[key] || (netActs[key] = { up: 0, down: 0 });
-        if (p.type === 'upgrade') cell.up += 1; else cell.down += 1;
-      }
-      if (p.type === 'upgrade' && p.cap) {
-        caps[p.dim][p.cap] = (caps[p.dim][p.cap] || 0) + 1;
+        if (p.type === 'downgrade') cell.down += 1;
+        else {
+          cell.up += 1;
+          if (!r.firstUpDim && p.dim && firstRound.firstUp.hasOwnProperty(p.dim)) r.firstUpDim = p.dim;
+        }
+      } else if (p.type === 'undo' && p.undone && p.undone.dim) {
+        // 撤销抵消上一步同维度操作
+        var u = p.undone;
+        var uk = (e.rid || '') + '|';
+        var lastKey = null;
+        Object.keys(netActs).forEach(function (k2) {
+          if (k2.indexOf(uk) === 0 && k2.slice(-('|' + u.dim).length) === ('|' + u.dim)) lastKey = k2;
+        });
+        if (lastKey) {
+          if (u.type === 'upgrade' && netActs[lastKey].up > 0) netActs[lastKey].up -= 1;
+          else if (u.type === 'downgrade' && netActs[lastKey].down > 0) netActs[lastKey].down -= 1;
+        }
       }
     }
     if (e.ev === 'answer') {
@@ -147,11 +198,22 @@ function aggregate(file) {
   // 把攒下来的动作折算成净值：只算「净升/净降」，抵消掉的不计
   Object.keys(netActs).forEach(function (k) {
     var cell = netActs[k];
-    var dim = k.split("|")[2];
+    var parts = k.split("|");
+    var rk = parts[1], dim = parts[2];
     if (!upgrades.hasOwnProperty(dim)) return;
     var net = cell.up - cell.down;
-    if (net > 0) upgrades[dim] += net;
-    else if (net < 0) downgrades[dim] += -net;
+    if (net > 0) {
+      upgrades[dim] += net;
+      if (rk === "1") firstRound.r1Up[dim] += net;
+    } else if (net < 0) {
+      downgrades[dim] += -net;
+      if (rk === "1") firstRound.r1Down[dim] += -net;
+    }
+  });
+
+  Object.keys(runs).forEach(function (rid) {
+    var fd = runs[rid].firstUpDim;
+    if (fd && firstRound.firstUp.hasOwnProperty(fd)) firstRound.firstUp[fd] += 1;
   });
 
   var runList = Object.keys(runs).map(function (k) { return runs[k]; });
@@ -161,13 +223,29 @@ function aggregate(file) {
 
   var durations = finished.map(function (r) { return r.end.props.durationMs || 0; }).filter(function (x) { return x > 0; });
 
-  // 每局的「推进档数」= 六个维度相对初始档一共升了几档（不是分数，是投入了多少）
+  // 每局的「推进档数」= 六个维度相对该局初始档一共升了几档（优先用该局 run_start 记录的 cfg.inits）
+  var metaNow = buildMeta();
+  var fallbackInits = {};
+  metaNow.dims.forEach(function (d) { fallbackInits[d.id] = d.init; });
   function stepsOf(r) {
     var t = (r.end && r.end.props && r.end.props.tiers) || {};
+    var inits = (r.start && r.start.props && r.start.props.cfg && r.start.props.cfg.inits) || fallbackInits;
     var n = 0;
-    DIMS.forEach(function (d) { n += Math.max(0, (t[d.id] || d.init) - d.init); });
+    DIMS.forEach(function (d) {
+      var base = (typeof inits[d.id] === 'number') ? inits[d.id] : d.init;
+      n += Math.max(0, (t[d.id] || base) - base);
+    });
     return n;
   }
+
+  // 封神专精按最终结算结果统计（避免「试选后降档/撤销」被重复记账）
+  finished.forEach(function (r) {
+    var rc = (r.end && r.end.props && r.end.props.caps) || {};
+    DIMS.forEach(function (d) {
+      var cid = rc[d.id];
+      if (cid) caps[d.id][cid] = (caps[d.id][cid] || 0) + 1;
+    });
+  });
 
   // 按年级分组
   var byYear = {};
@@ -307,6 +385,7 @@ function aggregate(file) {
     tiers: tierDist,
     achievements: achievements,
     actions: { upgrades: upgrades, downgrades: downgrades },
+    firstRound: firstRound,
     survey: survey,
     caps: caps,
     cards: cards,

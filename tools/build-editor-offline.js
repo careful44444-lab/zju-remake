@@ -54,8 +54,8 @@ var BASE_FLAT = flatOf(BASE);
 var boot = [
   '<script>',
   'window.__IS_OFFLINE_EDITOR__ = true;',
-  'window.__BASE_FLAT__ = ' + JSON.stringify(BASE_FLAT) + ';',
-  'window.__EDITOR_DATA__ = ' + JSON.stringify(BASE) + ';',
+  'window.__BASE_FLAT__ = ' + JSON.stringify(BASE_FLAT).replace(/</g, '\\u003c') + ';',
+  'window.__EDITOR_DATA__ = ' + JSON.stringify(BASE).replace(/</g, '\\u003c') + ';',
   '',
   '// 屏蔽 file:// 下会报错的历史 API，以及所有网络请求',
   'try { history.replaceState = function () {}; } catch (e) { }',
